@@ -95,10 +95,17 @@ Pressione `Ctrl+C` para sair do calibrador.
 Abra o `config.json` e preencha:
 
 - Em `vistoria`: **onde o app Vistoria salva o arquivo do dia.**
+  - Já vem apontando para a pasta **`VistoriaMuse` na Área de Trabalho** (o código acha a Área de Trabalho sozinho, mesmo com OneDrive). O atalho `AREA_DE_TRABALHO` nos caminhos significa isso.
   - `modo: "arquivo_mais_recente"` + `pasta` + `padrao_arquivo` (ex.: `*.txt`, `*.pdf`) → pega o arquivo mais novo da pasta; **ou**
   - `modo: "caminho_fixo"` + `caminho_fixo` → sempre o mesmo arquivo (se o app sobrescreve diariamente).
-  - Se o Vistoria exporta **PDF**, instale também: `pip install pypdf`.
+  - Se o Vistoria exporta **PDF**, mude o padrão para `*.pdf` e instale: `pip install pypdf`.
   - Teste a leitura: `python claude_muse_bot.py --testar-vistoria`
+
+> 📁 **Organização das pastas (já configurada):**
+> - **Entra** (arquivo do Vistoria): `Área de Trabalho\VistoriaMuse`
+> - **Sai** (o que o bot envia ao muse): `Área de Trabalho\VistoriaMuse\enviados_muse`
+>
+> São pastas separadas de propósito: assim o bot nunca confunde o próprio arquivo de saída com o arquivo de entrada do Vistoria.
 - Em `claude.prompt_inicial`: a instrução que abre o dia (já traz o protocolo). Ajuste para dizer **o que são as atualizações do dia** e de onde o Claude tira o que precisa fazer. **Quanto mais específico, melhor.**
 - Em `claude.prompt_proximo`: a mensagem que pede a próxima atualização (normalmente não precisa mexer).
 - Em `claude.continuar_conversa`: `true` para o Claude lembrar o que já foi feito no dia (usa `claude --continue`).

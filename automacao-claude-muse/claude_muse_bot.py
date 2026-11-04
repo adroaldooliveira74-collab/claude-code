@@ -48,6 +48,43 @@ CONFIG_PADRAO = os.path.join(AQUI, "config.json")
 
 
 # ============================================================================
+# Caminhos
+# ============================================================================
+def pasta_area_de_trabalho():
+    """Descobre a Area de Trabalho do Windows (considera OneDrive)."""
+    lar = os.path.expanduser("~")
+    candidatos = [
+        os.path.join(lar, "OneDrive", "Desktop"),
+        os.path.join(lar, "OneDrive", "Area de Trabalho"),
+        os.path.join(lar, "Desktop"),
+        os.path.join(lar, "Area de Trabalho"),
+    ]
+    for c in candidatos:
+        if os.path.isdir(c):
+            return c
+    return os.path.join(lar, "Desktop")  # padrao, mesmo que ainda nao exista
+
+
+def expandir_caminho(p):
+    """Expande atalhos nos caminhos do config:
+      AREA_DE_TRABALHO  -> a Area de Trabalho do usuario
+      ~                 -> a pasta do usuario
+    Caminhos relativos ficam relativos a pasta do script.
+    """
+    if not p:
+        return p
+    p = p.strip()
+    marcador = "AREA_DE_TRABALHO"
+    if p.upper().startswith(marcador):
+        resto = p[len(marcador):].lstrip("\\/")
+        return os.path.join(pasta_area_de_trabalho(), resto) if resto else pasta_area_de_trabalho()
+    p = os.path.expanduser(p)
+    if not os.path.isabs(p):
+        p = os.path.join(AQUI, p)
+    return p
+
+
+# ============================================================================
 # Utilidades
 # ============================================================================
 def carregar_config(caminho):
@@ -191,13 +228,13 @@ def ler_texto_vistoria(cfg):
     modo = v.get("modo", "arquivo_mais_recente")
 
     if modo == "caminho_fixo":
-        caminho = v.get("caminho_fixo", "").strip()
+        caminho = expandir_caminho(v.get("caminho_fixo", ""))
         if not caminho:
             raise RuntimeError("Config 'vistoria.caminho_fixo' esta vazio.")
         if not os.path.isfile(caminho):
             raise RuntimeError(f"Arquivo do Vistoria nao encontrado: {caminho}")
     else:
-        pasta = v.get("pasta", "").strip()
+        pasta = expandir_caminho(v.get("pasta", ""))
         padrao = v.get("padrao_arquivo", "*.txt").strip()
         if not pasta or not os.path.isdir(pasta):
             raise RuntimeError(f"Pasta do Vistoria invalida: {pasta!r}")
@@ -376,7 +413,7 @@ def rodar_uma_vez(cfg):
 
 def salvar_relatorio(cfg, texto, titulo=""):
     """Salva a atualizacao num arquivo e devolve o caminho completo."""
-    pasta = os.path.join(AQUI, cfg["arquivos"]["pasta_relatorios"])
+    pasta = expandir_caminho(cfg["arquivos"]["pasta_relatorios"])
     os.makedirs(pasta, exist_ok=True)
     ext = cfg["arquivos"].get("extensao_relatorio", "txt").lstrip(".")
     prefixo = _limpar_nome(titulo) if titulo else "relatorio"

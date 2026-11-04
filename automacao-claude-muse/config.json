@@ -5,7 +5,7 @@
     "_comentario": "O app Vistoria gera um arquivo todo dia as 16:00. O bot le esse arquivo e entrega ao Claude.",
     "ativo": true,
     "modo": "arquivo_mais_recente",
-    "pasta": "C:\\Users\\SEU_USUARIO\\Documents\\Vistoria",
+    "pasta": "AREA_DE_TRABALHO\\VistoriaMuse",
     "padrao_arquivo": "*.txt",
     "caminho_fixo": ""
   },
@@ -50,7 +50,7 @@
   },
 
   "arquivos": {
-    "pasta_relatorios": "relatorios",
+    "pasta_relatorios": "AREA_DE_TRABALHO\\VistoriaMuse\\enviados_muse",
     "extensao_relatorio": "txt",
     "arquivo_log": "execucao.log"
   }
