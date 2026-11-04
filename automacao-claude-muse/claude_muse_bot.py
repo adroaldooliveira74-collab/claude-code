@@ -41,6 +41,8 @@ try:
 except Exception:  # pragma: no cover
     _GUI_OK = False
 
+import muse_api  # modulo local: fala com o muse.ai pela API (sem clicar na tela)
+
 AQUI = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PADRAO = os.path.join(AQUI, "config.json")
 
@@ -193,15 +195,32 @@ def rodar_uma_vez(cfg):
     if not relatorio:
         log(cfg, "ERRO: o Claude devolveu um relatorio vazio. Abortando.")
         return
-    salvar_relatorio(cfg, relatorio)
-    log(cfg, f"Relatorio gerado ({len(relatorio)} caracteres).")
+    caminho = salvar_relatorio(cfg, relatorio)
+    log(cfg, f"Relatorio gerado ({len(relatorio)} caracteres) -> {caminho}")
 
-    # 2) Cola o relatorio no muse e envia
-    log(cfg, "Colando o relatorio no muse.ai...")
-    colar_texto(cfg, cfg["muse"]["campo_entrada_xy"], relatorio)
-    enviar_no_muse(cfg)
+    # 2) Envia o relatorio ao muse.ai
+    if cfg.get("muse_api", {}).get("ativo", False):
+        # Caminho CONFIAVEL: sobe o arquivo pela API (cabecalho Key), sem clicar na tela.
+        log(cfg, "Enviando o relatorio ao muse.ai via API (upload de arquivo)...")
+        try:
+            resultado = muse_api.enviar_arquivo(cfg, caminho)
+            log(cfg, f"Upload concluido. Resposta do muse.ai: {resultado}")
+        except RuntimeError as e:
+            log(cfg, f"ERRO no upload via API: {e}")
+            return
+    else:
+        # Alternativa antiga: colar no navegador (depende de coordenadas da tela).
+        log(cfg, "Colando o relatorio no muse.ai pelo navegador...")
+        colar_texto(cfg, cfg["muse"]["campo_entrada_xy"], relatorio)
+        enviar_no_muse(cfg)
 
-    # 3) Loop de duvidas: le o muse -> se houver duvida, pergunta ao Claude -> cola de volta
+    # 3) Loop de duvidas (opcional): quando a execucao trava esperando uma resposta,
+    #    le a pergunta no navegador -> pergunta ao Claude -> cola a resposta de volta.
+    if not cfg.get("muse", {}).get("tratar_duvidas", True):
+        log(cfg, "Loop de duvidas desativado no config. Execucao do dia finalizada.")
+        log(cfg, "=== Execucao do dia finalizada ===")
+        return
+
     max_it = cfg["loop"]["max_iteracoes"]
     fins = [t.lower() for t in cfg["loop"].get("texto_que_indica_fim", [])]
     ultima_resposta = ""
@@ -256,11 +275,15 @@ def rodar_uma_vez(cfg):
 
 
 def salvar_relatorio(cfg, texto):
+    """Salva o relatorio num arquivo e devolve o caminho completo."""
     pasta = os.path.join(AQUI, cfg["arquivos"]["pasta_relatorios"])
     os.makedirs(pasta, exist_ok=True)
-    nome = dt.datetime.now().strftime("relatorio_%Y-%m-%d_%H%M.txt")
-    with open(os.path.join(pasta, nome), "w", encoding="utf-8") as f:
+    ext = cfg["arquivos"].get("extensao_relatorio", "txt").lstrip(".")
+    nome = dt.datetime.now().strftime(f"relatorio_%Y-%m-%d_%H%M.{ext}")
+    caminho = os.path.join(pasta, nome)
+    with open(caminho, "w", encoding="utf-8") as f:
         f.write(texto)
+    return caminho
 
 
 # ============================================================================
@@ -315,6 +338,7 @@ def main():
     ap.add_argument("--config", default=CONFIG_PADRAO, help="caminho do config.json")
     ap.add_argument("--calibrar", action="store_true", help="descobrir coordenadas da tela")
     ap.add_argument("--testar-claude", action="store_true", help="so testa o Claude Code")
+    ap.add_argument("--testar-muse", action="store_true", help="confere a chave da API do muse.ai")
     ap.add_argument("--agora", action="store_true", help="roda o fluxo completo uma vez")
     ap.add_argument("--daemon", action="store_true", help="fica rodando e dispara no horario")
     args = ap.parse_args()
@@ -329,6 +353,10 @@ def main():
         print("Testando o Claude Code (pode levar alguns segundos)...")
         r = perguntar_ao_claude(cfg, "Responda apenas: OK, estou funcionando.")
         print("Resposta do Claude:\n", r)
+        return
+
+    if args.testar_muse:
+        print(muse_api.testar_conexao(cfg))
         return
 
     if args.agora:

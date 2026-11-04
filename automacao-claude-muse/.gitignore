@@ -1,0 +1,6 @@
+# Nao versionar relatorios gerados, logs nem segredos
+relatorios/
+*.log
+.env
+__pycache__/
+*.pyc

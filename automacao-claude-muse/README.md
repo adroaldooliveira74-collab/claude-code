@@ -3,9 +3,11 @@
 Automação para Windows que, todo dia às 16:00:
 
 1. Pede ao **Claude Code** para gerar o relatório em texto (modo automático `claude -p`, sem olhar a tela — confiável);
-2. Cola o relatório no **muse.ai** aberto no navegador;
-3. Lê o que o muse respondeu; se vier uma **dúvida**, manda para o Claude, pega a resposta e cola de volta;
-4. Repete até o muse indicar que terminou (ou até o limite de segurança).
+2. Salva o relatório como **arquivo** e **sobe para o muse.ai pela API oficial** (cabeçalho `Key`, sem clicar na tela);
+3. (Opcional) Se durante a execução algo **travar esperando uma resposta** no navegador, o bot lê essa dúvida, manda para o Claude, pega a resposta e **cola de volta no navegador**;
+4. Repete até terminar (ou até o limite de segurança).
+
+> **Novidade:** a parte do muse.ai agora usa a **API** (confiável, não depende de posição de tela). A automação de teclado/mouse ficou **só** para o loop de dúvidas no navegador, se você quiser usá-lo.
 
 > ⚠️ **Leia isto antes de usar.** O robô controla seu teclado e mouse. Enquanto ele roda, **não mexa no computador** e deixe a janela do muse.ai aberta e visível. Para abortar na hora: jogue o mouse rápido para o **canto superior esquerdo** da tela.
 
@@ -24,9 +26,19 @@ Automação para Windows que, todo dia às 16:00:
    python --version
    ```
 
-3. As bibliotecas de automação:
+3. As bibliotecas:
    ```bash
-   pip install pyautogui pyperclip
+   pip install requests pyautogui pyperclip
+   ```
+   (`requests` = API do muse.ai; `pyautogui`/`pyperclip` = só o loop de dúvidas no navegador.)
+
+4. **A chave da API do muse.ai.** Pegue a chave na sua conta do muse.ai e guarde numa variável de ambiente (não no código). No **CMD**:
+   ```bash
+   setx MUSE_API_KEY "sua_chave_aqui"
+   ```
+   Feche e abra um novo terminal depois. Confira com:
+   ```bash
+   python claude_muse_bot.py --testar-muse
    ```
 
 ---
@@ -40,9 +52,11 @@ Deve aparecer algo como *"OK, estou funcionando."*. Se der erro aqui, o problema
 
 ---
 
-## 3. Descobrir as posições da tela (calibrar)
+## 3. Descobrir as posições da tela (calibrar) — só para o loop de dúvidas
 
-O robô precisa saber **onde clicar** no muse.ai. Abra o muse.ai no navegador, deixe-o na tela e rode:
+Se você **não** vai usar o loop de dúvidas (`muse.tratar_duvidas: false` no config), **pule este passo** — a API não precisa de coordenadas.
+
+O loop de dúvidas precisa saber **onde clicar** no navegador. Abra a janela na tela e rode:
 
 ```bash
 python claude_muse_bot.py --calibrar
@@ -62,10 +76,11 @@ Pressione `Ctrl+C` para sair do calibrador.
 
 Abra o `config.json` e preencha:
 
-- Em `muse`: as coordenadas que você anotou.
 - Em `claude.prompt_relatorio`: o texto exato do que o Claude deve gerar às 16:00. **Quanto mais específico, melhor.**
-- Em `loop.texto_que_indica_fim`: palavras que, se aparecerem na resposta do muse, significam "acabou o dia" (ex.: `concluido`, `zerado`).
-- Em `muse.usar_enter_para_enviar`: `true` se o site envia com Enter; senão preencha `botao_enviar_xy`.
+- Em `muse_api.ativo`: `true` para subir pela API (recomendado). `collection_id` é opcional (ID da coleção do muse onde o arquivo deve entrar).
+- Em `arquivos.extensao_relatorio`: `txt` ou `md`. (Obs.: o muse.ai é feito para **vídeo** — veja "Limites honestos" abaixo.)
+- Em `muse.tratar_duvidas`: `true` só se você vai usar o loop de dúvidas no navegador. Aí preencha também as coordenadas (`campo_entrada_xy`, `area_resposta_xy`) e `usar_enter_para_enviar`.
+- Em `loop.texto_que_indica_fim`: palavras que, se aparecerem no navegador, significam "acabou" (ex.: `concluido`, `zerado`).
 
 ---
 
@@ -102,6 +117,7 @@ Deixe essa janela aberta; ele dispara sozinho quando der 16:00. (Fecha a janela 
 
 ## Limites honestos
 
-- Como o muse.ai é operado **"clicando no site"** (sem API), tudo depende das coordenadas: se o layout do site mudar ou a janela mudar de lugar/tamanho, **recalibre**.
-- A "dúvida" é lida copiando o texto da área que você apontou. Se o site não deixar selecionar/copiar aquele texto, essa parte do loop não funciona — aí o ideal seria usar a **API do muse.ai** (se existir na sua conta) e eu reescrevo essa parte de forma muito mais robusta.
-- O robô para sozinho por segurança quando: o muse sinaliza fim, a resposta não muda, ou atinge `max_iteracoes`.
+- **O muse.ai é uma plataforma de vídeo.** O endpoint `/api/files/upload` é feito para vídeos. Se ele recusar um `.txt`/`.md`, o script mostra a mensagem exata do servidor. Nesse caso as opções são: transformar o relatório num vídeo (narração/slide) antes de subir, ou pôr o texto como **descrição de um vídeo**. Me avise a mensagem de erro que eu ajusto.
+- **Loop de dúvidas** continua por teclado/mouse (é no navegador): depende de coordenadas; se a janela mudar de lugar/tamanho, **recalibre**. Se não precisar dele, deixe `muse.tratar_duvidas: false`.
+- A chave da API fica na variável `MUSE_API_KEY`, **nunca** dentro do `config.json` commitado.
+- O robô para sozinho por segurança quando: aparece um texto de fim, a resposta não muda, ou atinge `max_iteracoes`.

@@ -9,12 +9,23 @@
     "diretorio_de_trabalho": ""
   },
 
+  "muse_api": {
+    "_comentario": "Parte NOVA e confiavel: sobe o relatorio como arquivo via API. A chave fica na variavel de ambiente, nao aqui.",
+    "ativo": true,
+    "url_upload": "https://muse.ai/api/files/upload",
+    "variavel_ambiente_chave": "MUSE_API_KEY",
+    "collection_id": "",
+    "timeout_segundos": 300
+  },
+
   "muse": {
+    "_comentario": "Usado APENAS no loop de duvidas (colar a resposta no navegador). Descubra as coordenadas com --calibrar.",
     "campo_entrada_xy": [800, 900],
     "area_resposta_xy": [800, 500],
     "botao_enviar_xy": null,
     "usar_enter_para_enviar": true,
-    "segundos_espera_resposta": 20
+    "segundos_espera_resposta": 20,
+    "tratar_duvidas": true
   },
 
   "loop": {
@@ -29,6 +40,7 @@
 
   "arquivos": {
     "pasta_relatorios": "relatorios",
+    "extensao_relatorio": "txt",
     "arquivo_log": "execucao.log"
   }
 }
