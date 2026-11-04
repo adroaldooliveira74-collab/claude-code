@@ -1,8 +1,8 @@
 name: Build Android APK
 
 # Gera um APK de Android (debug, instalável direto no celular) via Capacitor.
-# Rode manualmente em Actions -> "Build Android APK" -> Run workflow,
-# ou automaticamente a cada push. O APK fica em "Artifacts" ao final.
+# Rode em Actions -> "Build Android APK" -> Run workflow, ou a cada push.
+# O APK fica em "Artifacts" ao final (perito-laudo-apk / app-debug.apk).
 
 on:
   workflow_dispatch:
@@ -32,11 +32,6 @@ jobs:
           distribution: "temurin"
           java-version: "17"
 
-      - uses: android-actions/setup-android@v3
-
-      - name: Aceitar licenças do Android SDK
-        run: yes | sdkmanager --licenses || true
-
       - name: Montar a pasta web (www)
         run: |
           mkdir -p www
@@ -49,6 +44,13 @@ jobs:
       - name: Adicionar plataforma Android
         run: npx cap add android
 
+      - name: Apontar o SDK e aceitar licenças
+        run: |
+          SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          echo "Using SDK at: $SDK"
+          echo "sdk.dir=$SDK" > android/local.properties
+          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
+
       - name: Sincronizar
         run: npx cap sync android
 
@@ -56,7 +58,7 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Publicar o APK como artifact
         uses: actions/upload-artifact@v4
