@@ -4,7 +4,9 @@
   "claude": {
     "comando": "claude",
     "modelo": "",
-    "prompt_relatorio": "Gere o relatorio das 16:00 de hoje em texto corrido, claro e objetivo, pronto para ser publicado. Nao faca perguntas; se faltar informacao, assuma o razoavel e marque entre colchetes.",
+    "continuar_conversa": true,
+    "prompt_inicial": "Voce vai me comandar as atualizacoes do dia para eu publicar no muse.ai, UMA DE CADA VEZ. Responda SEMPRE exatamente neste formato, sem mais nada:\nACAO: upload\nTITULO: nome-curto-sem-espacos\nCONTEUDO:\n<o texto completo da atualizacao, pronto para publicar>\n\nQuando nao houver mais nada a fazer hoje, responda apenas:\nACAO: nada\n\nComece agora pela primeira atualizacao (o relatorio das 16:00).",
+    "prompt_proximo": "Publiquei a atualizacao anterior com sucesso no muse.ai. Qual a proxima? Mesmo formato exato (ACAO/TITULO/CONTEUDO). Se ja zeramos tudo que foi pedido hoje, responda apenas: ACAO: nada",
     "timeout_segundos": 300,
     "diretorio_de_trabalho": ""
   },

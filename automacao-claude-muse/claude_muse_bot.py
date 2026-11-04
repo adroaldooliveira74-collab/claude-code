@@ -80,16 +80,22 @@ def exigir_gui():
 # ============================================================================
 # Claude Code (modo automatico, sem olhar a tela)
 # ============================================================================
-def perguntar_ao_claude(cfg, prompt):
+def perguntar_ao_claude(cfg, prompt, continuar=False):
     """Chama `claude -p "<prompt>"` e devolve a resposta em texto.
 
     Esse e o jeito confiavel de falar com o Claude Code: nada de ler o terminal
     pela tela. O Claude Code precisa estar instalado e ja logado nesta maquina.
+
+    continuar=True adiciona `--continue`, para o Claude LEMBRAR o que ja foi feito
+    hoje (mantem a mesma conversa). Assim ele vai comandando uma atualizacao de
+    cada vez ate zerar o que foi pedido.
     """
     c = cfg["claude"]
-    comando = [c["comando"], "-p", prompt]
+    flags = []
     if c.get("modelo"):
-        comando += ["--model", c["modelo"]]
+        flags += ["--model", c["modelo"]]
+    if continuar and c.get("continuar_conversa", True):
+        flags += ["--continue"]
 
     kwargs = {
         "capture_output": True,
@@ -101,14 +107,15 @@ def perguntar_ao_claude(cfg, prompt):
     if c.get("diretorio_de_trabalho"):
         kwargs["cwd"] = c["diretorio_de_trabalho"]
 
-    # No Windows o executavel costuma ser claude.cmd; shell=True ajuda a encontrar.
     if os.name == "nt":
+        # No Windows o executavel costuma ser claude.cmd; shell=True ajuda a encontrar.
         kwargs["shell"] = True
-        comando = " ".join(
-            (f'"{p}"' if " " in p else p) for p in comando[:2]
-        ) + f' "{prompt_escape(prompt)}"' + (
-            f' --model {c["modelo"]}' if c.get("modelo") else ""
+        comando = (
+            f'"{c["comando"]}" -p "{prompt_escape(prompt)}"'
+            + ("".join(f" {f}" for f in flags))
         )
+    else:
+        comando = [c["comando"], "-p", prompt] + flags
 
     try:
         proc = subprocess.run(comando, **kwargs)
@@ -126,6 +133,45 @@ def perguntar_ao_claude(cfg, prompt):
             f"Claude retornou erro (codigo {proc.returncode}): {(proc.stderr or '').strip()}"
         )
     return saida
+
+
+# ----------------------------------------------------------------------------
+# Protocolo: o Claude comanda, o bot executa.
+# O Claude responde SEMPRE neste formato:
+#     ACAO: upload        (ou 'nada' quando nao ha mais nada hoje)
+#     TITULO: nome-curto
+#     CONTEUDO:
+#     <texto da atualizacao>
+# ----------------------------------------------------------------------------
+def parsear_resposta_claude(texto):
+    """Le a resposta do Claude no protocolo e devolve {acao, titulo, conteudo}."""
+    acao, titulo, conteudo_linhas = "nada", "", []
+    coletando = False
+    for linha in (texto or "").splitlines():
+        sem = linha.strip()
+        baixo = sem.lower()
+        if not coletando and baixo.startswith("acao:"):
+            acao = sem.split(":", 1)[1].strip().lower()
+        elif not coletando and baixo.startswith("titulo:"):
+            titulo = sem.split(":", 1)[1].strip()
+        elif not coletando and baixo.startswith("conteudo:"):
+            coletando = True
+            resto = sem.split(":", 1)[1]
+            if resto.strip():
+                conteudo_linhas.append(resto.lstrip())
+        elif coletando:
+            conteudo_linhas.append(linha)
+    conteudo = "\n".join(conteudo_linhas).strip()
+    # Normaliza a acao: qualquer coisa que nao seja upload com conteudo = parar.
+    if acao != "upload" or not conteudo:
+        acao = "nada"
+    return {"acao": acao, "titulo": titulo, "conteudo": conteudo}
+
+
+def _limpar_nome(titulo):
+    """Transforma um titulo em nome de arquivo seguro."""
+    seguro = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in titulo).strip("-")
+    return seguro or "atualizacao"
 
 
 def prompt_escape(texto):
@@ -184,89 +230,68 @@ def ler_resposta_do_muse(cfg):
 
 
 # ============================================================================
-# Fluxo principal de um dia
+# Fluxo principal de um dia: o Claude comanda, o bot executa, ate zerar.
 # ============================================================================
-def rodar_uma_vez(cfg):
-    log(cfg, "=== Iniciando execucao do dia ===")
-
-    # 1) Gera o relatorio das 16:00 com o Claude
-    log(cfg, "Pedindo o relatorio ao Claude Code...")
-    relatorio = perguntar_ao_claude(cfg, cfg["claude"]["prompt_relatorio"])
-    if not relatorio:
-        log(cfg, "ERRO: o Claude devolveu um relatorio vazio. Abortando.")
-        return
-    caminho = salvar_relatorio(cfg, relatorio)
-    log(cfg, f"Relatorio gerado ({len(relatorio)} caracteres) -> {caminho}")
-
-    # 2) Envia o relatorio ao muse.ai
+def publicar_no_muse(cfg, caminho):
+    """Publica o arquivo no muse.ai. API se ativa (confiavel); senao, pelo navegador."""
     if cfg.get("muse_api", {}).get("ativo", False):
-        # Caminho CONFIAVEL: sobe o arquivo pela API (cabecalho Key), sem clicar na tela.
-        log(cfg, "Enviando o relatorio ao muse.ai via API (upload de arquivo)...")
-        try:
-            resultado = muse_api.enviar_arquivo(cfg, caminho)
-            log(cfg, f"Upload concluido. Resposta do muse.ai: {resultado}")
-        except RuntimeError as e:
-            log(cfg, f"ERRO no upload via API: {e}")
-            return
+        log(cfg, f"Enviando '{os.path.basename(caminho)}' ao muse.ai via API...")
+        resultado = muse_api.enviar_arquivo(cfg, caminho)
+        log(cfg, f"Upload concluido. Resposta do muse.ai: {resultado}")
     else:
-        # Alternativa antiga: colar no navegador (depende de coordenadas da tela).
-        log(cfg, "Colando o relatorio no muse.ai pelo navegador...")
-        colar_texto(cfg, cfg["muse"]["campo_entrada_xy"], relatorio)
+        with open(caminho, "r", encoding="utf-8") as f:
+            texto = f.read()
+        log(cfg, "Colando no muse.ai pelo navegador...")
+        colar_texto(cfg, cfg["muse"]["campo_entrada_xy"], texto)
         enviar_no_muse(cfg)
 
-    # 3) Loop de duvidas (opcional): quando a execucao trava esperando uma resposta,
-    #    le a pergunta no navegador -> pergunta ao Claude -> cola a resposta de volta.
-    if not cfg.get("muse", {}).get("tratar_duvidas", True):
-        log(cfg, "Loop de duvidas desativado no config. Execucao do dia finalizada.")
-        log(cfg, "=== Execucao do dia finalizada ===")
-        return
 
+def rodar_uma_vez(cfg):
+    """O Claude vai mandando as atualizacoes uma a uma; o bot publica cada uma
+    no muse.ai e volta ao Claude, ate ele responder que nao ha mais nada (zerou)."""
+    log(cfg, "=== Iniciando execucao do dia (Claude comanda, bot executa) ===")
+    c = cfg["claude"]
     max_it = cfg["loop"]["max_iteracoes"]
-    fins = [t.lower() for t in cfg["loop"].get("texto_que_indica_fim", [])]
-    ultima_resposta = ""
+
+    # Primeira mensagem = o protocolo + pedido da 1a atualizacao (relatorio das 16:00).
+    prompt = c.get("prompt_inicial") or c.get("prompt_relatorio")
+    publicadas = 0
 
     for i in range(1, max_it + 1):
-        log(cfg, f"Aguardando resposta do muse (iteracao {i}/{max_it})...")
-        time.sleep(cfg["muse"].get("segundos_espera_resposta", 20))
-
-        resposta_muse = ler_resposta_do_muse(cfg)
-
-        if not resposta_muse:
-            log(cfg, "Nao consegui ler texto do muse (vazio). Encerrando o loop.")
-            break
-
-        # Condicao de fim: muse sinalizou que terminou
-        baixo = resposta_muse.lower()
-        if any(marca in baixo for marca in fins):
-            log(cfg, "O muse sinalizou que o dia esta concluido. Encerrando.")
-            break
-
-        # Evita loop infinito se o conteudo nao mudou
-        if resposta_muse == ultima_resposta:
-            log(cfg, "A resposta do muse nao mudou. Encerrando o loop.")
-            break
-        ultima_resposta = resposta_muse
-
-        # Trata como "duvida" -> manda ao Claude
-        log(cfg, "Duvida recebida do muse. Perguntando ao Claude...")
-        prompt_duvida = (
-            "No contexto do relatorio das 16:00 que voce gerou, responda a esta "
-            "pergunta/duvida de forma direta e pronta para colar:\n\n"
-            + resposta_muse
-        )
+        continuar = i > 1  # da 2a chamada em diante, mantem a memoria da conversa
+        log(cfg, f"Pedindo a atualizacao #{i} ao Claude...")
         try:
-            resposta_claude = perguntar_ao_claude(cfg, prompt_duvida)
+            resposta = perguntar_ao_claude(cfg, prompt, continuar=continuar)
         except RuntimeError as e:
             log(cfg, f"ERRO ao falar com o Claude: {e}. Encerrando.")
             break
 
-        if not resposta_claude:
-            log(cfg, "Claude devolveu resposta vazia. Encerrando.")
+        ordem = parsear_resposta_claude(resposta)
+        if ordem["acao"] == "nada":
+            log(cfg, f"Claude indicou que nao ha mais nada hoje. Zerado. "
+                     f"Total publicado: {publicadas}.")
             break
 
-        log(cfg, "Colando a resposta do Claude de volta no muse...")
-        colar_texto(cfg, cfg["muse"]["campo_entrada_xy"], resposta_claude)
-        enviar_no_muse(cfg)
+        caminho = salvar_relatorio(cfg, ordem["conteudo"], titulo=ordem["titulo"])
+        log(cfg, f"Atualizacao '{ordem['titulo'] or '(sem titulo)'}' "
+                 f"gerada ({len(ordem['conteudo'])} chars) -> {caminho}")
+
+        # Executa a publicacao. Se falhar, avisa o Claude e deixa ele decidir.
+        try:
+            publicar_no_muse(cfg, caminho)
+            publicadas += 1
+            prompt = c.get("prompt_proximo") or (
+                "Publiquei com sucesso. Qual a proxima atualizacao? Responda no mesmo "
+                "formato (ACAO/TITULO/CONTEUDO), ou 'ACAO: nada' se zeramos tudo hoje."
+            )
+        except RuntimeError as e:
+            log(cfg, f"ERRO ao publicar no muse.ai: {e}")
+            prompt = (
+                "Falha ao publicar a atualizacao anterior no muse.ai. Mensagem do "
+                "servidor:\n" + str(e) + "\n\nDecida: reenvie corrigido no mesmo "
+                "formato (ACAO/TITULO/CONTEUDO) ou responda 'ACAO: nada' para parar."
+            )
+
         time.sleep(cfg["loop"].get("segundos_entre_acoes", 2.0))
     else:
         log(cfg, "Limite de iteracoes atingido. Encerrando por seguranca.")
@@ -274,12 +299,13 @@ def rodar_uma_vez(cfg):
     log(cfg, "=== Execucao do dia finalizada ===")
 
 
-def salvar_relatorio(cfg, texto):
-    """Salva o relatorio num arquivo e devolve o caminho completo."""
+def salvar_relatorio(cfg, texto, titulo=""):
+    """Salva a atualizacao num arquivo e devolve o caminho completo."""
     pasta = os.path.join(AQUI, cfg["arquivos"]["pasta_relatorios"])
     os.makedirs(pasta, exist_ok=True)
     ext = cfg["arquivos"].get("extensao_relatorio", "txt").lstrip(".")
-    nome = dt.datetime.now().strftime(f"relatorio_%Y-%m-%d_%H%M.{ext}")
+    prefixo = _limpar_nome(titulo) if titulo else "relatorio"
+    nome = dt.datetime.now().strftime(f"{prefixo}_%Y-%m-%d_%H%M%S.{ext}")
     caminho = os.path.join(pasta, nome)
     with open(caminho, "w", encoding="utf-8") as f:
         f.write(texto)

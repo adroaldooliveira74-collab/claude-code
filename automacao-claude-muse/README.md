@@ -1,13 +1,30 @@
 # Robô Claude Code → muse.ai
 
-Automação para Windows que, todo dia às 16:00:
+Automação para Windows em que **o Claude comanda e o bot executa**, todo dia às 16:00:
 
-1. Pede ao **Claude Code** para gerar o relatório em texto (modo automático `claude -p`, sem olhar a tela — confiável);
-2. Salva o relatório como **arquivo** e **sobe para o muse.ai pela API oficial** (cabeçalho `Key`, sem clicar na tela);
-3. (Opcional) Se durante a execução algo **travar esperando uma resposta** no navegador, o bot lê essa dúvida, manda para o Claude, pega a resposta e **cola de volta no navegador**;
-4. Repete até terminar (ou até o limite de segurança).
+1. O bot pergunta ao **Claude Code** qual a próxima atualização do dia (modo `claude -p`, sem olhar a tela);
+2. O Claude responde no formato do protocolo (abaixo); o bot **salva como arquivo** e **publica no muse.ai pela API** (cabeçalho `Key`);
+3. O bot volta ao Claude (`--continue`, mantendo a memória do dia) e pede a **próxima**;
+4. Isso se repete **até o Claude responder `ACAO: nada`** (zerou o que foi pedido) ou atingir o limite de segurança.
 
-> **Novidade:** a parte do muse.ai agora usa a **API** (confiável, não depende de posição de tela). A automação de teclado/mouse ficou **só** para o loop de dúvidas no navegador, se você quiser usá-lo.
+### O protocolo (como o Claude comanda)
+
+O Claude responde sempre assim:
+
+```
+ACAO: upload
+TITULO: nome-curto-sem-espacos
+CONTEUDO:
+<o texto completo da atualização>
+```
+
+E, quando não há mais nada no dia:
+
+```
+ACAO: nada
+```
+
+Se um upload falhar, o bot **avisa o Claude com a mensagem de erro** e deixa ele decidir (reenviar corrigido ou parar). Assim, o dia inteiro é conduzido pelo Claude, sem você precisar mexer.
 
 > ⚠️ **Leia isto antes de usar.** O robô controla seu teclado e mouse. Enquanto ele roda, **não mexa no computador** e deixe a janela do muse.ai aberta e visível. Para abortar na hora: jogue o mouse rápido para o **canto superior esquerdo** da tela.
 
@@ -76,7 +93,9 @@ Pressione `Ctrl+C` para sair do calibrador.
 
 Abra o `config.json` e preencha:
 
-- Em `claude.prompt_relatorio`: o texto exato do que o Claude deve gerar às 16:00. **Quanto mais específico, melhor.**
+- Em `claude.prompt_inicial`: a instrução que abre o dia (já traz o protocolo). Ajuste para dizer **o que são as atualizações do dia** e de onde o Claude tira o que precisa fazer. **Quanto mais específico, melhor.**
+- Em `claude.prompt_proximo`: a mensagem que pede a próxima atualização (normalmente não precisa mexer).
+- Em `claude.continuar_conversa`: `true` para o Claude lembrar o que já foi feito no dia (usa `claude --continue`).
 - Em `muse_api.ativo`: `true` para subir pela API (recomendado). `collection_id` é opcional (ID da coleção do muse onde o arquivo deve entrar).
 - Em `arquivos.extensao_relatorio`: `txt` ou `md`. (Obs.: o muse.ai é feito para **vídeo** — veja "Limites honestos" abaixo.)
 - Em `muse.tratar_duvidas`: `true` só se você vai usar o loop de dúvidas no navegador. Aí preencha também as coordenadas (`campo_entrada_xy`, `area_resposta_xy`) e `usar_enter_para_enviar`.
