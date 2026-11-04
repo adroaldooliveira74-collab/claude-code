@@ -396,16 +396,13 @@ table.data .del{color:var(--danger);border:1px solid var(--line);background:var(
     <div class="card"><h2>✍️ Parecer / Conclusão <span class="seal ia">IA MONTA A IMPUGNAÇÃO</span></h2>
       <div class="row-actions" style="margin-bottom:10px"><button class="btn ia small" id="iaParecer">✨ Montar parecer de impugnação (IA)</button><span class="hint" id="iaParecerStatus"></span></div>
       <label class="field">Parecer do assistente técnico
-        <textarea id="concl" rows="5" placeholder="Diante do exposto e das constatações técnicas, conclui o perito que as atividades do reclamante [são / não são] insalubres/perigosas, nos termos da NR-15/NR-16…"></textarea></label></div>
-    <div class="card"><h2>✅ Conformidade do laudo <span class="seal">CPC art. 473</span></h2>
-      <p class="sub">Verificação automática — feche as pendências antes de exportar, para o juízo não descartar o laudo por lacuna.</p>
-      <div id="cplList"></div></div>
+        <textarea id="concl" rows="5" placeholder="Diante das fragilidades apontadas, conclui o assistente técnico que o laudo pericial deve ser impugnado/reconsiderado, requerendo esclarecimentos ou nova perícia…"></textarea></label></div>
     <div class="doc-toolbar">
-      <button class="btn primary" id="genBtn">↻ Montar / atualizar laudo</button>
+      <button class="btn primary" id="genBtn">↻ Montar / atualizar relatório</button>
       <button class="btn" id="pdfBtn">⬇ Baixar PDF</button>
       <button class="btn" id="copyBtn">⧉ Copiar texto</button>
     </div>
-    <div class="doc" id="laudoDoc"><p class="empty">Preencha as abas e clique em “Montar / atualizar laudo”.</p></div>
+    <div class="doc" id="laudoDoc"><p class="empty">Preencha as abas e clique em “Montar / atualizar relatório”.</p></div>
   </section>
 
   <!-- + · NÃO CONFORMIDADES -->
@@ -957,7 +954,7 @@ async function generateLaudo(){const doc=$("#laudoDoc");const{photos,vids,normas
     <h2>${S_()}. ANÁLISE E CONSTATAÇÕES — REGISTRO FOTOGRÁFICO</h2>${photoHTML||`<p class="empty">[nenhuma foto anexada]</p>`}${vidHTML}
     <h2>${S_()}. RESPOSTA AOS QUESITOS</h2>${quesHTML}
     <h2>${S_()}. CONCLUSÃO</h2>${para(S.conclusao)}
-    <p style="font-size:12px;color:var(--muted)">O presente laudo foi elaborado com imparcialidade, tendo por finalidade esclarecer os pontos controvertidos submetidos ao perito e auxiliar o juízo na formação de seu convencimento.</p>
+    <p style="font-size:12px;color:var(--muted)">O presente relatório técnico de acompanhamento foi elaborado pelo assistente técnico da reclamada, com finalidade de subsidiar a análise crítica do laudo pericial e eventual pedido de impugnação.</p>
     <div class="sign"><p>${local}, ${hoje}.</p><div class="line"></div><p><b>${em(PE.nome)}</b><br>${esc(PE.formacao)||""}${PE.registro?` — ${esc(PE.registro)}`:""}${S.art?`<br>ART nº ${esc(S.art)}`:""}</p></div>
     <div style="text-align:center;margin-top:28px"><img src="${LOGO_HEADER}" style="max-width:200px;display:block;margin:0 auto 6px"><div style="font-size:11px;color:var(--muted);line-height:1.45">UrbanClin — Medicina e Segurança do Trabalho<br>Perobal – PR · Atendimento em todo o Estado do Paraná<br>(47) 99167-1874 · a.marques_74@live.com</div></div>`;
   checkLaudo();return{photos};}
