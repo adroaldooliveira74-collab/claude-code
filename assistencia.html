@@ -318,6 +318,9 @@ table.data .del{color:var(--danger);border:1px solid var(--line);background:var(
       <div class="note green"><b>Regra:</b> as fotos e vídeos existem para <b>responder ao processo</b>. Registre apenas o que se relaciona ao objeto e aos quesitos. O que for visto na perícia mas alheio ao processo vai para o <b>Relatório de Não Conformidades</b>, que <b>não</b> integra o laudo.</div>
       <div class="drop" id="dropMedia"><span class="ic">🖼️</span><b>Toque para escolher ou arraste fotos e vídeos</b><span>JPG, PNG, HEIC, MP4… — máx. <b>100 fotos</b> e <b>50 vídeos</b> de até <b>1 min</b>. Imagens são redimensionadas e salvas no navegador.</span></div>
       <input type="file" id="mediaInput" accept="image/*,video/*" multiple hidden>
+      <input type="file" id="camFoto" accept="image/*" capture="environment" hidden>
+      <input type="file" id="camVideo" accept="video/*" capture="environment" hidden>
+      <div class="row-actions" style="margin-top:10px;gap:8px;flex-wrap:wrap"><button class="btn small" id="btnCamFoto" type="button">📷 Tirar foto</button><button class="btn small" id="btnCamVideo" type="button">🎥 Gravar vídeo (curto, até 1 min)</button></div>
       <div class="row-actions" style="margin-top:12px"><span class="count-badge" id="mediaCount">0 mídias</span></div>
       <div class="photos" id="mediaGrid"></div>
       <div class="empty-state" id="mediaEmpty">Nenhuma mídia adicionada ainda.</div>
@@ -694,6 +697,8 @@ async function renderApt(){aptUrls.forEach(u=>URL.revokeObjectURL(u));aptUrls.le
 
 /* mídias */
 wireDrop("#dropMedia","#mediaInput",files=>handleFiles(files),true);
+{const _bf=$("#btnCamFoto"),_cf=$("#camFoto");if(_bf&&_cf){_bf.addEventListener("click",()=>{if(isLocked()){flash("Perícia encerrada — somente leitura.");return;}_cf.click();});_cf.addEventListener("change",()=>{if(_cf.files&&_cf.files.length)handleFiles(_cf.files);_cf.value="";});}}
+{const _bv=$("#btnCamVideo"),_cv=$("#camVideo");if(_bv&&_cv){_bv.addEventListener("click",()=>{if(isLocked()){flash("Perícia encerrada — somente leitura.");return;}flash("Grave um vídeo de até 1 minuto. Vídeos mais longos serão recusados.");_cv.click();});_cv.addEventListener("change",()=>{if(_cv.files&&_cv.files.length)handleFiles(_cv.files);_cv.value="";});}}
 const MAX_FOTOS=100,MAX_VIDEOS=50,MAX_VID_SEG=60;
 function videoDuracao(file){return new Promise(res=>{try{const v=document.createElement("video");v.preload="metadata";v.onloadedmetadata=()=>{const d=v.duration;URL.revokeObjectURL(v.src);res(isFinite(d)?d:0);};v.onerror=()=>{URL.revokeObjectURL(v.src);res(0);};v.src=URL.createObjectURL(file);}catch(e){res(0);}});}
 async function handleFiles(files){if(isLocked()){flash("Perícia encerrada — somente leitura. Use o relatório do aparelho, que segue liberado.");return;}
