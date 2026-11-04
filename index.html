@@ -269,7 +269,8 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
     <div class="card">
       <h2>🎯 Objeto e ART</h2>
       <div class="row-actions" style="margin-bottom:10px"><button class="btn ia small" id="iaObjeto">✨ Objeto pela IA (lê a petição)</button><span class="hint" id="iaObjetoStatus">A IA sugere o objeto e a caracterização (item 3) a partir da petição; a ART é sua e fica manual.</span></div>
-      <label class="field">Objeto da perícia
+      <label class="field">Tipo da perícia<select id="s_tipo"><option>Insalubridade</option><option>Periculosidade</option><option>Insalubridade e Periculosidade</option></select></label>
+      <label class="field" style="margin-top:12px">Objeto da perícia
         <textarea id="s_objeto" rows="3" placeholder="Verificar a existência de insalubridade/periculosidade nas atividades do reclamante, apurando agentes, intensidade/concentração e enquadramento na NR-15/NR-16."></textarea></label>
       <label class="field" style="margin-top:12px">ART nº (desta perícia) <input id="s_art" class="mono" placeholder="Nº da ART"></label>
     </div>
@@ -331,6 +332,13 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
         <textarea id="v_desc" rows="5" placeholder="A reclamada atua em …; o reclamante exercia a função de …, no setor …, executando: …"></textarea></label>
       <div class="row-actions" style="margin-top:8px"><button class="btn ia small" id="iaCaract">✨ Puxar da petição (IA)</button><span class="hint" id="iaCaractStatus"></span></div></div>
     <div class="card"><h2>🔬 Metodologia</h2><label class="field">Metodologia empregada <textarea id="v_metodo" rows="5"></textarea></label></div>
+    <div class="card">
+      <h2>🧾 Atividades e inspeção</h2>
+      <p class="sub">Atividades do reclamante (com regime) e o registro da inspeção — entram em “Análises preliminares” e “Registro da inspeção” do laudo.</p>
+      <div id="atvList"></div>
+      <div class="add-bar"><button class="btn small" id="addAtv">+ Atividade</button><button class="btn ia small" id="iaAtv">✨ Puxar atividades (IA)</button><span class="hint" id="atvStatus"></span></div>
+      <label class="field" style="margin-top:12px">Registro da inspeção<textarea id="v_registro" rows="4" placeholder="Como se deu a diligência: entrevistas, jornada informada, EPI, início pré-agendado, etc."></textarea></label>
+    </div>
     <div class="card">
       <h2>📷 Registro fotográfico e audiovisual <span class="seal">PADRÃO VISTORIA</span></h2>
       <div class="note green"><b>Regra:</b> as fotos e vídeos existem para <b>responder ao processo</b>. Registre apenas o que se relaciona ao objeto e aos quesitos. O que for visto na perícia mas alheio ao processo vai para o <b>Relatório de Não Conformidades</b>, que <b>não</b> integra o laudo.</div>
@@ -400,6 +408,12 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
       <div class="row-actions" style="margin-bottom:12px"><button class="btn ia small" id="iaNormas">✨ Sugerir NR/referências (IA lê a petição/objeto)</button><span class="hint" id="iaNormasStatus"></span></div>
       <div id="normasList"></div>
       <div class="add-bar"><input id="n_code" placeholder="NR-00" style="max-width:150px" class="mono"><input id="n_desc" placeholder="Título da referência" style="flex:1;min-width:150px"><button class="btn small" id="addNorma">+ Adicionar</button></div>
+    </div>
+    <div class="card">
+      <h2>🧪 Agentes — NR-15 (Anexos) <span class="seal">6. RISCOS POR AGENTE</span></h2>
+      <p class="sub">Situação e análise de cada agente dos Anexos da NR-15. Entram na seção “Riscos ocupacionais por agente”.</p>
+      <div class="row-actions" style="margin-bottom:10px"><button class="btn ia small" id="iaAgentes">✨ Analisar agentes (IA)</button><span class="hint" id="agStatus"></span></div>
+      <div id="agList"></div>
     </div>
     <div class="card">
       <h2>🧭 Análise do processo <span class="seal ia">USO INTERNO — NÃO ENTRA NO LAUDO</span></h2>
@@ -527,12 +541,16 @@ const DOC_BASE=["LTCAT — Laudo Técnico das Condições Ambientais do Trabalho
 const PROF_FUNCOES=["Eng. de Segurança do Trabalho","Médico do Trabalho","Téc. de Segurança do Trabalho","Responsável legal","Preposto","Outro"];
 
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+const AGENTES_NR15=[["Anexo 1","Ruído contínuo ou intermitente"],["Anexo 2","Ruído de impacto"],["Anexo 3","Calor (IBUTG)"],["Anexo 5","Radiações ionizantes"],["Anexo 6","Pressões hiperbáricas"],["Anexo 7","Radiações não ionizantes"],["Anexo 8","Vibrações"],["Anexo 9","Frio"],["Anexo 10","Umidade"],["Anexo 11","Agentes químicos (limite de tolerância)"],["Anexo 12","Poeiras minerais"],["Anexo 13","Agentes químicos (inspeção)"],["Anexo 14","Agentes biológicos"]];
+const ABREV=[["ACGIH","American Conference of Governmental Industrial Hygienists"],["CA","Certificado de Aprovação"],["dB(A)","Nível de pressão sonora"],["EPC","Equipamento de Proteção Coletiva"],["EPI","Equipamento de Proteção Individual"],["GHE","Grupo Homogêneo de Exposição"],["IBUTG","Índice de Bulbo Úmido – Termômetro de Globo"],["LTCAT","Laudo Técnico das Condições Ambientais do Trabalho"],["NHO","Norma de Higiene Ocupacional (Fundacentro)"],["NR","Norma Regulamentadora"],["PCMSO","Programa de Controle Médico de Saúde Ocupacional"],["PGR","Programa de Gerenciamento de Riscos"]];
+const CONCEITOS=[["Habitual","Que se faz por hábito; frequente, usual."],["Permanente","Que permanece; contínuo, duradouro, ininterrupto."],["Intermitente","Não contínuo; interrompido a espaços; que para por intervalos."],["Eventual","Que depende de eventualidade; casual, fortuito."]];
+const BIBLIO=["SALIBA, T. M. Manual prático de higiene ocupacional e PPRA.","SALIBA, T. M.; CORRÊA, M. A. C. Insalubridade e periculosidade: aspectos técnicos e práticos.","NR-15 — Atividades e Operações Insalubres (Portaria MTE nº 3.214/78 e Anexos).","NR-16 — Atividades e Operações Perigosas.","NHO-01 e NHO-06 — FUNDACENTRO.","Manuais de Legislação Atlas — Segurança e Medicina do Trabalho."];
 function blankState(){const adr=uid();return{
   peticao:"",processo:{numero:"",acao:"",vara:"",comarca:"",valor:"",nomeacao:""},
   empresa:{razao:"",cnpj:"",cnae:"",atividade:"",empregados:"",grau:"",endereco:""},
   profEmpresa:[],partes:{autor:"",autorAdv:"",reu:"",reuAdv:""},vinculo:{funcao:"",setor:"",admissao:"",saida:""},
   equipe:[{id:adr,nome:"Adroaldo Marques de Oliveira",formacao:"Engenheiro de Segurança do Trabalho",registro:"CREA-PR 168996",email:"",tel:""}],
-  peritoId:adr,assistentes:[],objeto:"",art:"",
+  peritoId:adr,assistentes:[],objeto:"",art:"",tipoPericia:"Insalubridade",registroInspecao:"",atividades:[],agentes:AGENTES_NR15.map(a=>({anexo:a[0],nome:a[1],situacao:"Não constatada exposição significativa",analise:""})),
   vistoria:{data:"",hora:"",clima:"",local:"",presentes:"",desc:"",metodo:DEFAULT_METODO},
   medicoes:[],aparelhos:[],epiDocs:[],
   docs:DOC_BASE.map(t=>({id:uid(),tipo:t,apresentado:"",validade:"",obs:"",hasText:false})),
@@ -579,7 +597,7 @@ const BIND=[
   ["#pt_reu",s=>s.partes.reu,(s,v)=>s.partes.reu=v],["#pt_reu_adv",s=>s.partes.reuAdv,(s,v)=>s.partes.reuAdv=v],
   ["#vc_funcao",s=>s.vinculo.funcao,(s,v)=>s.vinculo.funcao=v],["#vc_setor",s=>s.vinculo.setor,(s,v)=>s.vinculo.setor=v],
   ["#vc_admissao",s=>s.vinculo.admissao,(s,v)=>s.vinculo.admissao=v],["#vc_saida",s=>s.vinculo.saida,(s,v)=>s.vinculo.saida=v],
-  ["#s_objeto",s=>s.objeto,(s,v)=>s.objeto=v],["#s_art",s=>s.art,(s,v)=>s.art=v],
+  ["#s_objeto",s=>s.objeto,(s,v)=>s.objeto=v],["#s_art",s=>s.art,(s,v)=>s.art=v],["#s_tipo",s=>s.tipoPericia,(s,v)=>s.tipoPericia=v],["#v_registro",s=>s.registroInspecao,(s,v)=>s.registroInspecao=v],
   ["#v_data",s=>s.vistoria.data,(s,v)=>s.vistoria.data=v],["#v_hora",s=>s.vistoria.hora,(s,v)=>s.vistoria.hora=v],
   ["#v_clima",s=>s.vistoria.clima,(s,v)=>s.vistoria.clima=v],["#v_local",s=>s.vistoria.local,(s,v)=>s.vistoria.local=v],
   ["#v_presentes",s=>s.vistoria.presentes,(s,v)=>s.vistoria.presentes=v],["#v_desc",s=>s.vistoria.desc,(s,v)=>s.vistoria.desc=v],
@@ -850,14 +868,16 @@ ${quesitos||"(sem quesitos)"}
 
 Classifique cada imagem: se mostra algo ligado ao OBJETO do processo, escreva a legenda técnica (relevante=true). Se mostra um achado de segurança que NÃO se relaciona ao objeto, marque relevante=false e lance esse achado em "ncs" — pois o laudo só trata do objeto; o que é visto na perícia mas é alheio ao processo vai para o relatório de não conformidades.
 Responda SOMENTE com JSON:
-{"fotos":[{"i":1,"legenda":"descrição técnica objetiva ligada ao objeto","relevante":true}],"respostas":[{"id":"<id do quesito>","resposta":"resposta técnica fundamentada"}],"ncs":[{"descricao":"achado de segurança fora do objeto do processo","grau":"Baixa|Média|Alta|Grave e iminente","norma":"NR-xx","recomendacao":"medida corretiva"}],"caracterizacao":"relatório de vistoria: caracterização do local e da atividade do reclamante, cruzando documentos e imagens","conclusao":"conclusão do perito, objetiva e fundamentada nas NR"}`;
+{"fotos":[{"i":1,"legenda":"descrição técnica objetiva ligada ao objeto","relevante":true}],"respostas":[{"id":"<id do quesito>","resposta":"resposta técnica fundamentada"}],"ncs":[{"descricao":"achado de segurança fora do objeto do processo","grau":"Baixa|Média|Alta|Grave e iminente","norma":"NR-xx","recomendacao":"medida corretiva"}],"caracterizacao":"relatório de vistoria: caracterização do local e da atividade do reclamante, cruzando documentos e imagens","atividades":[{"desc":"atividade do reclamante","regime":"habitual/intermitente|habitual/permanente|eventual"}],"agentes":[{"anexo":"Anexo 3","situacao":"Não constatada exposição significativa|Exposição caracterizada|Não aplicável","analise":"breve análise do agente para a função"}],"conclusao":"conclusão do perito, objetiva e fundamentada nas NR"}`;
   try{const data=await s.json(prompt,{images:blobs.length?blobs:undefined,modelTier:"complex"});let n=0,nc=0;
     if(Array.isArray(data.fotos))data.fotos.forEach(f=>{const idx=(f.i|0)-1;const m=sent[idx];if(m&&!m.legenda&&f.legenda&&f.relevante!==false){m.legenda=String(f.legenda);n++;}});
     if(Array.isArray(data.respostas))data.respostas.forEach(r=>{const q=state.quesitos.find(x=>x.id===r.id);if(q&&!q.resposta&&r.resposta){q.resposta=String(r.resposta);n++;}});
     if(Array.isArray(data.ncs))data.ncs.forEach(x=>{if(x&&x.descricao){state.ncs.push({id:uid(),desc:String(x.descricao),grau:String(x.grau||"Média"),norma:String(x.norma||""),recom:String(x.recomendacao||"")});nc++;}});
     if(data.caracterizacao&&!state.vistoria.desc.trim()){state.vistoria.desc=String(data.caracterizacao);const dv=$("#v_desc");if(dv)dv.value=state.vistoria.desc;n++;}
+    if(Array.isArray(data.atividades))data.atividades.forEach(x=>{if(x&&x.desc&&!state.atividades.some(z=>z.desc===String(x.desc))){state.atividades.push({id:uid(),desc:String(x.desc),regime:String(x.regime||"habitual/intermitente")});n++;}});
+    if(Array.isArray(data.agentes))data.agentes.forEach(x=>{const a=state.agentes.find(z=>z.anexo.toLowerCase()===String(x.anexo||"").toLowerCase());if(a){if(x.situacao)a.situacao=String(x.situacao);if(x.analise)a.analise=String(x.analise);}});
     if(data.conclusao&&!state.conclusao.trim()){state.conclusao=String(data.conclusao);$("#concl").value=state.conclusao;n++;}
-    save();renderMedia();renderQuesitos();renderNc();generateLaudo();st.style.color="var(--ok)";st.textContent=`Rascunho gerado — ${n} campo(s) preenchido(s)${nc?`, ${nc} não conformidade(s) enviada(s) ao relatório à parte`:""}. Revise antes de imprimir.`;flash("Rascunho da IA pronto — revise.");
+    save();renderMedia();renderQuesitos();renderNc();renderAtividades();renderAgentes();generateLaudo();st.style.color="var(--ok)";st.textContent=`Rascunho gerado — ${n} campo(s) preenchido(s)${nc?`, ${nc} não conformidade(s) enviada(s) ao relatório à parte`:""}. Revise antes de imprimir.`;flash("Rascunho da IA pronto — revise.");
   }catch(e){const msg=iaErr(e);st.style.color="var(--warn)";st.textContent=msg;flash(msg);}finally{btn.disabled=false;}}
 function iaErr(e){return e&&e.code==="not_granted"?"Configure a chave do Gemini (aba IA/Config).":e&&e.code==="invalid_json"?"Formato inesperado — tente de novo.":e&&e.code==="rate_limited"?"Muitas chamadas — aguarde.":"Falha na IA — tente novamente.";}
 $("#iaBtn").addEventListener("click",iaDraft);
@@ -910,6 +930,37 @@ Responda SOMENTE com JSON: {"medicoes":[{"agente":"Ruido continuo","valor":"85",
   catch(e){if(st){st.style.color="var(--warn)";st.textContent=iaErr(e);}}finally{if(b)b.disabled=false;}}
 {const _im=$("#iaMed");if(_im)_im.addEventListener("click",iaMedicoesFn);}
 
+/* ===== atividades / agentes / tipo (Etapa B) ===== */
+function renderAtividades(){const w=$("#atvList");if(!w)return;w.innerHTML="";state.atividades.forEach(a=>{const el=document.createElement("div");el.className="person";el.innerHTML=`<input data-ad="${a.id}" value="${esc(a.desc)}" placeholder="Atividade do reclamante" style="flex:1;min-width:180px"><select data-ar="${a.id}" style="width:auto"><option ${a.regime==="habitual/intermitente"?"selected":""}>habitual/intermitente</option><option ${a.regime==="habitual/permanente"?"selected":""}>habitual/permanente</option><option ${a.regime==="eventual"?"selected":""}>eventual</option></select><button class="btn danger small" data-ax="${a.id}">×</button>`;w.appendChild(el);});
+  w.querySelectorAll("[data-ad]").forEach(i=>i.addEventListener("input",()=>{const a=state.atividades.find(x=>x.id===i.dataset.ad);if(a){a.desc=i.value;save();}}));
+  w.querySelectorAll("[data-ar]").forEach(sx=>sx.addEventListener("change",()=>{const a=state.atividades.find(x=>x.id===sx.dataset.ar);if(a){a.regime=sx.value;save();}}));
+  w.querySelectorAll("[data-ax]").forEach(b=>b.addEventListener("click",()=>{state.atividades=state.atividades.filter(x=>x.id!==b.dataset.ax);save();renderAtividades();}));}
+{const _aa=$("#addAtv");if(_aa)_aa.addEventListener("click",()=>{state.atividades.push({id:uid(),desc:"",regime:"habitual/intermitente"});save();renderAtividades();});}
+function renderAgentes(){const w=$("#agList");if(!w)return;w.innerHTML="";const opts=["Não constatada exposição significativa","Exposição caracterizada","Não aplicável"];state.agentes.forEach((a,i)=>{const el=document.createElement("div");el.className="doc-row";el.innerHTML=`<div class="top"><span class="tname">${esc(a.anexo)} — ${esc(a.nome)}</span><select data-ags="${i}" style="width:auto;min-width:240px">${opts.map(o=>`<option ${o===a.situacao?"selected":""}>${o}</option>`).join("")}</select></div><textarea data-aga="${i}" placeholder="Análise (opcional)" style="margin-top:8px;min-height:48px">${esc(a.analise)}</textarea>`;w.appendChild(el);});
+  w.querySelectorAll("[data-ags]").forEach(sx=>sx.addEventListener("change",()=>{const a=state.agentes[+sx.dataset.ags];if(a){a.situacao=sx.value;save();}}));
+  w.querySelectorAll("[data-aga]").forEach(t=>t.addEventListener("input",()=>{const a=state.agentes[+t.dataset.aga];if(a){a.analise=t.value;save();}}));}
+async function iaAtvFn(){const st=$("#atvStatus");const s=await getSample();if(!s){if(st){st.style.color="var(--warn)";st.textContent="Configure o Gemini (aba IA/Config).";}return;}
+  const b=$("#iaAtv");if(b)b.disabled=true;if(st){st.style.color="var(--muted)";st.innerHTML='<span class="spin"></span> Extraindo atividades…';}
+  const prompt=`${IA_RULE}
+Liste as ATIVIDADES do reclamante (função: ${state.vinculo.funcao||"—"}) a partir da petição e da caracterização, classificando cada uma como "habitual/intermitente", "habitual/permanente" ou "eventual". Não invente fatos.
+Petição (trecho): ${(state.peticao||"").slice(0,5000)}
+Caracterização: ${(state.vistoria.desc||"").slice(0,1500)}
+Responda SOMENTE com JSON: {"atividades":[{"desc":"...","regime":"habitual/intermitente"}]}`;
+  try{const d=await s.json(prompt,{modelTier:"default"});let nq=0;if(Array.isArray(d.atividades))d.atividades.forEach(x=>{if(x&&x.desc&&!state.atividades.some(z=>z.desc===String(x.desc))){state.atividades.push({id:uid(),desc:String(x.desc),regime:String(x.regime||"habitual/intermitente")});nq++;}});save();renderAtividades();if(st){st.style.color="var(--ok)";st.textContent=nq+" atividade(s) extraída(s) — revise.";}flash(nq+" atividade(s) pela IA.");}
+  catch(e){if(st){st.style.color="var(--warn)";st.textContent=iaErr(e);}}finally{if(b)b.disabled=false;}}
+{const _ya=$("#iaAtv");if(_ya)_ya.addEventListener("click",iaAtvFn);}
+async function iaAgentesFn(){const st=$("#agStatus");const s=await getSample();if(!s){if(st){st.style.color="var(--warn)";st.textContent="Configure o Gemini (aba IA/Config).";}return;}
+  const b=$("#iaAgentes");if(b)b.disabled=true;if(st){st.style.color="var(--muted)";st.innerHTML='<span class="spin"></span> Analisando agentes…';}
+  const med=state.medicoes.map(m=>`${m.agente}: ${m.valor} ${m.unidade} (lim ${m.limite}) ${m.resultado}`).join("; ");
+  const prompt=`${IA_RULE}
+Analise, agente por agente (Anexos da NR-15), se há exposição insalubre para a função do reclamante. Use APENAS os dados fornecidos; não invente medições. Para cada anexo, informe a situação exatamente como "Não constatada exposição significativa", "Exposição caracterizada" ou "Não aplicável", e uma análise curta.
+Função: ${state.vinculo.funcao||"—"}; Atividades: ${state.atividades.map(a=>a.desc+" ("+a.regime+")").join("; ")||"—"}
+Medições: ${med||"—"}; Caracterização: ${(state.vistoria.desc||"").slice(0,1500)}
+Anexos a avaliar: ${state.agentes.map(a=>a.anexo+" "+a.nome).join("; ")}
+Responda SOMENTE com JSON: {"agentes":[{"anexo":"Anexo 3","situacao":"...","analise":"..."}]}`;
+  try{const d=await s.json(prompt,{modelTier:"complex"});if(Array.isArray(d.agentes))d.agentes.forEach(x=>{const a=state.agentes.find(z=>z.anexo.toLowerCase()===String(x.anexo||"").toLowerCase());if(a){if(x.situacao)a.situacao=String(x.situacao);if(x.analise)a.analise=String(x.analise);}});save();renderAgentes();generateLaudo();if(st){st.style.color="var(--ok)";st.textContent="Agentes analisados — revise.";}flash("Agentes analisados pela IA.");}
+  catch(e){if(st){st.style.color="var(--warn)";st.textContent=iaErr(e);}}finally{if(b)b.disabled=false;}}
+{const _ig=$("#iaAgentes");if(_ig)_ig.addEventListener("click",iaAgentesFn);}
 /* ===== laudo ===== */
 async function imgDataUrl(id){const b=await idbGet(id);if(!b)return"";return await new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>res("");r.readAsDataURL(b);});}
 async function buildModel(){const imgs=state.media.filter(m=>m.kind==="img");const photos=[];for(const m of imgs)photos.push({legenda:m.legenda,norma:m.norma,data:await imgDataUrl(m.id)});return{photos,vids:state.media.filter(m=>m.kind==="vid").length,normasOn:state.normas.filter(n=>n.on)};}
@@ -929,7 +980,14 @@ async function generateLaudo(){const doc=$("#laudoDoc");const{photos,vids,normas
   groups.forEach(([org,title])=>{const l=S.quesitos.filter(q=>q.origem===org);if(!l.length)return;quesHTML+=`<h2>${title}</h2>`;l.forEach((q,i)=>{quesHTML+=`<div class="q-block"><span class="qlab">Quesito ${String(i+1).padStart(2,"0")}</span><p class="qp">${em(q.pergunta)}</p><p class="qa"><b>Resposta:</b> ${esc(q.resposta)||`<span class="empty">[resposta pendente]</span>`}</p></div>`;});});
   if(!quesHTML)quesHTML=`<h2>RESPOSTA AOS QUESITOS</h2><p class="empty">[nenhum quesito cadastrado]</p>`;
   const local=V.local?esc(V.local.split(/[,–-]/).slice(-2).join(", ").trim()):em(P.comarca);const hoje=new Date().toLocaleDateString("pt-BR",{day:"2-digit",month:"long",year:"numeric"});
-  let s=0;const S_=()=>["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII"][s++];
+  const atvHTML=S.atividades.length?`<ul>`+S.atividades.map(a=>`<li>${esc(a.desc)||"—"}${a.regime?` <span class="mono">(${esc(a.regime)})</span>`:""}</li>`).join("")+`</ul>`:`<p class="empty">[atividades a preencher]</p>`;
+  const agHTML=S.agentes.map(a=>`<p><b>${esc(a.anexo)} — ${esc(a.nome)}:</b> ${esc(a.situacao)||"—"}.${a.analise?` ${esc(a.analise)}`:""}</p>`).join("");
+  const abrevHTML=`<dl class="kv">`+ABREV.map(x=>`<dt class="mono">${esc(x[0])}</dt><dd>${esc(x[1])}</dd>`).join("")+`</dl>`;
+  const concHTML=`<dl class="kv">`+CONCEITOS.map(x=>`<dt>${esc(x[0])}</dt><dd>${esc(x[1])}</dd>`).join("")+`</dl>`;
+  const biblioHTML=`<ul>`+BIBLIO.map(b=>`<li>${esc(b)}</li>`).join("")+`</ul>`;
+  const docA=S.docs.filter(d=>d.apresentado==="Sim").map(d=>esc(d.tipo));const docApresHTML=docA.length?`<p>Documentos apresentados pela empresa: ${docA.join("; ")}.</p>`:"";
+  const periodoHTML=`<dl class="kv"><dt>Função</dt><dd>${em(VC.funcao)}</dd><dt>Setor</dt><dd>${em(VC.setor)}</dd><dt>Admissão</dt><dd>${em(fmtDate(VC.admissao))}</dd><dt>Saída / data-base</dt><dd>${fmtDate(VC.saida)||"atual"}</dd></dl>`;
+  let s=0;const S_=()=>["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV","XVI","XVII","XVIII"][s++];
   doc.innerHTML=`<img class="lh" src="${LOGO_HEADER}" alt="UrbanClin">
     <h1>LAUDO PERICIAL</h1><div class="doc-sub">Autos nº ${em(P.numero)} · ${em(P.vara)} · ${em(P.comarca)}</div>
     <h2>${S_()}. IDENTIFICAÇÃO</h2>
@@ -941,16 +999,24 @@ async function generateLaudo(){const doc=$("#laudoDoc");const{photos,vids,normas
       <dt>Perito</dt><dd>${em(PE.nome)}${PE.formacao?`, ${esc(PE.formacao)}`:""}${PE.registro?` — ${esc(PE.registro)}`:""}</dd>
       ${AS.length?`<dt>Assistente(s)</dt><dd>${AS.map(a=>esc(a.nome)+(a.registro?` (${esc(a.registro)})`:"")).join("; ")}</dd>`:""}
       ${S.art?`<dt>ART</dt><dd class="mono">${esc(S.art)}</dd>`:""}</dl>
-    <h2>${S_()}. DO OBJETO DA PERÍCIA</h2>${para(S.objeto)}
+    <h2>${S_()}. ABREVIATURAS E SIGLAS</h2>${abrevHTML}
+    <h2>${S_()}. CONCEITOS</h2>${concHTML}
+    <h2>${S_()}. OBJETIVO</h2><p>Laudo pericial de <b>${esc(S.tipoPericia)}</b>.</p>${para(S.objeto)}
+    <h2>${S_()}. PERÍODO DE TRABALHO</h2>${periodoHTML}
+    <h2>${S_()}. ANÁLISES PRELIMINARES — ATIVIDADES</h2>${atvHTML}
+    <h2>${S_()}. REGISTRO DA INSPEÇÃO</h2>${S.registroInspecao?para(S.registroInspecao):`<p class="empty">[registro da inspeção a preencher]</p>`}
     <h2>${S_()}. DA METODOLOGIA</h2>${para(V.metodo)}
-    <h2>${S_()}. DA VISTORIA</h2>
-    <dl class="kv"><dt>Data / hora</dt><dd>${em(fmtDate(V.data))}${V.hora?` às ${esc(V.hora)}`:""}</dd><dt>Local</dt><dd>${em(V.local)}</dd><dt>Condições</dt><dd>${em(V.clima)}</dd><dt>Presentes</dt><dd>${em(V.presentes)}</dd>${A.abertura?`<dt>Abertura</dt><dd>${fmtTs(A.abertura.ts)} — ${esc(A.abertura.acomp)} (${esc(A.abertura.papel)})${A.abertura.gpsOk?` · GPS ${A.abertura.lat.toFixed(5)}, ${A.abertura.lon.toFixed(5)} (±${A.abertura.acc} m)`:" · GPS indisponível"}</dd>`:""}${A.fechamento?`<dt>Encerramento</dt><dd>${fmtTs(A.fechamento.ts)} — ${esc(A.fechamento.acomp)}${A.fechamento.gpsOk?` · GPS ${A.fechamento.lat.toFixed(5)}, ${A.fechamento.lon.toFixed(5)}`:""}</dd>`:""}</dl>${para(V.desc)}
+    <h2>${S_()}. DA PERÍCIA TÉCNICA</h2>${docApresHTML}
+    <dl class="kv"><dt>Data / hora</dt><dd>${em(fmtDate(V.data))}${V.hora?` às ${esc(V.hora)}`:""}</dd><dt>Local</dt><dd>${em(V.local)}</dd><dt>Condições</dt><dd>${em(V.clima)}</dd><dt>Presentes</dt><dd>${em(V.presentes)}</dd>${A.abertura?`<dt>Abertura</dt><dd>${fmtTs(A.abertura.ts)} — ${esc(A.abertura.acomp)} (${esc(A.abertura.papel)})${A.abertura.gpsOk?` · GPS ${A.abertura.lat.toFixed(5)}, ${A.abertura.lon.toFixed(5)} (±${A.abertura.acc} m)`:" · GPS indisponível"}</dd>`:""}${A.fechamento?`<dt>Encerramento</dt><dd>${fmtTs(A.fechamento.ts)} — ${esc(A.fechamento.acomp)}${A.fechamento.gpsOk?` · GPS ${A.fechamento.lat.toFixed(5)}, ${A.fechamento.lon.toFixed(5)}`:""}</dd>`:""}</dl>${V.desc?para(V.desc):""}
     <h2>${S_()}. DA DOCUMENTAÇÃO ANALISADA</h2>${docHTML}${epiHTML}
     <h2>${S_()}. FUNDAMENTAÇÃO TÉCNICA</h2>${normasHTML}${artHTML}
     ${medHTML?`<h2>${S_()}. DAS AVALIAÇÕES QUANTITATIVAS</h2>${medHTML}`:""}
+    <h2>${S_()}. RISCOS OCUPACIONAIS POR AGENTE (NR-15)</h2>${agHTML}
     <h2>${S_()}. ANÁLISE E CONSTATAÇÕES — REGISTRO FOTOGRÁFICO</h2>${photoHTML||`<p class="empty">[nenhuma foto anexada]</p>`}${vidHTML}
     <h2>${S_()}. RESPOSTA AOS QUESITOS</h2>${quesHTML}
     <h2>${S_()}. CONCLUSÃO</h2>${para(S.conclusao)}
+    <h2>${S_()}. ENCERRAMENTO</h2><p>Nada mais havendo a considerar, encerra-se o presente Laudo Técnico Pericial, composto pelas folhas assinadas e rubricadas, que reflete fielmente as condições constatadas na data da diligência.</p>
+    <h2>${S_()}. BIBLIOGRAFIA</h2>${biblioHTML}
     <p style="font-size:12px;color:var(--muted)">O presente laudo foi elaborado com imparcialidade, tendo por finalidade esclarecer os pontos controvertidos submetidos ao perito e auxiliar o juízo na formação de seu convencimento.</p>
     <div class="sign"><p>${local}, ${hoje}.</p><div class="line"></div><p><b>${em(PE.nome)}</b><br>${esc(PE.formacao)||""}${PE.registro?` — ${esc(PE.registro)}`:""}${S.art?`<br>ART nº ${esc(S.art)}`:""}</p></div>
     <div style="text-align:center;margin-top:28px"><img src="${LOGO_HEADER}" style="max-width:200px;display:block;margin:0 auto 6px"><div style="font-size:11px;color:var(--muted);line-height:1.45">UrbanClin — Medicina e Segurança do Trabalho<br>Perobal – PR · Atendimento em todo o Estado do Paraná<br>(47) 99167-1874 · a.marques_74@live.com</div></div>`;
@@ -976,17 +1042,18 @@ async function exportPdf(){const{photos}=await generateLaudo();const J=window.js
   const body=(t,o={})=>{if(t==null||t==="")return;doc.setFont("helvetica",o.b?"bold":"normal");doc.setFontSize(o.s||10);doc.splitTextToSize(String(t),CW).forEach(ln=>{if(y>BOT){doc.addPage();y=TOP;}doc.text(ln,o.align==="center"?W/2:M,y,{align:o.align||"left"});y+=(o.s||10)*0.42+1.2;});nl(1);};
   doc.setFont("helvetica","bold");doc.setFontSize(16);doc.text("LAUDO PERICIAL",W/2,y,{align:"center"});nl(6);doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(90,90,90);doc.text(`Autos nº ${P.numero||"—"}  ·  ${P.vara||"—"}`,W/2,y,{align:"center"});nl(8);doc.setTextColor(20,20,20);
   H("I. IDENTIFICAÇÃO");[["Processo nº",P.numero],["Ação",P.acao],["Juízo",P.vara],["Comarca",P.comarca],["Reclamante",PA.autor],["Reclamada",(EMP.razao||PA.reu)+(EMP.cnpj?" — CNPJ "+EMP.cnpj:"")],["Perito",[PE.nome,PE.formacao,PE.registro].filter(Boolean).join(" — ")],AS.length?["Assistente(s)",AS.map(a=>a.nome).join("; ")]:null,S.art?["ART",S.art]:null].filter(Boolean).forEach(([k,v])=>{if(v)body(`${k}: ${v}`);});
-  H("II. DO OBJETO");body(S.objeto||"[a preencher]");H("III. DA METODOLOGIA");body(V.metodo);
-  H("IV. DA VISTORIA");body(`Data: ${fmtDate(V.data)||"—"} ${V.hora||""}`);body(`Local: ${V.local||"—"}`);body(`Condições: ${V.clima||"—"}`);body(`Presentes: ${V.presentes||"—"}`);if(V.desc)body(V.desc);
+  body("Tipo da perícia: "+S.tipoPericia);H("II. OBJETIVO");body(S.objeto||"[a preencher]");body("Período: função "+(S.vinculo.funcao||"—")+", setor "+(S.vinculo.setor||"—")+", de "+(fmtDate(S.vinculo.admissao)||"—")+" a "+(fmtDate(S.vinculo.saida)||"atual")+".");H("III. DA METODOLOGIA");body(V.metodo);
+  H("IV. DA VISTORIA");body(`Data: ${fmtDate(V.data)||"—"} ${V.hora||""}`);body(`Local: ${V.local||"—"}`);body(`Condições: ${V.clima||"—"}`);body(`Presentes: ${V.presentes||"—"}`);if(V.desc)body(V.desc);if(S.atividades.length){H("ATIVIDADES");S.atividades.forEach(a=>body("• "+(a.desc||"—")+" ("+a.regime+")"));}if(S.registroInspecao){H("REGISTRO DA INSPEÇÃO");body(S.registroInspecao);}
   H("V. DOCUMENTAÇÃO ANALISADA");const du=S.docs.filter(d=>d.apresentado);if(du.length)du.forEach(d=>body(`• ${d.tipo}: ${d.apresentado}${d.validade?" ("+d.validade+")":""}${d.obs?" — "+d.obs:""}`));else body("[marque a conformidade]");
   const gr=computeGaps();if(S.epi.length&&gr.gaps){if(gr.gaps.length)body(`EPI (NR-06): ${gr.gaps.length} intervalo(s) sem comprovação contínua no período ${fmtDate(gr.adm)}–${fmtDate(gr.sai)}: ${gr.gaps.map(g=>fmtDate(g.from)+" a "+fmtDate(g.to)).join("; ")}.`);else body(`EPI (NR-06): cobertura sem lacunas no período ${fmtDate(gr.adm)}–${fmtDate(gr.sai)}.`);}
   H("VI. FUNDAMENTAÇÃO TÉCNICA");const non=S.normas.filter(n=>n.on);if(non.length){body("Referências consideradas:");non.forEach(n=>body(`• ${n.code} — ${n.desc}`));}else body("[selecione as referências]");if(S.art)body(`Perícia amparada pela ART nº ${S.art}.`);
   if(S.medicoes.length){H("VII. AVALIAÇÕES QUANTITATIVAS");S.medicoes.forEach(m=>body(`• ${m.agente||"—"}: ${m.valor||"—"} ${m.unidade||""} (limite ${m.limite||"—"}) — ${m.resultado||"—"} [${m.tecnica||"—"}]`));if(S.aparelhos.length)body(`Anexados ${S.aparelhos.length} relatório(s) de instrumento.`);}
+  H("RISCOS OCUPACIONAIS POR AGENTE (NR-15)");S.agentes.forEach(a=>body("• "+a.anexo+" — "+a.nome+": "+(a.situacao||"—")+(a.analise?". "+a.analise:"")));
   H("ANÁLISE E CONSTATAÇÕES — REGISTRO FOTOGRÁFICO");let pn=0;
   for(const p of photos){pn++;try{const dim=await imgSize(p.data);let w=dim.w,h=dim.h;const r=Math.min(CW/w,90/h);w*=r;h*=r;if(y+h>BOT){doc.addPage();y=TOP;}doc.addImage(p.data,"JPEG",M,y,w,h);y+=h+2;body(`Foto ${String(pn).padStart(2,"0")} — ${p.legenda||"[legenda]"}${p.norma?" ("+p.norma+")":""}`,{s:8});}catch(e){}}
   if(!photos.length)body("[nenhuma foto anexada]");
   H("RESPOSTA AOS QUESITOS");[["Juiz","QUESITOS DO JUÍZO"],["Reclamada","QUESITOS DA RECLAMADA"],["Autora","QUESITOS DA PARTE AUTORA"],["MP","QUESITOS DO MINISTÉRIO PÚBLICO"]].forEach(([org,t])=>{const l=S.quesitos.filter(q=>q.origem===org);if(!l.length)return;body(t,{b:true,s:10.5});l.forEach((q,i)=>{body(`Quesito ${String(i+1).padStart(2,"0")}: ${q.pergunta||"[—]"}`,{b:true,s:9.5});body(`Resposta: ${q.resposta||"[pendente]"}`,{s:9.5});});});
-  H("CONCLUSÃO");body(S.conclusao||"[a preencher]");nl(6);const local=V.local?V.local.split(/[,–-]/).slice(-2).join(", ").trim():(P.comarca||"");
+  H("CONCLUSÃO");body(S.conclusao||"[a preencher]");H("ENCERRAMENTO");body("Nada mais havendo a considerar, encerra-se o presente Laudo Técnico Pericial.");H("BIBLIOGRAFIA");BIBLIO.forEach(bb=>body("• "+bb));nl(6);const local=V.local?V.local.split(/[,–-]/).slice(-2).join(", ").trim():(P.comarca||"");
   body(`${local}, ${new Date().toLocaleDateString("pt-BR",{day:"2-digit",month:"long",year:"numeric"})}.`,{align:"center"});nl(10);if(y>BOT){doc.addPage();y=TOP;}doc.line(W/2-35,y,W/2+35,y);nl(4);body(PE.nome||"",{b:true,align:"center"});body([PE.formacao,PE.registro].filter(Boolean).join(" — "),{align:"center",s:9});if(S.art)body("ART nº "+S.art,{align:"center",s:9});
   await stampLogos(doc,W,M,CW);
   await saveFile(doc.output("blob"),fname("pdf"));}
@@ -1091,7 +1158,7 @@ function renderVistMed(){const w=$("#vistMedResumo");if(!w)return;let h="";
   if(state.medicoes.length)h+=`<div class="tbl-wrap"><table class="data" style="min-width:auto"><thead><tr><th>Agente</th><th>Valor</th><th>Unid.</th><th>Limite</th><th>Resultado</th></tr></thead><tbody>`+state.medicoes.map(m=>`<tr><td>${esc(m.agente)||"—"}</td><td>${esc(m.valor)||"—"}</td><td>${esc(m.unidade)||"—"}</td><td>${esc(m.limite)||"—"}</td><td>${esc(m.resultado)||"—"}</td></tr>`).join("")+`</tbody></table></div>`;
   if(!h)h=`<div class="hint">Nenhum relatório/medição ainda. Anexe e analise na aba Medições.</div>`;
   w.innerHTML=h;}
-function renderAll(){renderProf();renderEquipe();renderDocs();renderEpi();renderEpiDocs();renderMed();renderApt();renderQuesitos();renderNormas();renderMedia();renderNc();renderAudit();applyLock();checkLaudo();}
+function renderAll(){renderProf();renderEquipe();renderDocs();renderEpi();renderEpiDocs();renderMed();renderApt();renderQuesitos();renderNormas();renderAtividades();renderAgentes();renderMedia();renderNc();renderAudit();applyLock();checkLaudo();}
 hydrate();bindInputs();renderAll();
 if(!$("#v_metodo").value)$("#v_metodo").value=state.vistoria.metodo;
 $("#saveTxt").textContent="Salva automaticamente";
