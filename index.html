@@ -484,9 +484,9 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
       <h2>⚙️ IA (Gemini) <span class="seal ia">GEMINI</span></h2>
       <p class="sub">A IA deste app usa o <b>Google Gemini</b>. Informe sua chave; ela fica salva <b>apenas neste aparelho</b> e so e enviada ao proprio Gemini.</p>
       <label class="field">Chave da API Gemini<input id="cfg_key" type="password" placeholder="AIza..."></label>
-      <label class="field" style="margin-top:10px">Modelo<input id="cfg_model" class="mono" placeholder="gemini-2.0-flash"></label>
+      <label class="field" style="margin-top:10px">Modelo<input id="cfg_model" class="mono" placeholder="gemini-flash-latest"></label>
       <div class="row-actions" style="margin-top:12px"><button class="btn primary" id="cfg_save">Salvar</button><button class="btn" id="cfg_test">Testar conexao</button><span class="hint" id="cfg_status"></span></div>
-      <p class="hint" style="margin-top:10px">Chave gratuita em <b>aistudio.google.com/app/apikey</b>. Modelos: <span class="mono">gemini-2.0-flash</span>, <span class="mono">gemini-2.5-flash</span>, <span class="mono">gemini-1.5-pro</span>.</p>
+      <p class="hint" style="margin-top:10px">Chave gratuita em <b>aistudio.google.com/app/apikey</b>. Modelos: <span class="mono">gemini-flash-latest</span>, <span class="mono">gemini-3.8-flash</span>, <span class="mono">gemini-pro-latest</span>.</p>
     </div>
     <div class="card">
       <h2>💾 Backup / transferencia</h2>
@@ -765,7 +765,7 @@ $("#addNc").addEventListener("click",()=>{state.ncs.push({id:uid(),desc:"",grau:
 /* ===== IA ===== */
 let sampleCap=null,sampleTried=false,sampleLimits=null;
 function getKey(){try{return localStorage.getItem("gemini_key")||"";}catch(e){return"";}}
-function getModel(){try{return localStorage.getItem("gemini_model")||"gemini-2.0-flash";}catch(e){return"gemini-2.0-flash";}}
+function getModel(){try{return localStorage.getItem("gemini_model")||"gemini-flash-latest";}catch(e){return"gemini-flash-latest";}}
 function blobToB64(b){return new Promise(res=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(",")[1]||"");r.onerror=()=>res("");r.readAsDataURL(b);});}
 function b64ToBlob(b64,mime){try{const bin=atob(b64);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new Blob([u],{type:mime||"application/octet-stream"});}catch(e){return new Blob([]);}}
 async function geminiGenerate(input,opts,wantJson){const key=getKey();if(!key){const e=new Error("sem chave");e.code="not_granted";throw e;}const model=getModel();
@@ -781,8 +781,8 @@ async function geminiGenerate(input,opts,wantJson){const key=getKey();if(!key){c
 async function getSample(){if(!getKey())return null;if(!sampleCap){const fn=async(input,opts)=>({text:await geminiGenerate(input,opts,false),truncated:false});fn.json=(input,opts)=>geminiGenerate(input,opts,true);fn.limits=async()=>({maxPromptBytes:1000000,images:{maxCount:12,maxInputBytes:20000000,mediaTypes:["image/jpeg","image/png","image/webp"]}});sampleCap=fn;try{sampleLimits=await fn.limits();}catch(e){}}return sampleCap;}
 function registerSW(){if("serviceWorker"in navigator){try{navigator.serviceWorker.register("sw.js").catch(()=>{});}catch(e){}}}
 function initConfig(){const k=$("#cfg_key"),m=$("#cfg_model");if(k)k.value=getKey();if(m)m.value=getModel();
-  const sv=$("#cfg_save");if(sv)sv.addEventListener("click",()=>{try{localStorage.setItem("gemini_key",$("#cfg_key").value.trim());localStorage.setItem("gemini_model",($("#cfg_model").value.trim()||"gemini-2.0-flash"));}catch(e){}sampleCap=null;const st=$("#cfg_status");st.style.color="var(--ok)";st.textContent="Salvo neste aparelho.";flash("Configuracao salva.");});
-  const ts=$("#cfg_test");if(ts)ts.addEventListener("click",async()=>{const st=$("#cfg_status");try{localStorage.setItem("gemini_key",$("#cfg_key").value.trim());localStorage.setItem("gemini_model",($("#cfg_model").value.trim()||"gemini-2.0-flash"));}catch(e){}sampleCap=null;st.style.color="var(--muted)";st.innerHTML='<span class="spin"></span> Testando...';try{const s=await getSample();if(!s){st.style.color="var(--warn)";st.textContent="Informe a chave.";return;}await s("Responda apenas: OK");st.style.color="var(--ok)";st.textContent="Conexao OK.";flash("Gemini conectado.");}catch(e){st.style.color="var(--warn)";st.textContent="Falha: "+(e.message||e.code||"erro");}});}
+  const sv=$("#cfg_save");if(sv)sv.addEventListener("click",()=>{try{localStorage.setItem("gemini_key",$("#cfg_key").value.trim());localStorage.setItem("gemini_model",($("#cfg_model").value.trim()||"gemini-flash-latest"));}catch(e){}sampleCap=null;const st=$("#cfg_status");st.style.color="var(--ok)";st.textContent="Salvo neste aparelho.";flash("Configuracao salva.");});
+  const ts=$("#cfg_test");if(ts)ts.addEventListener("click",async()=>{const st=$("#cfg_status");try{localStorage.setItem("gemini_key",$("#cfg_key").value.trim());localStorage.setItem("gemini_model",($("#cfg_model").value.trim()||"gemini-flash-latest"));}catch(e){}sampleCap=null;st.style.color="var(--muted)";st.innerHTML='<span class="spin"></span> Testando...';try{const s=await getSample();if(!s){st.style.color="var(--warn)";st.textContent="Informe a chave.";return;}await s("Responda apenas: OK");st.style.color="var(--ok)";st.textContent="Conexao OK.";flash("Gemini conectado.");}catch(e){st.style.color="var(--warn)";st.textContent="Falha: "+(e.message||e.code||"erro");}});}
 async function exportBackup(){const ids=[];state.media.forEach(m=>ids.push(m.id));state.docs.forEach(d=>{if(d.hasText)ids.push("doctext_"+d.id);});state.aparelhos.forEach(a=>ids.push(a.kind==="pdf"?"apt_"+a.id:a.id));state.epiDocs.forEach(e=>ids.push(e.kind==="pdf"?"epidoc_"+e.id:e.id));
   const payload={_app:"perito-laudo",_v:5,ts:new Date().toISOString(),state:state,media:{}};
   for(const id of ids){const b=await idbGet(id);if(b==null)continue;if(typeof b==="string")payload.media[id]={t:"text",d:b};else payload.media[id]={t:"blob",m:b.type||"application/octet-stream",d:await blobToB64(b)};}
