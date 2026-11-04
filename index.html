@@ -194,7 +194,6 @@ table.data .del{color:var(--danger);border:1px solid var(--line);background:var(
       <label class="field" id="petTextWrap" style="margin-top:12px" hidden>Texto da petição
         <textarea id="peticao" rows="6" placeholder="Cole aqui o texto da petição inicial…"></textarea>
         <button class="btn small" id="parsePetText" style="margin-top:8px;align-self:flex-start">⤵ Puxar dados</button></label>
-      <p class="hint" style="margin-top:10px">💡 Integração com <b>Projudi/PJe</b> e <b>Receita Federal (CNPJ)</b>: ver observações no chat — exige um servidor externo, não roda dentro do app.</p>
     </div>
     <div class="card">
       <h2>⚖️ Dados do processo</h2>
@@ -218,7 +217,6 @@ table.data .del{color:var(--danger);border:1px solid var(--line);background:var(
         <label class="field">Grau de risco (NR-04) <input id="e_grau" placeholder="1 a 4"></label>
       </div>
       <label class="field" style="margin-top:13px">Endereço da empresa <input id="e_endereco" placeholder="Rua …, nº …, cidade – UF"></label>
-      <p class="hint" style="margin-top:8px">💡 Puxar dados do CNPJ direto da Receita exige conexão externa (bloqueada no app) — dá para fazer com um pequeno servidor. Por ora, preencha manualmente.</p>
       <h3 style="font-size:14px;color:var(--muted);margin:16px 0 6px;text-transform:uppercase;letter-spacing:.06em">Responsáveis técnicos da empresa</h3>
       <p class="hint" style="margin-bottom:8px">Profissionais que assinam LTCAT/PGR/PCMSO, preposto, responsável legal.</p>
       <div id="profList"></div>
@@ -323,9 +321,10 @@ table.data .del{color:var(--danger);border:1px solid var(--line);background:var(
       <div class="empty-state" id="mediaEmpty">Nenhuma mídia adicionada ainda.</div>
     </div>
     <div class="card">
-      <h2>🧾 Relatório do aparelho (medição) <span class="seal">ACEITA PDF APÓS O FECHAMENTO</span></h2>
-      <p class="sub">Parte da perícia. É o único item que continua aceitando PDF/foto <b>mesmo com a perícia encerrada</b> — para quando o relatório do equipamento só é baixado depois (dosímetro, medidor de IBUTG, luxímetro…). As medições e os relatórios ficam na aba Medições.</p>
-      <div class="row-actions"><button class="btn" id="aptFromVist">🧾 Anexar relatório do aparelho</button><button class="btn small" id="goMed">Abrir aba Medições →</button><span class="count-badge" id="aptCountV">0 relatórios</span></div>
+      <h2>🧾 Relatório do aparelho (medição) <span class="seal">PUXADO DO ITEM 4 · SOMENTE LEITURA</span></h2>
+      <p class="sub">Resumo, somente leitura, dos relatórios de instrumento e das medições já analisadas pela IA na aba <b>Medições</b>. Para maior segurança, o anexo do relatório é feito apenas na aba Medições.</p>
+      <div id="vistMedResumo"></div>
+      <div class="row-actions" style="margin-top:10px"><button class="btn small" id="goMed">Abrir aba Medições →</button></div>
     </div>
   </section>
 
@@ -682,7 +681,7 @@ function renderMed(){const tb=$("#medTable").querySelector("tbody");tb.innerHTML
   const b=(sel,key,field)=>tb.querySelectorAll(sel).forEach(i=>i.addEventListener("input",()=>{const m=state.medicoes.find(x=>x.id===i.dataset[key]);if(m){m[field]=i.value;save();}}));
   b("[data-ma]","ma","agente");b("[data-mv]","mv","valor");b("[data-mu]","mu","unidade");b("[data-ml]","ml","limite");b("[data-mt]","mt","tecnica");
   tb.querySelectorAll("[data-mr]").forEach(s=>s.addEventListener("change",()=>{const m=state.medicoes.find(x=>x.id===s.dataset.mr);if(m){m.resultado=s.value;save();}}));
-  tb.querySelectorAll("[data-mx]").forEach(x=>x.addEventListener("click",()=>{state.medicoes=state.medicoes.filter(m=>m.id!==x.dataset.mx);save();renderMed();}));}
+  tb.querySelectorAll("[data-mx]").forEach(x=>x.addEventListener("click",()=>{state.medicoes=state.medicoes.filter(m=>m.id!==x.dataset.mx);save();renderMed();}));renderVistMed();}
 $("#addMed").addEventListener("click",()=>{state.medicoes.push({id:uid(),agente:"",valor:"",unidade:"",limite:"",tecnica:"",resultado:""});save();renderMed();});
 
 /* relatórios de aparelho */
@@ -698,7 +697,7 @@ async function renderApt(){aptUrls.forEach(u=>URL.revokeObjectURL(u));aptUrls.le
     if(a.kind==="img"){const b=await idbGet(a.id);const u=b?URL.createObjectURL(b):"";if(u)aptUrls.push(u);inner+=`<img class="thumb" src="${u}" alt="">`;}
     inner+=`<pre data-apre="${a.id}" hidden></pre>`;el.innerHTML=inner;wrap.appendChild(el);}
   wrap.querySelectorAll("[data-av]").forEach(b=>b.addEventListener("click",async()=>{const pre=wrap.querySelector(`[data-apre="${b.dataset.av}"]`);if(!pre.hidden){pre.hidden=true;return;}pre.textContent=(await idbGet("apt_"+b.dataset.av))||"(sem texto)";pre.hidden=false;}));
-  wrap.querySelectorAll("[data-ad]").forEach(b=>b.addEventListener("click",async()=>{const a=state.aparelhos.find(x=>x.id===b.dataset.ad);if(a){await idbDel(a.kind==="pdf"?"apt_"+a.id:a.id);}state.aparelhos=state.aparelhos.filter(x=>x.id!==b.dataset.ad);save();renderApt();}));}
+  wrap.querySelectorAll("[data-ad]").forEach(b=>b.addEventListener("click",async()=>{const a=state.aparelhos.find(x=>x.id===b.dataset.ad);if(a){await idbDel(a.kind==="pdf"?"apt_"+a.id:a.id);}state.aparelhos=state.aparelhos.filter(x=>x.id!==b.dataset.ad);save();renderApt();}));renderVistMed();}
 
 /* mídias */
 wireDrop("#dropMedia","#mediaInput",files=>handleFiles(files),true);
@@ -986,7 +985,7 @@ async function encerrarPericia(){if(!state.auditoria.abertura){flash("Abra a per
 function reabrir(){if(!window.__ra){window.__ra=true;flash("Toque de novo em Reabrir para quebrar o lacre.");setTimeout(()=>window.__ra=false,3000);return;}state.auditoria.locked=false;save();renderAudit();applyLock();flash("Perícia reaberta para edição.");}
 function renderAudit(){const A=state.auditoria;const info=$("#auditInfo");if(!info)return;const line=(t,o)=>o?`<div style="font-size:13px;margin:4px 0;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--paper)"><b>${t}:</b> ${fmtTs(o.ts)} — ${esc(o.acomp)} (${esc(o.papel)}) ${o.gpsOk?`· 📍 ${o.lat.toFixed(5)}, ${o.lon.toFixed(5)} (±${o.acc} m)`:"· GPS indisponível"}</div>`:"";info.innerHTML=(A.abertura?line("Abertura",A.abertura):`<div class="hint">Perícia ainda não aberta.</div>`)+(A.fechamento?line("Encerramento",A.fechamento):"");const of=$("#openForm");if(of)of.hidden=!!A.abertura;const cf=$("#closeForm");if(cf)cf.hidden=!A.abertura||A.locked;const lb=$("#lockBanner");if(lb)lb.hidden=!A.locked;}
 function applyLock(){const lk=isLocked();const d=$("#dropMedia");if(d)d.hidden=lk;const vd=$("#v_desc");if(vd)vd.readOnly=lk;renderMedia();}
-{const _ab=$("#btnAbrir");if(_ab)_ab.addEventListener("click",abrirPericia);const _en=$("#btnEncerrar");if(_en)_en.addEventListener("click",encerrarPericia);const _rb=$("#btnReabrir");if(_rb)_rb.addEventListener("click",reabrir);const _av=$("#aptFromVist");if(_av)_av.addEventListener("click",()=>{if(window.pdfjsLib||true)$("#aptInput").click();});const _gm=$("#goMed");if(_gm)_gm.addEventListener("click",()=>{const t=document.querySelector('.tab[data-tab="medicoes"]');if(t)t.click();});}
+{const _ab=$("#btnAbrir");if(_ab)_ab.addEventListener("click",abrirPericia);const _en=$("#btnEncerrar");if(_en)_en.addEventListener("click",encerrarPericia);const _rb=$("#btnReabrir");if(_rb)_rb.addEventListener("click",reabrir);const _gm=$("#goMed");if(_gm)_gm.addEventListener("click",()=>{const t=document.querySelector('.tab[data-tab="medicoes"]');if(t)t.click();});}
 
 /* ===== IA: objeto a partir da petição ===== */
 async function iaObjetoFn(auto){const st=$("#iaObjetoStatus");const s=await getSample();if(!s){if(!auto&&st){st.style.color="var(--warn)";st.textContent="IA indisponível aqui.";}return;}
@@ -1062,6 +1061,11 @@ $("#dlDecl").addEventListener("click",()=>simplePdf("PETICAO - ESCUSA DO ENCARGO
 $("#cpAceite").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(genAceiteTxt());flash("Copiado.");}catch(e){flash("Não foi possível copiar.");}});
 $("#cpDecl").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(genDeclTxt());flash("Copiado.");}catch(e){flash("Não foi possível copiar.");}});
 
+function renderVistMed(){const w=$("#vistMedResumo");if(!w)return;let h="";
+  if(state.aparelhos.length)h+=`<div style="font-size:13px;margin-bottom:8px"><b>Relatórios de aparelho:</b> `+state.aparelhos.map(a=>esc(a.nome)).join("; ")+`</div>`;
+  if(state.medicoes.length)h+=`<div class="tbl-wrap"><table class="data" style="min-width:auto"><thead><tr><th>Agente</th><th>Valor</th><th>Unid.</th><th>Limite</th><th>Resultado</th></tr></thead><tbody>`+state.medicoes.map(m=>`<tr><td>${esc(m.agente)||"—"}</td><td>${esc(m.valor)||"—"}</td><td>${esc(m.unidade)||"—"}</td><td>${esc(m.limite)||"—"}</td><td>${esc(m.resultado)||"—"}</td></tr>`).join("")+`</tbody></table></div>`;
+  if(!h)h=`<div class="hint">Nenhum relatório/medição ainda. Anexe e analise na aba Medições.</div>`;
+  w.innerHTML=h;}
 function renderAll(){renderProf();renderEquipe();renderDocs();renderEpi();renderEpiDocs();renderMed();renderApt();renderQuesitos();renderNormas();renderMedia();renderNc();renderAudit();applyLock();checkLaudo();}
 hydrate();bindInputs();renderAll();
 if(!$("#v_metodo").value)$("#v_metodo").value=state.vistoria.metodo;
