@@ -24,7 +24,7 @@ jobs:
       - name: Montar o site
         run: |
           mkdir -p site
-          cp index.html manifest.webmanifest sw.js icon-192.png icon-512.png site/
+          cp index.html assistencia.html manifest.webmanifest sw.js icon-192.png icon-512.png site/
           cp -r vendor site/
 
       - name: Configurar Pages
