@@ -550,7 +550,7 @@ const ABREV=[["ACGIH","American Conference of Governmental Industrial Hygienists
 const CONCEITOS=[["Habitual","Que se faz por hábito; frequente, usual."],["Permanente","Que permanece; contínuo, duradouro, ininterrupto."],["Intermitente","Não contínuo; interrompido a espaços; que para por intervalos."],["Eventual","Que depende de eventualidade; casual, fortuito."]];
 const BIBLIO=["SALIBA, T. M. Manual prático de higiene ocupacional e PPRA.","SALIBA, T. M.; CORRÊA, M. A. C. Insalubridade e periculosidade: aspectos técnicos e práticos.","NR-15 — Atividades e Operações Insalubres (Portaria MTE nº 3.214/78 e Anexos).","NR-16 — Atividades e Operações Perigosas.","NHO-01 e NHO-06 — FUNDACENTRO.","Manuais de Legislação Atlas — Segurança e Medicina do Trabalho."];
 function blankState(){const adr=uid();return{
-  peticao:"",processo:{numero:"",acao:"",vara:"",comarca:"",valor:"",nomeacao:""},
+  painelId:uid(),peticao:"",processo:{numero:"",acao:"",vara:"",comarca:"",valor:"",nomeacao:""},
   empresa:{razao:"",cnpj:"",cnae:"",atividade:"",empregados:"",grau:"",endereco:""},
   profEmpresa:[],partes:{autor:"",autorAdv:"",reu:"",reuAdv:""},vinculo:{funcao:"",setor:"",admissao:"",saida:""},
   equipe:[{id:adr,nome:"Adroaldo Marques de Oliveira",formacao:"Engenheiro de Segurança do Trabalho",registro:"CREA-PR 168996",email:"",tel:""}],
@@ -566,7 +566,8 @@ function blankState(){const adr=uid();return{
 let state=loadState();
 function loadState(){try{const r=localStorage.getItem(LS_KEY);if(r)return Object.assign(blankState(),JSON.parse(r));}catch(e){}return blankState();}
 let saveTimer=null;
-function save(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem(LS_KEY,JSON.stringify(state));const t=$("#saveTxt");t.textContent="✓ salvo";t.className="status saved";}catch(e){}},300);}
+function save(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem(LS_KEY,JSON.stringify(state));const t=$("#saveTxt");t.textContent="✓ salvo";t.className="status saved";}catch(e){}try{syncPainel();}catch(e){}},300);}
+function syncPainel(){try{if(!state.painelId)state.painelId=uid();const numero=((state.processo&&state.processo.numero)||"").trim();const parte=((state.partes&&(state.partes.autor||state.partes.reu))||"").trim();if(!numero&&!parte)return;let arr=[];try{arr=JSON.parse(localStorage.getItem("painel_processos")||"[]");}catch(e){arr=[];}if(!Array.isArray(arr))arr=[];let it=arr.find(x=>x&&x.id===state.painelId);if(!it){it={id:state.painelId,modulo:"Perícia",prazo:"",status:"aberto",obs:""};arr.unshift(it);}it.numero=numero;it.parte=parte;it.modulo="Perícia";localStorage.setItem("painel_processos",JSON.stringify(arr));}catch(e){}}
 
 let dbp=null;
 function db(){if(dbp)return dbp;dbp=new Promise((res,rej)=>{const r=indexedDB.open("perito_media5",1);r.onupgradeneeded=()=>r.result.createObjectStore("m");r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});return dbp;}
