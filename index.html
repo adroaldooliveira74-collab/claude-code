@@ -337,7 +337,7 @@ table.data .del{color:var(--danger);border:1px solid var(--line);background:var(
       <div class="tbl-wrap"><table class="data" id="medTable"><thead><tr><th>Agente / grandeza</th><th>Valor</th><th>Unidade</th><th>Limite (NR-15)</th><th>Instrumento</th><th>Resultado</th><th></th></tr></thead><tbody></tbody></table></div>
       <datalist id="dlAgente"><option>Ruído contínuo</option><option>Ruído de impacto</option><option>Calor (IBUTG)</option><option>Umidade relativa</option><option>Iluminância</option><option>Poeira total</option><option>Poeira respirável</option><option>Vibração (VMB)</option><option>Vibração (VCI)</option><option>Concentração química</option></datalist>
       <datalist id="dlUnidade"><option>dB(A)</option><option>dB(C)</option><option>°C</option><option>%UR</option><option>lux</option><option>mg/m³</option><option>ppm</option><option>m/s²</option><option>f/cm³</option></datalist>
-      <div class="row-actions" style="margin-top:10px"><button class="btn small" id="addMed">+ Linha de medição</button><span class="hint">Entram no laudo em “Avaliações quantitativas”.</span></div>
+      <div class="row-actions" style="margin-top:10px"><button class="btn small" id="addMed">+ Linha de medição</button><button class="btn ia small" id="iaMed">✨ Preencher pela IA (lê relatórios/fotos)</button><span class="hint" id="iaMedStatus">Fotos e registro manual abaixo; a IA lê os relatórios do aparelho e as fotos da vistoria e preenche a tabela.</span></div>
     </div>
     <div class="card">
       <h2>🧾 Relatórios do aparelho <span class="seal">PDF + FOTO + MANUAL</span></h2>
@@ -867,6 +867,23 @@ Petição (trecho): ${(state.peticao||"").slice(0,7000)}`;
   try{const r=await s(prompt,{modelTier:"complex"});const txt=(r&&r.text)||"";if(txt){state.analise=(state.analise?state.analise+"\n\n":"")+txt;$("#analise").value=state.analise;save();}st.style.color="var(--ok)";st.textContent="Análise gerada. Uso interno.";flash("Análise do processo pronta.");
   }catch(e){const msg=iaErr(e);st.style.color="var(--warn)";st.textContent=msg;}finally{b.disabled=false;}}
 $("#iaAnalise").addEventListener("click",iaAnaliseFn);
+
+/* ===== IA: preencher medições a partir de relatórios/fotos ===== */
+async function iaMedicoesFn(){const st=$("#iaMedStatus");const s=await getSample();if(!s){if(st){st.style.color="var(--warn)";st.textContent="Configure o Gemini (aba IA/Config).";}return;}
+  const b=$("#iaMed");if(b)b.disabled=true;if(st){st.style.color="var(--muted)";st.innerHTML='<span class="spin"></span> Lendo relatorios e fotos...';}
+  const blobs=[];const maxImg=(sampleLimits&&sampleLimits.images)?sampleLimits.images.maxCount:8;
+  for(const a of state.aparelhos){if(a.kind==="img"&&blobs.length<maxImg){const bl=await idbGet(a.id);if(bl)blobs.push(bl);}}
+  for(const m of state.media){if(m.kind==="img"&&blobs.length<maxImg){const bl=await idbGet(m.id);if(bl)blobs.push(bl);}}
+  const aptx=await aptTexts();
+  const prompt=`${IA_RULE}
+Extraia as MEDICOES/avaliacoes quantitativas a partir dos relatorios de instrumentos e das imagens anexas (telas de dosimetro, medidor de IBUTG, luximetro, etc.). Para cada medicao informe agente, valor, unidade, limite de tolerancia da NR-15 quando aplicavel, instrumento e o resultado (Dentro do limite / Acima do limite / Nao aplicavel). NAO invente valores que nao estejam nos dados.
+Relatorios (texto):${aptx||" —"}
+Responda SOMENTE com JSON: {"medicoes":[{"agente":"Ruido continuo","valor":"85","unidade":"dB(A)","limite":"85 dB(A)","tecnica":"Dosimetro","resultado":"Acima do limite"}]}`;
+  try{const data=await s.json(prompt,{images:blobs.length?blobs:undefined,modelTier:"complex"});let n=0;
+    if(Array.isArray(data.medicoes))data.medicoes.forEach(x=>{if(x&&(x.agente||x.valor)){state.medicoes.push({id:uid(),agente:String(x.agente||""),valor:String(x.valor||""),unidade:String(x.unidade||""),limite:String(x.limite||""),tecnica:String(x.tecnica||x.instrumento||""),resultado:String(x.resultado||"")});n++;}});
+    save();renderMed();if(st){st.style.color="var(--ok)";st.textContent=n+" medicao(oes) extraida(s) — confira os valores.";}flash(n+" medicao(oes) pela IA.");}
+  catch(e){if(st){st.style.color="var(--warn)";st.textContent=iaErr(e);}}finally{if(b)b.disabled=false;}}
+{const _im=$("#iaMed");if(_im)_im.addEventListener("click",iaMedicoesFn);}
 
 /* ===== laudo ===== */
 async function imgDataUrl(id){const b=await idbGet(id);if(!b)return"";return await new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>res("");r.readAsDataURL(b);});}
