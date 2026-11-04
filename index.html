@@ -157,15 +157,34 @@ table.data .del{color:var(--danger);border:1px solid var(--line);background:var(
 .spin{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
 @keyframes sp{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+#home{position:fixed;inset:0;z-index:60;background:var(--paper);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:28px;text-align:center;padding-top:max(28px,env(safe-area-inset-top,0px));padding-bottom:max(28px,env(safe-area-inset-bottom,0px))}
+#home .home-logo{max-width:280px;width:72%;height:auto}
+#home .home-title{font-family:var(--display);font-weight:700;font-size:22px;color:var(--accent);letter-spacing:.02em}
+#home .home-actions{display:flex;flex-direction:column;gap:14px;width:100%;max-width:360px;margin-top:6px}
+#home .home-actions .btn{font-size:16px;padding:16px}
+body[data-view="app"] #home{display:none}
+body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([data-view="app"]) main{display:none}
 [hidden]{display:none!important}
 </style>
 </head>
 <body>
 
 
+<div id="home">
+  <img class="home-logo" id="homeLogo" alt="UrbanClin">
+  <div class="home-title">Perito · Laudo</div>
+  <div class="hint" style="max-width:440px">UrbanClin — Medicina e Segurança do Trabalho.<br>Escolha o módulo:</div>
+  <div class="home-actions">
+    <button class="btn primary" id="goPericia">⚖️ Perícia Judicial</button>
+    <button class="btn" id="goAssist">🧰 Assistência Técnica</button>
+  </div>
+  <div class="hint" id="assistMsg" hidden>Módulo de Assistência Técnica em construção — em breve.</div>
+</div>
+
 <div class="topbar">
   <div class="brand"><img class="logo-img" id="brandLogo" alt="UrbanClin"><span class="brandtag">Perito · Laudo</span></div>
   <div class="spacer"></div><span id="saveTxt" class="status">—</span>
+  <button class="icon-btn" id="homeBtn">🏠 Início</button>
   <button class="icon-btn" id="themeBtn">◐ Tema</button><button class="icon-btn" id="resetBtn">↺ Novo</button>
 </div>
 
@@ -541,6 +560,7 @@ function fmtDate(d){if(!d)return"";const p=d.split("-");return p.length===3?`${p
 function getPerito(){return state.equipe.find(p=>p.id===state.peritoId)||state.equipe[0]||{nome:"",formacao:"",registro:"",email:"",tel:""};}
 function getAssist(){return state.assistentes.map(id=>state.equipe.find(p=>p.id===id)).filter(Boolean);}
 $("#brandLogo").src=LOGO_HEADER;
+{const hl=$("#homeLogo");if(hl)hl.src=LOGO_HEADER;const gp=$("#goPericia");if(gp)gp.addEventListener("click",()=>{document.body.setAttribute("data-view","app");window.scrollTo(0,0);});const ga=$("#goAssist");if(ga)ga.addEventListener("click",()=>{const m=$("#assistMsg");if(m)m.hidden=false;});const hb=$("#homeBtn");if(hb)hb.addEventListener("click",()=>{document.body.removeAttribute("data-view");});}
 
 (function(){try{if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc="vendor/pdf.worker.min.js";}catch(e){}})();
 async function pdfToText(file){if(!window.pdfjsLib)throw new Error("pdfjs");const data=new Uint8Array(await file.arrayBuffer());const pdf=await pdfjsLib.getDocument({data}).promise;let out="";
