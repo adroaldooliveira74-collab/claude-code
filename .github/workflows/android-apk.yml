@@ -1,0 +1,68 @@
+name: Build Android APK
+
+# Gera um APK de Android (debug, instalável direto no celular) via Capacitor.
+# Rode em Actions -> "Build Android APK" -> Run workflow, ou a cada push.
+# O APK fica em "Artifacts" ao final (perito-laudo-apk / app-debug.apk).
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, "claude/zen-fermi-t4vuel" ]
+    paths:
+      - "index.html"
+      - "vendor/**"
+      - "icon-*.png"
+      - "manifest.webmanifest"
+      - "sw.js"
+      - "capacitor.config.json"
+      - ".github/workflows/android-apk.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Montar a pasta web (www)
+        run: |
+          mkdir -p www
+          cp index.html manifest.webmanifest sw.js icon-192.png icon-512.png www/
+          cp -r vendor www/
+
+      - name: Instalar Capacitor
+        run: npm install --no-save @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
+
+      - name: Adicionar plataforma Android
+        run: npx cap add android
+
+      - name: Apontar o SDK e aceitar licenças
+        run: |
+          SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          echo "Using SDK at: $SDK"
+          echo "sdk.dir=$SDK" > android/local.properties
+          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
+
+      - name: Sincronizar
+        run: npx cap sync android
+
+      - name: Compilar APK (debug)
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Publicar o APK como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: perito-laudo-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
