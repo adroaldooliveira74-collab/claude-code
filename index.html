@@ -500,7 +500,7 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
       <label class="field">Chave da API Gemini<input id="cfg_key" type="password" placeholder="AIza..."></label>
       <label class="field" style="margin-top:10px">Modelo<input id="cfg_model" class="mono" placeholder="gemini-flash-latest"></label>
       <div class="row-actions" style="margin-top:12px"><button class="btn primary" id="cfg_save">Salvar</button><button class="btn" id="cfg_test">Testar conexao</button><span class="hint" id="cfg_status"></span></div>
-      <p class="hint" style="margin-top:10px">Chave gratuita em <b>aistudio.google.com/app/apikey</b>. Modelos: <span class="mono">gemini-flash-latest</span>, <span class="mono">gemini-3.8-flash</span>, <span class="mono">gemini-pro-latest</span>.</p>
+      <p class="hint" style="margin-top:10px">Chave gratuita em <b>aistudio.google.com/app/apikey</b>. Modelos sugeridos: <span class="mono">gemini-flash-latest</span> (padrão), <span class="mono">gemini-pro-latest</span> (mais capaz) e <span class="mono">gemini-flash-lite-latest</span> (mais rápido/econômico). Use sempre as versões <span class="mono">-latest</span>, que não ficam obsoletas.</p>
     </div>
     <div class="card">
       <h2>💾 Backup / transferencia</h2>
@@ -1162,7 +1162,7 @@ function renderAll(){renderProf();renderEquipe();renderDocs();renderEpi();render
 hydrate();bindInputs();renderAll();
 if(!$("#v_metodo").value)$("#v_metodo").value=state.vistoria.metodo;
 $("#saveTxt").textContent="Salva automaticamente";
-try{const _mm=localStorage.getItem("gemini_model");if(_mm&&/2\.0-flash|1\.5|1\.0|^gemini-pro$/.test(_mm))localStorage.setItem("gemini_model","gemini-flash-latest");}catch(e){}getSample();initConfig();initBackup();registerSW();
+try{const _mm=localStorage.getItem("gemini_model");if(_mm&&/2\.0-flash|1\.5|1\.0|3\.8-flash|^gemini-pro$/.test(_mm))localStorage.setItem("gemini_model","gemini-flash-latest");}catch(e){}getSample();initConfig();initBackup();registerSW();
 </script>
 
 </body></html>
