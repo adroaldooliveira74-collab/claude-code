@@ -2,10 +2,11 @@
 
 Automação para Windows em que **o Claude comanda e o bot executa**, todo dia às 16:00:
 
-1. O bot pergunta ao **Claude Code** qual a próxima atualização do dia (modo `claude -p`, sem olhar a tela);
-2. O Claude responde no formato do protocolo (abaixo); o bot **salva como arquivo** e **publica no muse.ai pela API** (cabeçalho `Key`);
-3. O bot volta ao Claude (`--continue`, mantendo a memória do dia) e pede a **próxima**;
-4. Isso se repete **até o Claude responder `ACAO: nada`** (zerou o que foi pedido) ou atingir o limite de segurança.
+1. O bot **lê o arquivo que o app Vistoria gera às 16:00** (a fonte do dia) e entrega o texto ao Claude;
+2. O bot pergunta ao **Claude Code** qual a próxima atualização (modo `claude -p`, sem olhar a tela);
+3. O Claude responde no formato do protocolo (abaixo); o bot **salva como arquivo** e **publica no muse.ai pela API** (cabeçalho `Key`);
+4. O bot volta ao Claude (`--continue`, mantendo a memória do dia) e pede a **próxima**;
+5. Isso se repete **até o Claude responder `ACAO: nada`** (zerou o que foi pedido) ou atingir o limite de segurança.
 
 ### O protocolo (como o Claude comanda)
 
@@ -93,6 +94,11 @@ Pressione `Ctrl+C` para sair do calibrador.
 
 Abra o `config.json` e preencha:
 
+- Em `vistoria`: **onde o app Vistoria salva o arquivo do dia.**
+  - `modo: "arquivo_mais_recente"` + `pasta` + `padrao_arquivo` (ex.: `*.txt`, `*.pdf`) → pega o arquivo mais novo da pasta; **ou**
+  - `modo: "caminho_fixo"` + `caminho_fixo` → sempre o mesmo arquivo (se o app sobrescreve diariamente).
+  - Se o Vistoria exporta **PDF**, instale também: `pip install pypdf`.
+  - Teste a leitura: `python claude_muse_bot.py --testar-vistoria`
 - Em `claude.prompt_inicial`: a instrução que abre o dia (já traz o protocolo). Ajuste para dizer **o que são as atualizações do dia** e de onde o Claude tira o que precisa fazer. **Quanto mais específico, melhor.**
 - Em `claude.prompt_proximo`: a mensagem que pede a próxima atualização (normalmente não precisa mexer).
 - Em `claude.continuar_conversa`: `true` para o Claude lembrar o que já foi feito no dia (usa `claude --continue`).

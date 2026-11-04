@@ -174,6 +174,66 @@ def _limpar_nome(titulo):
     return seguro or "atualizacao"
 
 
+# ============================================================================
+# App Vistoria: le o arquivo que o app gera todo dia as 16:00
+# ============================================================================
+def ler_texto_vistoria(cfg):
+    """Le o texto gerado pelo app Vistoria (fonte do dia) a partir de um arquivo.
+
+    Dois modos (config 'vistoria.modo'):
+      - 'caminho_fixo'       : sempre o mesmo arquivo (o app sobrescreve diariamente)
+      - 'arquivo_mais_recente': o arquivo mais novo da pasta que bate com o padrao
+    Suporta .txt/.csv/.md direto; .pdf precisa da lib 'pypdf' (pip install pypdf).
+    """
+    import glob
+
+    v = cfg.get("vistoria", {})
+    modo = v.get("modo", "arquivo_mais_recente")
+
+    if modo == "caminho_fixo":
+        caminho = v.get("caminho_fixo", "").strip()
+        if not caminho:
+            raise RuntimeError("Config 'vistoria.caminho_fixo' esta vazio.")
+        if not os.path.isfile(caminho):
+            raise RuntimeError(f"Arquivo do Vistoria nao encontrado: {caminho}")
+    else:
+        pasta = v.get("pasta", "").strip()
+        padrao = v.get("padrao_arquivo", "*.txt").strip()
+        if not pasta or not os.path.isdir(pasta):
+            raise RuntimeError(f"Pasta do Vistoria invalida: {pasta!r}")
+        candidatos = glob.glob(os.path.join(pasta, padrao))
+        if not candidatos:
+            raise RuntimeError(
+                f"Nenhum arquivo em {pasta} bate com o padrao {padrao!r}."
+            )
+        caminho = max(candidatos, key=os.path.getmtime)
+
+    log(cfg, f"Lendo texto do Vistoria: {caminho}")
+    ext = os.path.splitext(caminho)[1].lower()
+
+    if ext == ".pdf":
+        try:
+            from pypdf import PdfReader
+        except Exception:
+            raise RuntimeError(
+                "O arquivo do Vistoria e PDF. Instale a leitura de PDF:  pip install pypdf"
+            )
+        leitor = PdfReader(caminho)
+        texto = "\n".join((pg.extract_text() or "") for pg in leitor.pages).strip()
+    else:
+        # txt/csv/md e afins: tenta utf-8, cai para latin-1.
+        try:
+            with open(caminho, "r", encoding="utf-8") as f:
+                texto = f.read().strip()
+        except UnicodeDecodeError:
+            with open(caminho, "r", encoding="latin-1") as f:
+                texto = f.read().strip()
+
+    if not texto:
+        raise RuntimeError(f"O arquivo do Vistoria foi lido mas esta vazio: {caminho}")
+    return texto
+
+
 def prompt_escape(texto):
     """Escapa aspas duplas para a linha de comando do Windows."""
     return texto.replace('"', '""')
@@ -253,8 +313,23 @@ def rodar_uma_vez(cfg):
     c = cfg["claude"]
     max_it = cfg["loop"]["max_iteracoes"]
 
-    # Primeira mensagem = o protocolo + pedido da 1a atualizacao (relatorio das 16:00).
+    # Primeira mensagem = protocolo + pedido da 1a atualizacao.
     prompt = c.get("prompt_inicial") or c.get("prompt_relatorio")
+
+    # Anexa o texto do app Vistoria (fonte do dia), se configurado.
+    if cfg.get("vistoria", {}).get("ativo", False):
+        try:
+            texto_vistoria = ler_texto_vistoria(cfg)
+        except RuntimeError as e:
+            log(cfg, f"ERRO ao ler o texto do Vistoria: {e}. Abortando o dia.")
+            return
+        log(cfg, f"Texto do Vistoria carregado ({len(texto_vistoria)} caracteres).")
+        prompt = (
+            prompt
+            + "\n\n=== TEXTO DO APP VISTORIA (fonte do dia, use como base) ===\n"
+            + texto_vistoria
+        )
+
     publicadas = 0
 
     for i in range(1, max_it + 1):
@@ -365,6 +440,7 @@ def main():
     ap.add_argument("--calibrar", action="store_true", help="descobrir coordenadas da tela")
     ap.add_argument("--testar-claude", action="store_true", help="so testa o Claude Code")
     ap.add_argument("--testar-muse", action="store_true", help="confere a chave da API do muse.ai")
+    ap.add_argument("--testar-vistoria", action="store_true", help="mostra o texto lido do app Vistoria")
     ap.add_argument("--agora", action="store_true", help="roda o fluxo completo uma vez")
     ap.add_argument("--daemon", action="store_true", help="fica rodando e dispara no horario")
     args = ap.parse_args()
@@ -383,6 +459,12 @@ def main():
 
     if args.testar_muse:
         print(muse_api.testar_conexao(cfg))
+        return
+
+    if args.testar_vistoria:
+        texto = ler_texto_vistoria(cfg)
+        print(f"--- Texto do Vistoria ({len(texto)} caracteres) ---\n")
+        print(texto[:2000] + ("\n\n[...truncado...]" if len(texto) > 2000 else ""))
         return
 
     if args.agora:

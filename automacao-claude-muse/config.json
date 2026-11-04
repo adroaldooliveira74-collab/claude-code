@@ -1,11 +1,20 @@
 {
   "_comentario": "Edite este arquivo. Todas as posicoes (x,y) voce descobre rodando: python claude_muse_bot.py --calibrar",
 
+  "vistoria": {
+    "_comentario": "O app Vistoria gera um arquivo todo dia as 16:00. O bot le esse arquivo e entrega ao Claude.",
+    "ativo": true,
+    "modo": "arquivo_mais_recente",
+    "pasta": "C:\\Users\\SEU_USUARIO\\Documents\\Vistoria",
+    "padrao_arquivo": "*.txt",
+    "caminho_fixo": ""
+  },
+
   "claude": {
     "comando": "claude",
     "modelo": "",
     "continuar_conversa": true,
-    "prompt_inicial": "Voce vai me comandar as atualizacoes do dia para eu publicar no muse.ai, UMA DE CADA VEZ. Responda SEMPRE exatamente neste formato, sem mais nada:\nACAO: upload\nTITULO: nome-curto-sem-espacos\nCONTEUDO:\n<o texto completo da atualizacao, pronto para publicar>\n\nQuando nao houver mais nada a fazer hoje, responda apenas:\nACAO: nada\n\nComece agora pela primeira atualizacao (o relatorio das 16:00).",
+    "prompt_inicial": "Com base no TEXTO DO APP VISTORIA que vou colar abaixo, voce vai me comandar as atualizacoes do dia para eu publicar no muse.ai, UMA DE CADA VEZ. Responda SEMPRE exatamente neste formato, sem mais nada:\nACAO: upload\nTITULO: nome-curto-sem-espacos\nCONTEUDO:\n<o texto completo da atualizacao, pronto para publicar>\n\nQuando nao houver mais nada a fazer hoje, responda apenas:\nACAO: nada\n\nComece agora pela primeira atualizacao a partir do texto do Vistoria.",
     "prompt_proximo": "Publiquei a atualizacao anterior com sucesso no muse.ai. Qual a proxima? Mesmo formato exato (ACAO/TITULO/CONTEUDO). Se ja zeramos tudo que foi pedido hoje, responda apenas: ACAO: nada",
     "timeout_segundos": 300,
     "diretorio_de_trabalho": ""
