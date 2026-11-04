@@ -35,7 +35,7 @@ jobs:
       - name: Montar a pasta web (www)
         run: |
           mkdir -p www
-          cp index.html manifest.webmanifest sw.js icon-192.png icon-512.png www/
+          cp index.html assistencia.html manifest.webmanifest sw.js icon-192.png icon-512.png www/
           cp -r vendor www/
 
       - name: Instalar Capacitor

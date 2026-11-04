@@ -3,6 +3,7 @@ const CACHE = "perito-laudo-v1";
 const ASSETS = [
   "./",
   "index.html",
+  "assistencia.html",
   "manifest.webmanifest",
   "vendor/pdf.min.js",
   "vendor/pdf.worker.min.js",
