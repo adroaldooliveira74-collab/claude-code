@@ -110,17 +110,13 @@ input.mono{font-family:var(--mono)}
   <div class="card">
     <div class="note">“Prazo a vencer” = processos em aberto cujo prazo cai nos próximos <b id="diasLbl">7</b> dias. “Vencidos” = em aberto com prazo já passado. <label class="field" style="display:inline-block;margin:8px 0 0">Alerta de prazo (dias)<input type="number" id="alertaDias" min="1" max="90" value="7" style="width:90px"></label></div>
     <div class="toolbar">
-      <button class="btn primary" id="btnAdd">+ Adicionar processo</button>
-      <button class="btn small" id="btnPullP">⬇ Puxar da Perícia atual</button>
-      <button class="btn small" id="btnPullA">⬇ Puxar da Assistência atual</button>
-      <span class="spacer"></span>
       <button class="btn small" id="btnPdf">📄 Relatório PDF</button>
       <button class="btn small" id="btnExp">💾 Backup</button>
       <button class="btn small" id="btnImp">⬆ Importar</button>
       <input type="file" id="impFile" accept=".json,application/json" hidden>
     </div>
     <div id="lista"></div>
-    <div class="empty" id="vazio" hidden>Nenhum processo cadastrado ainda. Toque em “Adicionar processo”.</div>
+    <div class="empty" id="vazio" hidden>Nenhum processo ainda. Os processos aparecem aqui <b>automaticamente</b> quando você preenche o número e/ou as partes numa <b>Perícia</b> ou <b>Assistência</b> (neste aparelho). Aqui você só informa o <b>prazo</b> e a <b>situação</b>.</div>
   </div>
 
   <div class="foot"><img id="footLogo" alt="UrbanClin"><div class="d">UrbanClin — Medicina e Segurança do Trabalho<br>Perobal – PR · Atendimento em todo o Estado do Paraná<br>(47) 99167-1874 · a.marques_74@live.com</div></div>
@@ -176,17 +172,13 @@ function render(){
       </div>
       <div class="meta">${esc(p.parte)||"—"} · ${esc(p.modulo||"Perícia")} · prazo: ${prazoTxt}${p.obs?" · "+esc(p.obs):""}</div>
       <div class="edit">
-        <div class="grid3">
-          <label class="field">Número do processo<input class="mono" data-f="numero" value="${esc(p.numero)}"></label>
-          <label class="field">Módulo<select data-f="modulo"><option ${p.modulo==="Perícia"?"selected":""}>Perícia</option><option ${p.modulo==="Assistência"?"selected":""}>Assistência</option></select></label>
-          <label class="field">Situação<select data-f="status"><option value="aberto" ${p.status!=="finalizada"?"selected":""}>Em aberto</option><option value="finalizada" ${p.status==="finalizada"?"selected":""}>Finalizada</option></select></label>
-        </div>
         <div class="grid2">
-          <label class="field">Parte(s) / reclamante<input data-f="parte" value="${esc(p.parte)}"></label>
+          <label class="field">Situação<select data-f="status"><option value="aberto" ${p.status!=="finalizada"?"selected":""}>Em aberto</option><option value="finalizada" ${p.status==="finalizada"?"selected":""}>Finalizada</option></select></label>
           <label class="field">Prazo de entrega<input type="date" data-f="prazo" value="${esc(p.prazo)}"></label>
         </div>
-        <label class="field">Observações<input data-f="obs" value="${esc(p.obs)}"></label>
-        <button class="btn danger small" data-act="del">🗑 Excluir processo</button>
+        <label class="field">Observações<input data-f="obs" value="${esc(p.obs)}" placeholder="anotações livres"></label>
+        <p class="sub" style="margin:2px 0 10px">Número, parte e módulo vêm da ${esc(p.modulo||"Perícia")} e são atualizados automaticamente.</p>
+        <button class="btn danger small" data-act="del">🗑 Remover do painel</button>
       </div>`;
     lista.appendChild(el);
   });
@@ -196,17 +188,6 @@ function render(){
   lista.querySelectorAll("[data-f]").forEach(inp=>{const ev=(inp.tagName==="SELECT"||inp.type==="date")?"change":"input";inp.addEventListener(ev,()=>{const id=inp.closest(".row").dataset.id;const p=procs.find(x=>x.id===id);if(!p)return;p[inp.dataset.f]=inp.value;persist();if(inp.dataset.f!=="numero"&&inp.dataset.f!=="parte"&&inp.dataset.f!=="obs")render();});});
 }
 
-function addProc(pre){procs.unshift(Object.assign({id:uid(),numero:"",parte:"",modulo:"Perícia",prazo:"",status:"aberto",obs:""},pre||{}));persist();filtro=null;document.querySelectorAll(".tile").forEach(t=>t.setAttribute("aria-pressed","false"));render();const first=$("#lista .row");if(first){first.classList.add("open");first.scrollIntoView({behavior:"smooth",block:"center"});}}
-
-function pullFrom(lsKey,modulo){
-  let st;try{st=JSON.parse(localStorage.getItem(lsKey)||"null");}catch(e){st=null;}
-  if(!st){flash("Nada encontrado — abra e salve um processo no módulo "+modulo+" neste aparelho.");return;}
-  const numero=(st.processo&&st.processo.numero)||"";
-  const parte=(st.partes&&(st.partes.autor||st.partes.reu))||"";
-  if(!numero&&!parte){flash("O processo atual do módulo "+modulo+" está sem número/partes.");return;}
-  if(numero&&procs.some(p=>p.numero&&p.numero===numero)){flash("Esse processo já está no painel.");return;}
-  addProc({numero,parte,modulo});flash("Puxado do módulo "+modulo+" — informe o prazo.");
-}
 
 function exportPdf(){
   const J=window.jspdf&&window.jspdf.jsPDF;if(!J){flash("Gerador de PDF indisponível.");return;}
@@ -253,9 +234,6 @@ document.getElementById("logo").src=LOGO;document.getElementById("footLogo").src
 $("#alertaDias").value=alertaDias();
 $("#alertaDias").addEventListener("change",()=>{let v=parseInt($("#alertaDias").value,10);if(isNaN(v))v=7;v=Math.max(1,Math.min(90,v));$("#alertaDias").value=v;localStorage.setItem(CFGK,String(v));render();});
 document.querySelectorAll(".tile").forEach(t=>t.addEventListener("click",()=>{const b=t.dataset.bucket;filtro=filtro===b?null:b;document.querySelectorAll(".tile").forEach(x=>x.setAttribute("aria-pressed",x.dataset.bucket===filtro?"true":"false"));render();}));
-$("#btnAdd").addEventListener("click",()=>addProc());
-$("#btnPullP").addEventListener("click",()=>pullFrom("perito_laudo_v5","Perícia"));
-$("#btnPullA").addEventListener("click",()=>pullFrom("assist_laudo_v1","Assistência"));
 $("#btnPdf").addEventListener("click",exportPdf);
 $("#btnExp").addEventListener("click",exportJson);
 $("#btnImp").addEventListener("click",()=>$("#impFile").click());

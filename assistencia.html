@@ -506,7 +506,7 @@ const PROF_FUNCOES=["Eng. de Segurança do Trabalho","Médico do Trabalho","Téc
 
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
 function blankState(){const adr=uid();return{
-  peticao:"",processo:{numero:"",acao:"",vara:"",comarca:"",valor:"",nomeacao:""},peritoProc:{nome:"",crea:""},
+  painelId:uid(),peticao:"",processo:{numero:"",acao:"",vara:"",comarca:"",valor:"",nomeacao:""},peritoProc:{nome:"",crea:""},
   empresa:{razao:"",cnpj:"",cnae:"",atividade:"",empregados:"",grau:"",endereco:""},
   profEmpresa:[],partes:{autor:"",autorAdv:"",reu:"",reuAdv:""},vinculo:{funcao:"",setor:"",admissao:"",saida:""},
   equipe:[{id:adr,nome:"Adroaldo Marques de Oliveira",formacao:"Engenheiro de Segurança do Trabalho",registro:"CREA-PR 168996",email:"",tel:""}],
@@ -522,7 +522,8 @@ function blankState(){const adr=uid();return{
 let state=loadState();
 function loadState(){try{const r=localStorage.getItem(LS_KEY);if(r)return Object.assign(blankState(),JSON.parse(r));}catch(e){}return blankState();}
 let saveTimer=null;
-function save(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem(LS_KEY,JSON.stringify(state));const t=$("#saveTxt");t.textContent="✓ salvo";t.className="status saved";}catch(e){}},300);}
+function save(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem(LS_KEY,JSON.stringify(state));const t=$("#saveTxt");t.textContent="✓ salvo";t.className="status saved";}catch(e){}try{syncPainel();}catch(e){}},300);}
+function syncPainel(){try{if(!state.painelId)state.painelId=uid();const numero=((state.processo&&state.processo.numero)||"").trim();const parte=((state.partes&&(state.partes.autor||state.partes.reu))||"").trim();if(!numero&&!parte)return;let arr=[];try{arr=JSON.parse(localStorage.getItem("painel_processos")||"[]");}catch(e){arr=[];}if(!Array.isArray(arr))arr=[];let it=arr.find(x=>x&&x.id===state.painelId);if(!it){it={id:state.painelId,modulo:"Assistência",prazo:"",status:"aberto",obs:""};arr.unshift(it);}it.numero=numero;it.parte=parte;it.modulo="Assistência";localStorage.setItem("painel_processos",JSON.stringify(arr));}catch(e){}}
 
 let dbp=null;
 function db(){if(dbp)return dbp;dbp=new Promise((res,rej)=>{const r=indexedDB.open("assist_media1",1);r.onupgradeneeded=()=>r.result.createObjectStore("m");r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});return dbp;}
