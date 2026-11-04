@@ -316,7 +316,7 @@ table.data .del{color:var(--danger);border:1px solid var(--line);background:var(
     <div class="card">
       <h2>📷 Registro fotográfico e audiovisual <span class="seal">PADRÃO VISTORIA</span></h2>
       <div class="note green"><b>Regra:</b> as fotos e vídeos existem para <b>responder ao processo</b>. Registre apenas o que se relaciona ao objeto e aos quesitos. O que for visto na perícia mas alheio ao processo vai para o <b>Relatório de Não Conformidades</b>, que <b>não</b> integra o laudo.</div>
-      <div class="drop" id="dropMedia"><span class="ic">🖼️</span><b>Toque para escolher ou arraste fotos e vídeos</b><span>JPG, PNG, HEIC, MP4… — imagens redimensionadas e salvas no navegador.</span></div>
+      <div class="drop" id="dropMedia"><span class="ic">🖼️</span><b>Toque para escolher ou arraste fotos e vídeos</b><span>JPG, PNG, HEIC, MP4… — máx. <b>100 fotos</b> e <b>50 vídeos</b> de até <b>1 min</b>. Imagens são redimensionadas e salvas no navegador.</span></div>
       <input type="file" id="mediaInput" accept="image/*,video/*" multiple hidden>
       <div class="row-actions" style="margin-top:12px"><span class="count-badge" id="mediaCount">0 mídias</span></div>
       <div class="photos" id="mediaGrid"></div>
@@ -694,7 +694,21 @@ async function renderApt(){aptUrls.forEach(u=>URL.revokeObjectURL(u));aptUrls.le
 
 /* mídias */
 wireDrop("#dropMedia","#mediaInput",files=>handleFiles(files),true);
-async function handleFiles(files){if(isLocked()){flash("Perícia encerrada — somente leitura. Use o relatório do aparelho, que segue liberado.");return;}for(const f of files){const isImg=f.type.startsWith("image/"),isVid=f.type.startsWith("video/");if(!isImg&&!isVid)continue;const id=uid();try{const b=isImg?await downscale(f):f;await idbPut(id,b);}catch(e){await idbPut(id,f);}state.media.push({id,kind:isImg?"img":"vid",legenda:"",norma:""});}save();renderMedia();flash("Mídia adicionada.");}
+const MAX_FOTOS=100,MAX_VIDEOS=50,MAX_VID_SEG=60;
+function videoDuracao(file){return new Promise(res=>{try{const v=document.createElement("video");v.preload="metadata";v.onloadedmetadata=()=>{const d=v.duration;URL.revokeObjectURL(v.src);res(isFinite(d)?d:0);};v.onerror=()=>{URL.revokeObjectURL(v.src);res(0);};v.src=URL.createObjectURL(file);}catch(e){res(0);}});}
+async function handleFiles(files){if(isLocked()){flash("Perícia encerrada — somente leitura. Use o relatório do aparelho, que segue liberado.");return;}
+  let nFotos=state.media.filter(m=>m.kind==="img").length,nVids=state.media.filter(m=>m.kind==="vid").length;
+  let add=0,rejFoto=0,rejVid=0,rejDur=0;
+  for(const f of files){const isImg=f.type.startsWith("image/"),isVid=f.type.startsWith("video/");if(!isImg&&!isVid)continue;
+    if(isImg){if(nFotos>=MAX_FOTOS){rejFoto++;continue;}}
+    else{if(nVids>=MAX_VIDEOS){rejVid++;continue;}const dur=await videoDuracao(f);if(dur>MAX_VID_SEG+0.5){rejDur++;continue;}}
+    const id=uid();try{const b=isImg?await downscale(f):f;await idbPut(id,b);}catch(e){await idbPut(id,f);}
+    state.media.push({id,kind:isImg?"img":"vid",legenda:"",norma:""});if(isImg)nFotos++;else nVids++;add++;}
+  save();renderMedia();
+  const avisos=[];if(rejFoto)avisos.push(rejFoto+" foto(s) acima do limite de "+MAX_FOTOS);if(rejVid)avisos.push(rejVid+" vídeo(s) acima do limite de "+MAX_VIDEOS);if(rejDur)avisos.push(rejDur+" vídeo(s) com mais de 1 min");
+  if(add&&avisos.length)flash(add+" adicionada(s). Ignorado(s): "+avisos.join("; ")+".");
+  else if(avisos.length)flash("Nada adicionado — "+avisos.join("; ")+".");
+  else flash(add+" mídia(s) adicionada(s). ("+nFotos+"/"+MAX_FOTOS+" fotos, "+nVids+"/"+MAX_VIDEOS+" vídeos)");}
 function downscale(file){return new Promise((res,rej)=>{const img=new Image(),u=URL.createObjectURL(file);img.onload=()=>{const max=1600;let w=img.width,h=img.height;if(w>max||h>max){const r=Math.min(max/w,max/h);w=Math.round(w*r);h=Math.round(h*r);}const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);URL.revokeObjectURL(u);c.toBlob(b=>b?res(b):rej(0),"image/jpeg",.82);};img.onerror=()=>{URL.revokeObjectURL(u);rej(0);};img.src=u;});}
 const objUrls=[];
 async function renderMedia(){objUrls.forEach(u=>URL.revokeObjectURL(u));objUrls.length=0;const grid=$("#mediaGrid");grid.innerHTML="";$("#mediaEmpty").hidden=state.media.length>0;$("#mediaCount").textContent=state.media.length+(state.media.length===1?" mídia":" mídias");
