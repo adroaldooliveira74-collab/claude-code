@@ -97,7 +97,7 @@ input.mono,.mono input{font-family:var(--mono)}.hint{font-size:11.5px;color:var(
 .ques{border:1px solid var(--line);border-radius:11px;margin-bottom:13px;background:var(--card);overflow:hidden}
 .ques .head{display:flex;align-items:center;gap:9px;padding:11px 13px;background:var(--paper);border-bottom:1px solid var(--line);flex-wrap:wrap}
 .pill{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px;text-transform:uppercase;letter-spacing:.5px;color:#fff}
-.pill.juiz{background:#1f5fbf}.pill.reclamada{background:#c0392b}.pill.autora{background:var(--accent)}.pill.mp{background:#6b4fd8}
+.pill.juiz{background:#1f5fbf}.pill.reclamada{background:#c0392b}.pill.autora{background:var(--accent)}.pill.mp{background:#6b4fd8}.pill.laudo{background:#8a601c}
 .ques .qnum{font-family:var(--mono);font-weight:600;color:var(--muted);font-size:13px}.ques .head .spacer{flex:1}
 .ques select.orig{min-height:34px;padding:4px 8px;font-size:12px;width:auto}
 .ques .inner{padding:13px}.ques .qlabel{font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:700;margin-bottom:5px}
@@ -353,22 +353,17 @@ table.data .del{color:var(--danger);border:1px solid var(--line);background:var(
   <!-- 6 · QUESITOS -->
   <section class="panel" data-tab="quesitos">
     <div class="card">
-      <h2>❓ Quesitos <span class="seal">PDF · JUIZ → RECLAMADA → AUTORA</span></h2>
-      <p class="sub">Importe o PDF dos quesitos. O sistema separa por origem e mantém a ordem de resposta: Juiz, Reclamada e, por fim, a parte Autora.</p>
-      <div class="drop" id="dropQ"><span class="ic">📄</span><b>Toque para escolher o PDF dos quesitos</b><span>ou arraste aqui.</span></div>
-      <input type="file" id="qInput" accept="application/pdf" hidden>
-      <div class="row-actions" style="margin-top:10px"><button class="btn small" id="toggleQ">✎ Colar texto</button><span class="hint" id="qResult"></span></div>
-      <label class="field" id="qTextWrap" style="margin-top:12px" hidden>Texto dos quesitos
-        <textarea id="qText" rows="6" placeholder="Cole o texto dos quesitos (com os títulos de cada parte, se houver)…"></textarea>
-        <button class="btn small" id="parseQText" style="margin-top:8px;align-self:flex-start">⤵ Importar</button></label>
-      <div class="note green"><b>Imparcialidade:</b> o laudo esclarece a dúvida do juízo, não cria litígio. Responda de forma técnica, objetiva e fundamentada.</div>
+      <h2>⚖️ Laudo pericial — análise <span class="seal ia">IA ACHA OS FUROS</span></h2>
+      <p class="sub">Importe o PDF do <b>laudo do perito</b>. A IA analisa todos os pontos e os quesitos respondidos, cruza com a petição inicial e aponta os <b>furos</b> que podem fundamentar a impugnação.</p>
+      <div class="drop" id="dropLaudo"><span class="ic">📄</span><b>Toque para escolher o PDF do laudo pericial</b><span>ou arraste aqui.</span></div>
+      <input type="file" id="laudoInput" accept="application/pdf" hidden>
+      <div class="row-actions" style="margin-top:10px"><span class="hint" id="laudoResult"></span></div>
+      <div class="row-actions" style="margin-top:12px"><button class="btn ia" id="iaFuros">✨ Analisar laudo (achar furos)</button><span class="hint" id="furosStatus"></span></div>
+      <div class="note green"><b>Como funciona:</b> cada ponto frágil vira um item abaixo (ponto do laudo × crítica técnica). Revise e edite antes de usar no relatório.</div>
       <div id="quesitosList"></div>
-      <div class="empty-state" id="quesEmpty">Nenhum quesito cadastrado.</div>
+      <div class="empty-state" id="quesEmpty">Nenhum ponto/crítica cadastrado.</div>
       <div class="add-bar">
-        <button class="btn small" data-addq="Juiz">+ Quesito do Juiz</button>
-        <button class="btn small" data-addq="Reclamada">+ Quesito da Reclamada</button>
-        <button class="btn small" data-addq="Autora">+ Quesito da Autora</button>
-        <button class="btn small" data-addq="MP">+ Quesito do MP</button>
+        <button class="btn small" data-addq="Laudo">+ Ponto do laudo</button>
       </div>
     </div>
   </section>
@@ -398,8 +393,9 @@ table.data .del{color:var(--danger);border:1px solid var(--line);background:var(
       <div class="note ia"><b>Como funciona:</b> a IA integrada lê as fotos, os relatórios de aparelho e os dados cadastrados e redige um <b>rascunho</b> das legendas, da conclusão e das respostas aos quesitos. <b>Nada é definitivo</b> — o engenheiro revisa, corrige e imprime. A IA só preenche campos vazios.</div>
       <div class="row-actions"><button class="btn ia" id="iaBtn">✨ Gerar rascunho (fotos + dados)</button><span class="hint" id="iaStatus"></span></div>
     </div>
-    <div class="card"><h2>✍️ Conclusão</h2>
-      <label class="field">Conclusão do perito
+    <div class="card"><h2>✍️ Parecer / Conclusão <span class="seal ia">IA MONTA A IMPUGNAÇÃO</span></h2>
+      <div class="row-actions" style="margin-bottom:10px"><button class="btn ia small" id="iaParecer">✨ Montar parecer de impugnação (IA)</button><span class="hint" id="iaParecerStatus"></span></div>
+      <label class="field">Parecer do assistente técnico
         <textarea id="concl" rows="5" placeholder="Diante do exposto e das constatações técnicas, conclui o perito que as atividades do reclamante [são / não são] insalubres/perigosas, nos termos da NR-15/NR-16…"></textarea></label></div>
     <div class="card"><h2>✅ Conformidade do laudo <span class="seal">CPC art. 473</span></h2>
       <p class="sub">Verificação automática — feche as pendências antes de exportar, para o juízo não descartar o laudo por lacuna.</p>
@@ -426,8 +422,8 @@ table.data .del{color:var(--danger);border:1px solid var(--line);background:var(
   <!-- ⚖ · ACEITE / ESCUSA -->
   <section class="panel" data-tab="aceite">
     <div class="card">
-      <h2>⚖️ Aceite ou escusa do encargo <span class="seal">HONORÁRIOS · CPC 465/467</span></h2>
-      <div class="note"><b>Base dos honorários (confirme vigência e valores):</b> CPC art. 465, §3º (proposta de honorários) e art. 95 (adiantamento); Resolução CNJ nº 232/2016 (tabela); na Justiça do Trabalho, CLT art. 790-B e Resolução CSJT de honorários periciais. <b>Sem jurisprudência</b> — apenas a base de remuneração do perito.</div>
+      <h2>💼 Proposta de Assistência Técnica <span class="seal">HONORÁRIOS</span></h2>
+      <div class="note green"><b>Regras fixas:</b> R$ 1,00/km rodado (ida e volta, de <b>Perobal-PR</b> até a cidade da perícia) + refeição; até 100 km sem hotel; acima, diária de hotel estimada pela IA. Distância, hotel e refeição são estimativas — <b>confirme</b>.</div>
       <div class="grid g2">
         <label class="field">Valor arbitrado/ofertado pelo juízo <input id="en_ofertado" placeholder="R$ 0,00"></label>
         <label class="field">Honorários propostos <input id="en_proposto" placeholder="R$ 0,00"></label>
@@ -436,16 +432,16 @@ table.data .del{color:var(--danger);border:1px solid var(--line);background:var(
         <label class="field">Distância até o local — só ida (km) <input id="en_km" class="mono" placeholder="0"></label>
         <label class="field">Cidade do local (p/ estimar hotel/refeição) <input id="en_cidade" placeholder="Cidade – UF"></label>
       </div>
-      <div class="row-actions" style="margin-top:12px"><button class="btn ia small" id="iaHon">✨ Calcular honorários (IA)</button><span class="hint" id="iaHonStatus">Até 50 km sem deslocamento; acima, R$ 1,00/km rodado (ida e volta). A IA estima hotel/refeição e observa o teto legal (a confirmar).</span></div>
+      <div class="row-actions" style="margin-top:12px"><button class="btn ia small" id="iaHon">✨ Calcular honorários (IA)</button><span class="hint" id="iaHonStatus">R$ 1,00/km rodado (ida e volta) de Perobal-PR; refeição; acima de 100 km, diária de hotel estimada pela IA.</span></div>
       <label class="field" style="margin-top:12px">Justificativa dos honorários (complexidade, horas técnicas, deslocamento, medições, nº de quesitos)
         <textarea id="en_just" rows="4" placeholder="Deixe em branco para usar um texto-padrão, ou gere pela IA."></textarea></label>
     </div>
     <div class="card">
-      <h2>✅ Petição de aceitação + proposta de honorários</h2>
+      <h2>📄 Proposta de Assistência Técnica</h2>
       <div class="row-actions"><button class="btn primary" id="genAceite">↻ Gerar</button><button class="btn laranja" id="dlAceite">⬇ Baixar PDF</button><button class="btn" id="cpAceite">⧉ Copiar</button></div>
       <div class="doc" id="aceiteDoc" style="margin-top:12px"><p class="empty">Clique em Gerar.</p></div>
     </div>
-    <div class="card">
+    <div class="card" id="escusaCard" hidden>
       <h2>🚫 Petição de escusa / declínio <span class="seal">CPC art. 467</span></h2>
       <p class="sub">Texto-padrão para quando você não puder/quiser realizar a perícia.</p>
       <label class="field">Motivo da escusa<select id="en_motivo">
@@ -613,11 +609,8 @@ async function handlePdf(file,kind){const resSel=kind==="pet"?"#petResult":"#qRe
   try{const txt=await pdfToText(file);if(!txt.trim())throw 0;kind==="pet"?parsePeticao(txt):importQuesitos(txt);}
   catch(e){$(resSel).style.color="var(--warn)";$(resSel).textContent="Não consegui ler (PDF imagem/digitalizado?). Use “Colar texto”.";flash("Falha ao ler o PDF.");}}
 wireDrop("#dropPet","#petInput",f=>handlePdf(f,"pet"));
-wireDrop("#dropQ","#qInput",f=>handlePdf(f,"q"));
 $("#togglePet").addEventListener("click",()=>{const w=$("#petTextWrap");w.hidden=!w.hidden;});
-$("#toggleQ").addEventListener("click",()=>{const w=$("#qTextWrap");w.hidden=!w.hidden;});
 $("#parsePetText").addEventListener("click",()=>{const t=$("#peticao").value;if(!t.trim()){flash("Cole o texto primeiro.");return;}parsePeticao(t);});
-$("#parseQText").addEventListener("click",()=>{const t=$("#qText").value;if(!t.trim()){flash("Cole o texto primeiro.");return;}importQuesitos(t);});
 
 /* responsáveis da empresa */
 function renderProf(){const wrap=$("#profList");wrap.innerHTML="";
@@ -721,8 +714,8 @@ function addQuesito(o){state.quesitos.push({id:uid(),origem:o,pergunta:"",respos
 $$("[data-addq]").forEach(b=>b.addEventListener("click",()=>addQuesito(b.dataset.addq)));
 function renderQuesitos(){const wrap=$("#quesitosList");wrap.innerHTML="";$("#quesEmpty").hidden=state.quesitos.length>0;
   const ordered=[...state.quesitos].sort((a,b)=>ORDER.indexOf(a.origem)-ORDER.indexOf(b.origem));const cnt={};
-  ordered.forEach(q=>{cnt[q.origem]=(cnt[q.origem]||0)+1;const n=cnt[q.origem];const cls=q.origem==="Juiz"?"juiz":q.origem==="Reclamada"?"reclamada":q.origem==="Autora"?"autora":"mp";
-    const el=document.createElement("div");el.className="ques";el.innerHTML=`<div class="head"><span class="pill ${cls}">${esc(q.origem)}</span><span class="qnum">Quesito ${String(n).padStart(2,"0")}</span><span class="spacer"></span><select class="orig" data-orig="${q.id}">${ORDER.map(o=>`<option ${o===q.origem?"selected":""}>${o}</option>`).join("")}</select><button class="btn danger small" data-delq="${q.id}">Remover</button></div><div class="inner"><div class="qlabel">Pergunta</div><textarea class="pergunta" data-qp="${q.id}" placeholder="Transcreva o quesito…">${esc(q.pergunta)}</textarea><div class="qlabel">Resposta do perito</div><textarea class="resposta" data-qa="${q.id}" placeholder="Resposta técnica, objetiva e fundamentada…">${esc(q.resposta)}</textarea></div>`;wrap.appendChild(el);});
+  ordered.forEach(q=>{cnt[q.origem]=(cnt[q.origem]||0)+1;const n=cnt[q.origem];const cls=q.origem==="Juiz"?"juiz":q.origem==="Reclamada"?"reclamada":q.origem==="Autora"?"autora":q.origem==="MP"?"mp":"laudo";
+    const el=document.createElement("div");el.className="ques";el.innerHTML=`<div class="head"><span class="pill ${cls}">${esc(q.origem)}</span><span class="qnum">Quesito ${String(n).padStart(2,"0")}</span><span class="spacer"></span><select class="orig" data-orig="${q.id}">${ORDER.map(o=>`<option ${o===q.origem?"selected":""}>${o}</option>`).join("")}</select><button class="btn danger small" data-delq="${q.id}">Remover</button></div><div class="inner"><div class="qlabel">Ponto do laudo</div><textarea class="pergunta" data-qp="${q.id}" placeholder="Transcreva o quesito…">${esc(q.pergunta)}</textarea><div class="qlabel">Crítica técnica</div><textarea class="resposta" data-qa="${q.id}" placeholder="Resposta técnica, objetiva e fundamentada…">${esc(q.resposta)}</textarea></div>`;wrap.appendChild(el);});
   wrap.querySelectorAll("[data-qp]").forEach(t=>t.addEventListener("input",()=>{const q=state.quesitos.find(x=>x.id===t.dataset.qp);if(q){q.pergunta=t.value;save();}}));
   wrap.querySelectorAll("[data-qa]").forEach(t=>t.addEventListener("input",()=>{const q=state.quesitos.find(x=>x.id===t.dataset.qa);if(q){q.resposta=t.value;save();}}));
   wrap.querySelectorAll("[data-orig]").forEach(s=>s.addEventListener("change",()=>{const q=state.quesitos.find(x=>x.id===s.dataset.orig);if(q){q.origem=s.value;save();renderQuesitos();}}));
@@ -887,6 +880,42 @@ Responda SOMENTE com JSON: {"medicoes":[{"agente":"Ruido continuo","valor":"85",
   catch(e){if(st){st.style.color="var(--warn)";st.textContent=iaErr(e);}}finally{if(b)b.disabled=false;}}
 {const _im=$("#iaMed");if(_im)_im.addEventListener("click",iaMedicoesFn);}
 
+/* ===== Assistência: laudo do perito + furos + parecer ===== */
+async function handleLaudoPdf(file){const r=$("#laudoResult");if(r){r.style.color="var(--muted)";r.innerHTML='<span class="spin"></span> Lendo laudo…';}try{const t=await pdfToText(file);if(!t.trim())throw 0;await idbPut("laudotext",t);state.laudoHas=true;save();if(r){r.style.color="var(--ok)";r.textContent="Laudo lido ("+t.length+" caracteres). Agora clique em Analisar.";}flash("Laudo do perito carregado.");}catch(e){if(r){r.style.color="var(--warn)";r.textContent="Não consegui ler (PDF imagem/digitalizado?). Tente outro arquivo.";}}}
+async function iaFuros(){const st=$("#furosStatus");const s=await getSample();if(!s){st.style.color="var(--warn)";st.textContent="Configure o Gemini (aba IA/Config).";return;}
+  const laudo=await idbGet("laudotext");if(!laudo){st.style.color="var(--warn)";st.textContent="Importe o PDF do laudo primeiro.";return;}
+  const b=$("#iaFuros");if(b)b.disabled=true;st.style.color="var(--muted)";st.innerHTML='<span class="spin"></span> Analisando o laudo…';
+  const normas=state.normas.filter(n=>n.on).map(n=>n.code).join(", ");
+  const prompt=`${IA_RULE}
+Você atua como ASSISTENTE TÉCNICO da parte RECLAMADA. Analise criticamente o LAUDO PERICIAL abaixo e encontre TODOS os pontos frágeis ("furos") que possam fundamentar a IMPUGNAÇÃO do laudo: falhas de método, ausência/insuficiência de medição, divergência com a petição inicial, respostas aos quesitos sem base técnica, desrespeito às NR, conclusões sem demonstração. Cruze com a petição inicial e com o que foi visto na vistoria.
+Petição (trecho): ${(state.peticao||"").slice(0,5000)}
+Vistoria (caracterização): ${(state.vistoria.desc||"").slice(0,1500)}
+Normas aplicáveis: ${normas||"—"}
+LAUDO DO PERITO (trecho): ${laudo.slice(0,20000)}
+Responda SOMENTE com JSON: {"furos":[{"ponto":"ponto/afirmação do laudo","critica":"por que é frágil, tecnicamente","base":"NR/petição/boa técnica"}],"resumo":"síntese das fragilidades"}`;
+  try{const d=await s.json(prompt,{modelTier:"complex"});let n=0;
+    if(Array.isArray(d.furos))d.furos.forEach(f=>{if(f&&(f.ponto||f.critica)){state.quesitos.push({id:uid(),origem:"Laudo",pergunta:String(f.ponto||""),resposta:String(f.critica||"")+(f.base?" (Base: "+f.base+")":"")});n++;}});
+    if(d.resumo&&!state.conclusao.trim()){state.conclusao=String(d.resumo);const c=$("#concl");if(c)c.value=state.conclusao;}
+    save();renderQuesitos();generateLaudo();st.style.color="var(--ok)";st.textContent=n+" furo(s) encontrado(s) — revise na lista.";flash(n+" furo(s) pela IA.");}
+  catch(e){st.style.color="var(--warn)";st.textContent=iaErr(e);}finally{if(b)b.disabled=false;}}
+{const _if=$("#iaFuros");if(_if)_if.addEventListener("click",iaFuros);const _dl=$("#dropLaudo");if(_dl)wireDrop("#dropLaudo","#laudoInput",f=>handleLaudoPdf(f));}
+async function iaParecer(){const st=$("#iaParecerStatus");const s=await getSample();if(!s){st.style.color="var(--warn)";st.textContent="Configure o Gemini (aba IA/Config).";return;}
+  const laudo=await idbGet("laudotext")||"";const furos=state.quesitos.filter(q=>q.origem==="Laudo").map((q,i)=>(i+1)+") "+q.pergunta+" => "+q.resposta).join("\n");
+  const b=$("#iaParecer");if(b)b.disabled=true;st.style.color="var(--muted)";st.innerHTML='<span class="spin"></span> Montando o parecer…';
+  const prompt=`${IA_RULE}
+Você é ASSISTENTE TÉCNICO da RECLAMADA. Redija um PARECER TÉCNICO fundamentado, em português formal, concluindo pela IMPUGNAÇÃO do laudo pericial, cruzando laudo + petição + vistoria. Estruture: 1) Síntese; 2) Das fragilidades do laudo (ponto a ponto); 3) Da divergência com a realidade/petição; 4) Conclusão e pedido (requer a desconsideração/impugnação do laudo e, se cabível, esclarecimentos ou nova perícia). Técnica de SST; sem jurisprudência.
+Fragilidades levantadas:
+${furos||"(use sua própria análise do laudo)"}
+Petição (trecho): ${(state.peticao||"").slice(0,4000)}
+Vistoria: ${(state.vistoria.desc||"").slice(0,1500)}
+Laudo (trecho): ${laudo.slice(0,12000)}
+Responda apenas o texto do parecer.`;
+  try{const r=await s(prompt,{modelTier:"complex"});const t=((r&&r.text)||"").trim();if(t){state.conclusao=t;const c=$("#concl");if(c)c.value=t;save();generateLaudo();}st.style.color="var(--ok)";st.textContent="Parecer gerado — revise.";flash("Parecer de impugnação pronto.");}
+  catch(e){st.style.color="var(--warn)";st.textContent=iaErr(e);}finally{if(b)b.disabled=false;}}
+{const _ip=$("#iaParecer");if(_ip)_ip.addEventListener("click",iaParecer);}
+function genPropostaTxt(){const PE=getPerito(),E=state.encargo,P=state.processo;const cliente=state.partes.reu||state.empresa.razao||"[reclamada]";
+  return `PROPOSTA DE ASSISTÊNCIA TÉCNICA\n\nProcesso nº ${P.numero||"[número]"} — ${P.vara||"[vara]"}\nContratante (reclamada): ${cliente}\nPerito do processo: ${state.peritoProc.nome||"[perito]"}${state.peritoProc.crea?" ("+state.peritoProc.crea+")":""}\n\nPrezados, apresento proposta para atuação como ASSISTENTE TÉCNICO da reclamada, compreendendo: análise do laudo pericial, cruzamento com a petição inicial e documentos, vistoria/acompanhamento quando necessário e elaboração de PARECER TÉCNICO com vistas à impugnação do laudo.\n\nHonorários propostos: ${E.proposto||"R$ [valor]"}${E.prazo?`\nPrazo estimado: ${E.prazo} dias`:""}\n\n${E.just||"Valores: deslocamento a R$ 1,00/km rodado (ida e volta, de Perobal-PR), uma refeição e, acima de 100 km, diária de hotel; além das horas técnicas — estimativas a confirmar."}\n\nForma de pagamento${E.banco?": "+E.banco:" a combinar"}.\n\nColoco-me à disposição.\n\n${localCab()}, ${hojeExt()}.\n\n____________________________________\n${PE.nome||""}\n${[PE.formacao,PE.registro].filter(Boolean).join(" - ")}\nAssistente Técnico`;}
+
 /* ===== laudo ===== */
 async function imgDataUrl(id){const b=await idbGet(id);if(!b)return"";return await new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>res("");r.readAsDataURL(b);});}
 async function buildModel(){const imgs=state.media.filter(m=>m.kind==="img");const photos=[];for(const m of imgs)photos.push({legenda:m.legenda,norma:m.norma,data:await imgDataUrl(m.id)});return{photos,vids:state.media.filter(m=>m.kind==="vid").length,normasOn:state.normas.filter(n=>n.on)};}
@@ -902,7 +931,7 @@ async function generateLaudo(){const doc=$("#laudoDoc");const{photos,vids,normas
   const aptN=state.aparelhos.length;if(aptN)medHTML+=`<p>Foram anexados ${aptN} relatório(s) do(s) instrumento(s) de medição.</p>`;
   let photoHTML="",pn=0;photos.forEach(p=>{pn++;const nm=p.norma?` <span class="mono">(${esc(p.norma)})</span>`:"";photoHTML+=`<div class="photo-doc"><img src="${p.data}" alt=""><div class="cap"><b>Foto ${String(pn).padStart(2,"0")}</b> — ${esc(p.legenda)||"[legenda]"}${nm}</div></div>`;});
   const vidHTML=vids?`<p>Compõem ainda o acervo ${vids} registro(s) audiovisual(is), anexado(s) em meio digital.</p>`:"";
-  const groups=[["Juiz","QUESITOS DO JUÍZO"],["Reclamada","QUESITOS DA RECLAMADA"],["Autora","QUESITOS DA PARTE AUTORA"],["MP","QUESITOS DO MINISTÉRIO PÚBLICO"]];let quesHTML="";
+  const groups=[["Laudo","ANÁLISE CRÍTICA DO LAUDO"],["Juiz","QUESITOS DO JUÍZO"],["Reclamada","QUESITOS DA RECLAMADA"],["Autora","QUESITOS DA PARTE AUTORA"],["MP","QUESITOS DO MINISTÉRIO PÚBLICO"]];let quesHTML="";
   groups.forEach(([org,title])=>{const l=S.quesitos.filter(q=>q.origem===org);if(!l.length)return;quesHTML+=`<h2>${title}</h2>`;l.forEach((q,i)=>{quesHTML+=`<div class="q-block"><span class="qlab">Quesito ${String(i+1).padStart(2,"0")}</span><p class="qp">${em(q.pergunta)}</p><p class="qa"><b>Resposta:</b> ${esc(q.resposta)||`<span class="empty">[resposta pendente]</span>`}</p></div>`;});});
   if(!quesHTML)quesHTML=`<h2>RESPOSTA AOS QUESITOS</h2><p class="empty">[nenhum quesito cadastrado]</p>`;
   const local=V.local?esc(V.local.split(/[,–-]/).slice(-2).join(", ").trim()):em(P.comarca);const hoje=new Date().toLocaleDateString("pt-BR",{day:"2-digit",month:"long",year:"numeric"});
@@ -915,14 +944,14 @@ async function generateLaudo(){const doc=$("#laudoDoc");const{photos,vids,normas
       <dt>Reclamada</dt><dd>${em(EMP.razao||PA.reu)}${EMP.cnpj?` — CNPJ ${esc(EMP.cnpj)}`:""}${EMP.atividade?`<br>Atividade: ${esc(EMP.atividade)}`:""}</dd>
       ${profTxt?`<dt>Resp. técnicos da reclamada</dt><dd>${profTxt}</dd>`:""}
       ${VC.admissao?`<dt>Período</dt><dd>${fmtDate(VC.admissao)} a ${fmtDate(VC.saida)||"atual"}</dd>`:""}
-      <dt>Perito</dt><dd>${em(PE.nome)}${PE.formacao?`, ${esc(PE.formacao)}`:""}${PE.registro?` — ${esc(PE.registro)}`:""}</dd>
+      <dt>Perito do processo</dt><dd>${em(S.peritoProc.nome)}${S.peritoProc.crea?` — ${esc(S.peritoProc.crea)}`:""}</dd><dt>Assistente técnico</dt><dd>${em(PE.nome)}${PE.formacao?`, ${esc(PE.formacao)}`:""}${PE.registro?` — ${esc(PE.registro)}`:""}</dd>
       ${AS.length?`<dt>Assistente(s)</dt><dd>${AS.map(a=>esc(a.nome)+(a.registro?` (${esc(a.registro)})`:"")).join("; ")}</dd>`:""}
       ${S.art?`<dt>ART</dt><dd class="mono">${esc(S.art)}</dd>`:""}</dl>
-    <h2>${S_()}. DO OBJETO DA PERÍCIA</h2>${para(S.objeto)}
+    
     <h2>${S_()}. DA METODOLOGIA</h2>${para(V.metodo)}
     <h2>${S_()}. DA VISTORIA</h2>
     <dl class="kv"><dt>Data / hora</dt><dd>${em(fmtDate(V.data))}${V.hora?` às ${esc(V.hora)}`:""}</dd><dt>Local</dt><dd>${em(V.local)}</dd><dt>Condições</dt><dd>${em(V.clima)}</dd><dt>Presentes</dt><dd>${em(V.presentes)}</dd>${A.abertura?`<dt>Abertura</dt><dd>${fmtTs(A.abertura.ts)} — ${esc(A.abertura.acomp)} (${esc(A.abertura.papel)})${A.abertura.gpsOk?` · GPS ${A.abertura.lat.toFixed(5)}, ${A.abertura.lon.toFixed(5)} (±${A.abertura.acc} m)`:" · GPS indisponível"}</dd>`:""}${A.fechamento?`<dt>Encerramento</dt><dd>${fmtTs(A.fechamento.ts)} — ${esc(A.fechamento.acomp)}${A.fechamento.gpsOk?` · GPS ${A.fechamento.lat.toFixed(5)}, ${A.fechamento.lon.toFixed(5)}`:""}</dd>`:""}</dl>${para(V.desc)}
-    <h2>${S_()}. DA DOCUMENTAÇÃO ANALISADA</h2>${docHTML}${epiHTML}
+    
     <h2>${S_()}. FUNDAMENTAÇÃO TÉCNICA</h2>${normasHTML}${artHTML}
     ${medHTML?`<h2>${S_()}. DAS AVALIAÇÕES QUANTITATIVAS</h2>${medHTML}`:""}
     <h2>${S_()}. ANÁLISE E CONSTATAÇÕES — REGISTRO FOTOGRÁFICO</h2>${photoHTML||`<p class="empty">[nenhuma foto anexada]</p>`}${vidHTML}
@@ -962,7 +991,7 @@ async function exportPdf(){const{photos}=await generateLaudo();const J=window.js
   H("ANÁLISE E CONSTATAÇÕES — REGISTRO FOTOGRÁFICO");let pn=0;
   for(const p of photos){pn++;try{const dim=await imgSize(p.data);let w=dim.w,h=dim.h;const r=Math.min(CW/w,90/h);w*=r;h*=r;if(y+h>BOT){doc.addPage();y=TOP;}doc.addImage(p.data,"JPEG",M,y,w,h);y+=h+2;body(`Foto ${String(pn).padStart(2,"0")} — ${p.legenda||"[legenda]"}${p.norma?" ("+p.norma+")":""}`,{s:8});}catch(e){}}
   if(!photos.length)body("[nenhuma foto anexada]");
-  H("RESPOSTA AOS QUESITOS");[["Juiz","QUESITOS DO JUÍZO"],["Reclamada","QUESITOS DA RECLAMADA"],["Autora","QUESITOS DA PARTE AUTORA"],["MP","QUESITOS DO MINISTÉRIO PÚBLICO"]].forEach(([org,t])=>{const l=S.quesitos.filter(q=>q.origem===org);if(!l.length)return;body(t,{b:true,s:10.5});l.forEach((q,i)=>{body(`Quesito ${String(i+1).padStart(2,"0")}: ${q.pergunta||"[—]"}`,{b:true,s:9.5});body(`Resposta: ${q.resposta||"[pendente]"}`,{s:9.5});});});
+  H("ANÁLISE DO LAUDO / QUESITOS");[["Laudo","ANÁLISE CRÍTICA DO LAUDO"],["Juiz","QUESITOS DO JUÍZO"],["Reclamada","QUESITOS DA RECLAMADA"],["Autora","QUESITOS DA PARTE AUTORA"],["MP","QUESITOS DO MINISTÉRIO PÚBLICO"]].forEach(([org,t])=>{const l=S.quesitos.filter(q=>q.origem===org);if(!l.length)return;body(t,{b:true,s:10.5});l.forEach((q,i)=>{body(`Quesito ${String(i+1).padStart(2,"0")}: ${q.pergunta||"[—]"}`,{b:true,s:9.5});body(`Resposta: ${q.resposta||"[pendente]"}`,{s:9.5});});});
   H("CONCLUSÃO");body(S.conclusao||"[a preencher]");nl(6);const local=V.local?V.local.split(/[,–-]/).slice(-2).join(", ").trim():(P.comarca||"");
   body(`${local}, ${new Date().toLocaleDateString("pt-BR",{day:"2-digit",month:"long",year:"numeric"})}.`,{align:"center"});nl(10);if(y>BOT){doc.addPage();y=TOP;}doc.line(W/2-35,y,W/2+35,y);nl(4);body(PE.nome||"",{b:true,align:"center"});body([PE.formacao,PE.registro].filter(Boolean).join(" — "),{align:"center",s:9});if(S.art)body("ART nº "+S.art,{align:"center",s:9});
   await stampLogos(doc,W,M,CW);
@@ -1040,27 +1069,26 @@ function genAceiteTxt(){const PE=getPerito(),E=state.encargo;
   return `${encCab()}\n${PE.nome||"[perito]"}, ${PE.formacao||"[formação]"}${PE.registro?", "+PE.registro:""}, nomeado(a) perito(a) do juízo nos autos em epígrafe, vem, respeitosamente, perante Vossa Excelência, ACEITAR O ENCARGO, comprometendo-se a desempenhá-lo com zelo, imparcialidade e dentro do prazo fixado.\n\nNos termos do art. 465, §3º, do Código de Processo Civil, apresenta sua PROPOSTA DE HONORÁRIOS no valor de ${E.proposto||"R$ [valor]"}${E.prazo?`, estimando o prazo de ${E.prazo} dias para a entrega do laudo`:""}.\n\n${E.just||"A proposta considera a complexidade técnica da matéria, as horas técnicas de vistoria e de elaboração do laudo, eventuais avaliações instrumentais, o deslocamento até o local e o número de quesitos a responder."}\n\n${(E.ofertado&&E.proposto)?`O valor de ${E.ofertado}, eventualmente sugerido, mostra-se insuficiente à adequada realização dos trabalhos pelas razões acima expostas, razão pela qual se requer o arbitramento no valor ora proposto, com amparo no art. 465, §3º, e no art. 95 do CPC, observados os parâmetros da Resolução CNJ nº 232/2016 e, na Justiça do Trabalho, da respectiva Resolução CSJT de honorários periciais (respeitada a vigência).`:`Requer-se o arbitramento dos honorários no valor proposto, com amparo no art. 465, §3º, do CPC.`}\n\nRequer, ainda, a definição da forma e do prazo de pagamento${E.banco?`, indicando, desde já, para depósito: ${E.banco}`:""}.\n\nColoca-se à inteira disposição do juízo. Termos em que pede deferimento.\n\n${localCab()}, ${hojeExt()}.\n\n____________________________________\n${PE.nome||""}\n${[PE.formacao,PE.registro].filter(Boolean).join(" — ")}`;}
 function genDeclTxt(){const PE=getPerito(),E=state.encargo;const imp=/impedimento|suspei/i.test(E.motivo);
   return `${encCab()}\n${PE.nome||"[perito]"}, ${PE.formacao||"[formação]"}${PE.registro?", "+PE.registro:""}, nomeado(a) perito(a) do juízo nos autos em epígrafe, vem, respeitosamente, perante Vossa Excelência, no prazo legal, apresentar ESCUSA e DECLINAR do encargo pericial, com fundamento no art. 467${imp?" c/c art. 148":""} do Código de Processo Civil, pelo(s) seguinte(s) motivo(s):\n\n${E.motivo}${E.motcompl?` — ${E.motcompl}`:""}.\n\nDiante do exposto, requer a dispensa do encargo e a nomeação de outro profissional para a realização da perícia, colocando-se à disposição para os esclarecimentos que se fizerem necessários.\n\nTermos em que pede deferimento.\n\n${localCab()}, ${hojeExt()}.\n\n____________________________________\n${PE.nome||""}\n${[PE.formacao,PE.registro].filter(Boolean).join(" — ")}`;}
-async function iaHonorariosFn(){const st=$("#iaHonStatus");const s=await getSample();if(!s){st.style.color="var(--warn)";st.textContent="IA indisponível aqui.";return;}
-  const E=state.encargo;const kmIda=parseFloat(String(E.km||"").replace(",","."))||0;const rodado=kmIda>50?kmIda*2:0;const desloc=rodado*1.0;
-  const cidade=E.cidade||state.vistoria.local||state.processo.comarca||"";
-  const b=$("#iaHon");if(b)b.disabled=true;st.style.color="var(--muted)";st.innerHTML='<span class="spin"></span> Calculando honorários…';
+async function iaHonorariosFn(){const st=$("#iaHonStatus");const s=await getSample();if(!s){st.style.color="var(--warn)";st.textContent="Configure o Gemini (aba IA/Config).";return;}
+  const E=state.encargo;const cidade=E.cidade||state.vistoria.local||state.processo.comarca||"";const kmInf=parseFloat(String(E.km||"").replace(",","."))||0;
+  const b=$("#iaHon");if(b)b.disabled=true;st.style.color="var(--muted)";st.innerHTML='<span class="spin"></span> Calculando proposta…';
   const prompt=`${IA_RULE}
-Monte uma PROPOSTA DE HONORÁRIOS PERICIAIS (perícia trabalhista de SST) e a JUSTIFICATIVA, considerando:
-- Objeto/ação: ${state.objeto||state.processo.acao||"—"}
-- Nº de quesitos: ${state.quesitos.length}; medições/avaliações: ${state.medicoes.length}
-- Horas técnicas de vistoria e de elaboração do laudo (estime de forma razoável).
-- Deslocamento JÁ CALCULADO pela regra do perito: até 50 km (só ida) sem custo; acima disso, R$ 1,00 por km rodado (ida e volta). Distância: ${kmIda} km (só ida) → km rodado cobrável: ${rodado} km → custo de deslocamento: R$ ${desloc.toFixed(2)}.
-- Hospedagem/alimentação: SE a distância indicar pernoite, ESTIME a média de hotel e refeição na cidade "${cidade}" (deixe explícito que é ESTIMATIVA a confirmar); caso contrário, não inclua.
-- TETO LEGAL: observe o máximo que o juízo pode arbitrar conforme a legislação de honorários periciais (na Justiça do Trabalho, a Resolução do CSJT para beneficiário da justiça gratuita; na Justiça comum, a Resolução CNJ nº 232/2016). NÃO invente o valor do teto — se não tiver certeza do valor vigente, diga que deve ser confirmado e proponha dentro do razoável.
-Responda SOMENTE com JSON: {"proposto":"R$ 0.000,00","justificativa":"texto com horas técnicas, deslocamento (R$ ${desloc.toFixed(2)}), hospedagem/alimentação estimadas se houver, e a observância do teto legal a confirmar"}`;
-  try{const data=await s.json(prompt,{modelTier:"complex"});if(data.proposto){state.encargo.proposto=String(data.proposto);$("#en_proposto").value=state.encargo.proposto;}if(data.justificativa){state.encargo.just=String(data.justificativa);$("#en_just").value=state.encargo.just;}save();st.style.color="var(--ok)";st.textContent="Proposta calculada — revise valores e teto legal.";flash("Honorários sugeridos pela IA.");}
+Monte uma PROPOSTA DE HONORÁRIOS de ASSISTÊNCIA TÉCNICA (assistente técnico da reclamada), com estas REGRAS FIXAS:
+- Origem do assistente: Perobal - PR. Destino: a cidade da perícia ("${cidade||"informar"}").
+- Deslocamento: R$ 1,00 por km RODADO (ida e volta). ${kmInf?`Distância informada (só ida): ${kmInf} km.`:`Estime a distância rodoviária só ida de Perobal-PR até a cidade de destino (aproximada).`}
+- Refeição: incluir o custo de uma refeição.
+- Hospedagem: ATÉ 100 km (só ida) NÃO cobra hotel; ACIMA de 100 km, incluir a diária de um hotel, estimando o valor médio na cidade de destino.
+- Honorários técnicos: horas de análise do laudo, vistoria/acompanhamento e elaboração do parecer.
+Distância, hotel e refeição são ESTIMATIVAS a confirmar.
+Responda SOMENTE com JSON: {"distancia_ida_km":0,"deslocamento":"R$ 0,00","refeicao":"R$ 0,00","hotel":"R$ 0,00 ou -","honorarios_tecnicos":"R$ 0,00","total":"R$ 0,00","justificativa":"texto detalhando o cálculo (km rodado x R$1,00, refeição, hotel se acima de 100 km, honorários técnicos) como estimativa a confirmar"}`;
+  try{const d=await s.json(prompt,{modelTier:"complex"});if(d.total){state.encargo.proposto=String(d.total);$("#en_proposto").value=state.encargo.proposto;}if(d.distancia_ida_km&&!E.km){state.encargo.km=String(d.distancia_ida_km);const k=$("#en_km");if(k)k.value=state.encargo.km;}if(d.justificativa){state.encargo.just=String(d.justificativa);$("#en_just").value=state.encargo.just;}save();st.style.color="var(--ok)";st.textContent="Proposta calculada — confira os valores.";flash("Proposta calculada pela IA.");}
   catch(e){st.style.color="var(--warn)";st.textContent=iaErr(e);}finally{if(b)b.disabled=false;}}
 {const _ih=$("#iaHon");if(_ih)_ih.addEventListener("click",iaHonorariosFn);}
-$("#genAceite").addEventListener("click",()=>{$("#aceiteDoc").innerHTML=`<img class="lh" src="${LOGO_HEADER}">`+txtToDoc(genAceiteTxt());flash("Petição de aceitação gerada.");});
+$("#genAceite").addEventListener("click",()=>{$("#aceiteDoc").innerHTML=`<img class="lh" src="${LOGO_HEADER}">`+txtToDoc(genPropostaTxt());flash("Proposta gerada.");});
 $("#genDecl").addEventListener("click",()=>{$("#declDoc").innerHTML=`<img class="lh" src="${LOGO_HEADER}">`+txtToDoc(genDeclTxt());flash("Petição de escusa gerada.");});
-$("#dlAceite").addEventListener("click",()=>simplePdf("PETICAO - ACEITACAO E PROPOSTA DE HONORARIOS",genAceiteTxt(),fname("pdf","Aceite")));
+$("#dlAceite").addEventListener("click",()=>simplePdf("PROPOSTA DE ASSISTENCIA TECNICA",genPropostaTxt(),fname("pdf","Proposta")));
 $("#dlDecl").addEventListener("click",()=>simplePdf("PETICAO - ESCUSA DO ENCARGO",genDeclTxt(),fname("pdf","Escusa")));
-$("#cpAceite").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(genAceiteTxt());flash("Copiado.");}catch(e){flash("Não foi possível copiar.");}});
+$("#cpAceite").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(genPropostaTxt());flash("Copiado.");}catch(e){flash("Não foi possível copiar.");}});
 $("#cpDecl").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(genDeclTxt());flash("Copiado.");}catch(e){flash("Não foi possível copiar.");}});
 
 function renderVistMed(){const w=$("#vistMedResumo");if(!w)return;let h="";
