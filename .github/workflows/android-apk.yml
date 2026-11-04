@@ -10,6 +10,8 @@ on:
     branches: [ main, "claude/zen-fermi-t4vuel" ]
     paths:
       - "index.html"
+      - "assistencia.html"
+      - "painel.html"
       - "vendor/**"
       - "icon-*.png"
       - "manifest.webmanifest"
@@ -35,7 +37,7 @@ jobs:
       - name: Montar a pasta web (www)
         run: |
           mkdir -p www
-          cp index.html assistencia.html manifest.webmanifest sw.js icon-192.png icon-512.png www/
+          cp index.html assistencia.html painel.html manifest.webmanifest sw.js icon-192.png icon-512.png www/
           cp -r vendor www/
 
       - name: Instalar Capacitor
