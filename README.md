@@ -45,6 +45,15 @@ npm run dist   # gera o instalador em dist/ (Windows .exe, Linux AppImage, macOS
 ```
 Observação: para um ícone perfeito no Windows, troque o ícone por um `.ico` e ajuste `build.win.icon` no `package.json`.
 
+## 3b) APK do Android (gerado automaticamente)
+Há um workflow do GitHub Actions que **compila o APK** (Capacitor, app independente/offline) sem você instalar nada:
+1. No GitHub, aba **Actions → "Build Android APK" → Run workflow** (ou ele roda a cada push).
+2. Ao terminar, abra a execução e baixe o arquivo em **Artifacts → `perito-laudo-apk`** (`app-debug.apk`).
+3. No celular, habilite **"Instalar apps de fontes desconhecidas"** e instale o APK.
+
+Caminho alternativo (ainda mais simples, sem Actions): hospede o PWA (Pages) e use **https://www.pwabuilder.com** — cole a URL e baixe o pacote Android.
+Observação: o APK empacota o app (funciona offline); as funções de **IA (Gemini)** continuam exigindo internet. GPS/câmera podem pedir ajuste de permissão na primeira versão.
+
 ## 4) Backup e transferência celular → PC
 - No celular: aba **IA/Config → Exportar tudo (backup)** gera um arquivo `.perito.json` com **todos os dados e mídias**.
 - No PC: **Importar backup** (marque *abrir como leitura* se quiser só consultar).
