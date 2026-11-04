@@ -773,7 +773,7 @@ async function geminiGenerate(input,opts,wantJson){const key=getKey();if(!key){c
   if(opts&&opts.images){const arr=opts.images.length!=null?[...opts.images]:[opts.images];for(const b of arr){if(!b)continue;const d=await blobToB64(b);if(d)parts.push({inlineData:{mimeType:b.type||"image/jpeg",data:d}});}}
   const body={contents:[{role:"user",parts}],generationConfig:{temperature:0.3}};if(wantJson)body.generationConfig.responseMimeType="application/json";
   let resp;try{resp=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(model)+":generateContent?key="+encodeURIComponent(key),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});}catch(e){const er=new Error("rede");er.code="upstream_error";throw er;}
-  if(!resp.ok){let msg="";try{const j=await resp.json();msg=(j&&j.error&&j.error.message)||"";}catch(e){}const er=new Error(msg||("HTTP "+resp.status));er.code=resp.status===429?"rate_limited":(resp.status===400||resp.status===403)?"not_granted":"upstream_error";throw er;}
+  if(!resp.ok){let msg="";try{const j=await resp.json();msg=(j&&j.error&&j.error.message)||"";}catch(e){}if((resp.status===404||/no longer available|not found|not_found|is not supported|não está dispon/i.test(msg))&&model!=="gemini-flash-latest"){try{localStorage.setItem("gemini_model","gemini-flash-latest");}catch(e){}const mf=$("#cfg_model");if(mf)mf.value="gemini-flash-latest";return await geminiGenerate(input,opts,wantJson);}const er=new Error(msg||("HTTP "+resp.status));er.code=resp.status===429?"rate_limited":(resp.status===400||resp.status===403)?"not_granted":"upstream_error";throw er;}
   let data;try{data=await resp.json();}catch(e){const er=new Error("resposta invalida");er.code="upstream_error";throw er;}
   const cand=(data.candidates||[])[0]||{};const ps=(cand.content||{}).parts||[];let txt=ps.map(p=>p.text||"").join("").trim();
   if(wantJson){let j=null;try{j=JSON.parse(txt);}catch(e){const m=txt.match(/[\[{][\s\S]*[\]}]/);if(m){try{j=JSON.parse(m[0]);}catch(e2){}}}if(j==null){const er=new Error("json invalido");er.code="invalid_json";er.text=txt;throw er;}return j;}
@@ -1090,7 +1090,7 @@ function renderAll(){renderProf();renderEquipe();renderDocs();renderEpi();render
 hydrate();bindInputs();renderAll();
 if(!$("#v_metodo").value)$("#v_metodo").value=state.vistoria.metodo;
 $("#saveTxt").textContent="Salva automaticamente";
-getSample();initConfig();initBackup();registerSW();
+try{const _mm=localStorage.getItem("gemini_model");if(_mm&&/2\.0-flash|1\.5|1\.0|^gemini-pro$/.test(_mm))localStorage.setItem("gemini_model","gemini-flash-latest");}catch(e){}getSample();initConfig();initBackup();registerSW();
 </script>
 
 </body></html>
