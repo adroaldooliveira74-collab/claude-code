@@ -1,8 +1,6 @@
 name: Deploy PWA (GitHub Pages)
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 permissions:
@@ -31,8 +29,6 @@ jobs:
 
       - name: Configurar Pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: Enviar artefato
         uses: actions/upload-pages-artifact@v3
