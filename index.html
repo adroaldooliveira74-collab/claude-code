@@ -177,6 +177,7 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
   <div class="home-actions">
     <button class="btn primary" id="goPericia">⚖️ Perícia Judicial</button>
     <button class="btn" id="goAssist">🧰 Assistência Técnica</button>
+    <button class="btn" id="goPainel">📋 Painel de Processos</button>
   </div>
   <div class="hint" id="assistMsg" hidden>Módulo de Assistência Técnica em construção — em breve.</div>
 </div>
@@ -581,7 +582,7 @@ function fmtDate(d){if(!d)return"";const p=d.split("-");return p.length===3?`${p
 function getPerito(){return state.equipe.find(p=>p.id===state.peritoId)||state.equipe[0]||{nome:"",formacao:"",registro:"",email:"",tel:""};}
 function getAssist(){return state.assistentes.map(id=>state.equipe.find(p=>p.id===id)).filter(Boolean);}
 $("#brandLogo").src=LOGO_HEADER;
-{const hl=$("#homeLogo");if(hl)hl.src=LOGO_HEADER;const gp=$("#goPericia");if(gp)gp.addEventListener("click",()=>{document.body.setAttribute("data-view","app");window.scrollTo(0,0);});const ga=$("#goAssist");if(ga)ga.addEventListener("click",()=>{location.href="assistencia.html";});const hb=$("#homeBtn");if(hb)hb.addEventListener("click",()=>{document.body.removeAttribute("data-view");});}
+{const hl=$("#homeLogo");if(hl)hl.src=LOGO_HEADER;const gp=$("#goPericia");if(gp)gp.addEventListener("click",()=>{document.body.setAttribute("data-view","app");window.scrollTo(0,0);});const ga=$("#goAssist");if(ga)ga.addEventListener("click",()=>{location.href="assistencia.html";});const gpn=$("#goPainel");if(gpn)gpn.addEventListener("click",()=>{location.href="painel.html";});const hb=$("#homeBtn");if(hb)hb.addEventListener("click",()=>{document.body.removeAttribute("data-view");});}
 
 (function(){try{if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc="vendor/pdf.worker.min.js";}catch(e){}})();
 async function pdfToText(file){if(!window.pdfjsLib)throw new Error("pdfjs");const data=new Uint8Array(await file.arrayBuffer());const pdf=await pdfjsLib.getDocument({data}).promise;let out="";

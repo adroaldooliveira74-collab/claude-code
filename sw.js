@@ -6,6 +6,7 @@ const ASSETS = [
   "./",
   "index.html",
   "assistencia.html",
+  "painel.html",
   "manifest.webmanifest",
   "vendor/pdf.min.js",
   "vendor/pdf.worker.min.js",
