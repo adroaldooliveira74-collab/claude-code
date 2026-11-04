@@ -1,0 +1,34 @@
+{
+  "_comentario": "Edite este arquivo. Todas as posicoes (x,y) voce descobre rodando: python claude_muse_bot.py --calibrar",
+
+  "claude": {
+    "comando": "claude",
+    "modelo": "",
+    "prompt_relatorio": "Gere o relatorio das 16:00 de hoje em texto corrido, claro e objetivo, pronto para ser publicado. Nao faca perguntas; se faltar informacao, assuma o razoavel e marque entre colchetes.",
+    "timeout_segundos": 300,
+    "diretorio_de_trabalho": ""
+  },
+
+  "muse": {
+    "campo_entrada_xy": [800, 900],
+    "area_resposta_xy": [800, 500],
+    "botao_enviar_xy": null,
+    "usar_enter_para_enviar": true,
+    "segundos_espera_resposta": 20
+  },
+
+  "loop": {
+    "max_iteracoes": 10,
+    "texto_que_indica_fim": ["concluido", "finalizado", "sem duvidas", "ok, obrigado", "zerado"],
+    "segundos_entre_acoes": 2.0
+  },
+
+  "agenda": {
+    "rodar_todo_dia_as": "16:00"
+  },
+
+  "arquivos": {
+    "pasta_relatorios": "relatorios",
+    "arquivo_log": "execucao.log"
+  }
+}
