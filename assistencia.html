@@ -55,6 +55,10 @@ a{color:var(--accent)}button{font-family:inherit}
 .tab[aria-selected="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);box-shadow:0 3px 10px -4px rgba(0,122,54,.6)}
 .tab[aria-selected="true"] .n{background:rgba(255,255,255,.22);color:var(--accent-ink)}
 .tab:not([aria-selected="true"]):hover{border-color:var(--accent);color:var(--accent)}
+.tab.done .n{background:var(--ok);color:#fff}
+.procchip{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--accent);background:var(--accent-soft);border:1px solid var(--line);border-radius:999px;padding:3px 10px;max-width:42vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.navprev{display:flex;gap:10px;justify-content:space-between;margin-top:14px}
+.navprev button{flex:1;max-width:48%}
 main{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 72px;max-width:1000px;margin:0 auto}
 .panel{display:none}.panel[data-active="true"]{display:block;animation:fade .18s ease}
 @keyframes fade{from{opacity:.5}to{opacity:1}}
@@ -131,7 +135,7 @@ table.data .del{color:var(--danger);border:1px solid var(--line);background:var(
 .chk-list{display:flex;flex-direction:column;gap:7px;margin-top:6px}
 .chk-list label{display:flex;gap:8px;align-items:center;font-size:13.5px;font-weight:500;color:var(--ink)}
 .chk-list input{width:19px;height:19px;min-height:0}
-.doc-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.doc-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;padding-top:12px;border-top:1px solid var(--line)}
 .doc{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:clamp(18px,3.5vw,40px);color:var(--ink);line-height:1.65;box-shadow:0 8px 24px -18px rgba(16,40,24,.4)}
 .doc .lh{width:auto;max-width:230px;display:block;margin:0 auto 18px;border-radius:4px}
 .doc .lf{width:100%;max-width:100%;display:block;margin:30px auto 0;border-radius:4px}
@@ -166,6 +170,7 @@ table.data .del{color:var(--danger);border:1px solid var(--line);background:var(
 
 <div class="topbar">
   <div class="brand"><img class="logo-img" id="brandLogo" alt="UrbanClin"><span class="brandtag">Assistência Técnica</span></div>
+  <span class="procchip" id="procChip" title="Processo atual"></span>
   <div class="spacer"></div><span id="saveTxt" class="status">—</span>
   <button class="icon-btn" id="procBtn">📁 Processos</button>
   <button class="icon-btn" id="homeBtn">🏠 Início</button>
@@ -498,6 +503,7 @@ table.data .del{color:var(--danger);border:1px solid var(--line);background:var(
       <p class="sub">Abra este endereco no navegador e use <b>Instalar app</b> (Chrome/Edge no PC e Android) ou <b>Compartilhar → Adicionar a Tela de Inicio</b> (iPhone). Funciona como app, com camera, GPS e offline.</p>
     </div>
   </section>
+  <div class="navprev" id="navPrev"><button class="btn" id="navPrevBtn">← Anterior</button><button class="btn primary" id="navNextBtn">Próximo →</button></div>
 </main>
 
 <div class="flash" id="flash"></div>
@@ -605,7 +611,14 @@ const BIND=[
 function hydrate(){BIND.forEach(([sel,get])=>{const el=$(sel);if(el)el.value=get(state)||"";});}
 function bindInputs(){BIND.forEach(([sel,,set])=>{const el=$(sel);if(el)el.addEventListener("input",()=>{set(state,el.value);save();if(sel==="#vc_admissao"||sel==="#vc_saida")renderEpiGap();});});}
 
-$$(".tab").forEach(t=>t.addEventListener("click",()=>{const id=t.dataset.tab;$$(".tab").forEach(x=>x.setAttribute("aria-selected",x===t));$$(".panel").forEach(p=>p.dataset.active=(p.dataset.tab===id));window.scrollTo({top:0,behavior:"smooth"});if(id==="laudo")generateLaudo();}));
+$$(".tab").forEach(t=>t.addEventListener("click",()=>{const id=t.dataset.tab;$$(".tab").forEach(x=>x.setAttribute("aria-selected",x===t));$$(".panel").forEach(p=>p.dataset.active=(p.dataset.tab===id));window.scrollTo({top:0,behavior:"smooth"});try{t.scrollIntoView({inline:"center",block:"nearest"});}catch(e){}if(id==="laudo")generateLaudo();}));
+const TAB_ORDER=["processo","vistoria","medicoes","quesitos","normas","laudo","aceite","config"];
+function curTab(){const t=document.querySelector('.tab[aria-selected="true"]');return t?t.dataset.tab:"processo";}
+function goTab(id){const t=document.querySelector('.tab[data-tab="'+id+'"]');if(t)t.click();}
+{const pv=$("#navPrevBtn"),nx=$("#navNextBtn");if(pv)pv.addEventListener("click",()=>{const i=TAB_ORDER.indexOf(curTab());if(i>0)goTab(TAB_ORDER[i-1]);});if(nx)nx.addEventListener("click",()=>{const i=TAB_ORDER.indexOf(curTab());if(i<TAB_ORDER.length-1)goTab(TAB_ORDER[i+1]);});}
+function updateProcChip(){const c=$("#procChip");if(c)c.textContent=(state.processo&&state.processo.numero)?("Proc. "+state.processo.numero):"Novo trabalho";}
+function tabDone(id){const S=state;switch(id){case"processo":return !!((S.processo&&S.processo.numero)||(S.partes&&(S.partes.reu||S.partes.autor)));case"vistoria":return !!(S.vistoria&&(S.vistoria.data||S.vistoria.local))||(S.media&&S.media.length>0);case"medicoes":return S.medicoes&&S.medicoes.length>0;case"quesitos":return S.quesitos&&S.quesitos.length>0;case"normas":return S.normas&&S.normas.some(n=>n.on);case"laudo":return !!(S.conclusao&&S.conclusao.trim());default:return false;}}
+function updateTabDots(){$$(".tab").forEach(t=>{t.classList.toggle("done",tabDone(t.dataset.tab));});}
 
 function parsePeticao(txt){const found=[];const put=(sel,setter,val,label)=>{if(val){setter(state,val);const el=$(sel);if(el)el.value=val;found.push(label);}};
   const cnj=txt.match(/\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/);if(cnj)put("#p_numero",(s,v)=>s.processo.numero=v,cnj[0],"processo");
@@ -1168,7 +1181,7 @@ function renderVistMed(){const w=$("#vistMedResumo");if(!w)return;let h="";
   if(state.medicoes.length)h+=`<div class="tbl-wrap"><table class="data" style="min-width:auto"><thead><tr><th>Agente</th><th>Valor</th><th>Unid.</th><th>Limite</th><th>Resultado</th></tr></thead><tbody>`+state.medicoes.map(m=>`<tr><td>${esc(m.agente)||"—"}</td><td>${esc(m.valor)||"—"}</td><td>${esc(m.unidade)||"—"}</td><td>${esc(m.limite)||"—"}</td><td>${esc(m.resultado)||"—"}</td></tr>`).join("")+`</tbody></table></div>`;
   if(!h)h=`<div class="hint">Nenhum relatório/medição ainda. Anexe e analise na aba Medições.</div>`;
   w.innerHTML=h;}
-function renderAll(){renderProf();renderEquipe();renderDocs();renderEpi();renderEpiDocs();renderMed();renderApt();renderQuesitos();renderNormas();renderMedia();renderNc();renderAudit();applyLock();checkLaudo();}
+function renderAll(){renderProf();renderEquipe();renderDocs();renderEpi();renderEpiDocs();renderMed();renderApt();renderQuesitos();renderNormas();renderMedia();renderNc();renderAudit();applyLock();checkLaudo();updateTabDots();updateProcChip();}
 hydrate();bindInputs();renderAll();
 if(!$("#v_metodo").value)$("#v_metodo").value=state.vistoria.metodo;
 $("#saveTxt").textContent="Salva automaticamente";
