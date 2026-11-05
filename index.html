@@ -348,6 +348,8 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
         <textarea id="v_presentes" rows="3" placeholder="Perito do juízo; preposto da reclamada Sr. …; assistente técnico Eng. … (CREA …); reclamante Sr. …"></textarea></label>
       <label class="field" style="margin-top:13px">Caracterização do local / atividade do reclamante
         <textarea id="v_desc" rows="5" placeholder="A reclamada atua em …; o reclamante exercia a função de …, no setor …, executando: …"></textarea></label>
+      <label class="field" style="margin-top:12px">Entrevistas na diligência (reclamante, preposto, testemunhas)<textarea id="v_entrev" rows="3" placeholder="Quem informou o quê sobre jornada, atividades, EPI… — fundamenta a habitualidade."></textarea></label>
+      <label class="field" style="margin-top:12px">Local / caso paradigma (quando a vistoria não foi no local original)<input id="v_parad" placeholder="Ex.: unidade equivalente em …, pois o setor foi desativado em __/__"></label>
       <div class="row-actions" style="margin-top:8px"><button class="btn ia small" id="iaCaract">✨ Puxar da petição (IA)</button><span class="hint" id="iaCaractStatus"></span></div></div>
     <div class="card"><h2>🔬 Metodologia</h2><label class="field">Metodologia empregada <textarea id="v_metodo" rows="5"></textarea></label></div>
     <div class="card">
@@ -379,6 +381,25 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
 
   <!-- 4 · MEDIÇÕES -->
   <section class="panel" data-tab="medicoes">
+    <div class="card">
+      <h2>🧮 Calculadoras técnicas <span class="seal">NHO-01 / NHO-06</span></h2>
+      <p class="sub">Calcule e lance o resultado na tabela abaixo, com o método citado no laudo.</p>
+      <h3 style="font-size:14px;margin-top:6px">Ruído — dose e NEN (NHO-01 · q=5 · critério 85 dB(A))</h3>
+      <div class="grid g2">
+        <label class="field">Nível medido L (dB(A))<input id="rz_l" type="number" step="0.1" inputmode="decimal"></label>
+        <label class="field">Tempo de exposição (h/dia)<input id="rz_t" type="number" step="0.1" value="8" inputmode="decimal"></label>
+      </div>
+      <div class="row-actions"><button class="btn small" id="rz_calc" type="button">Calcular</button><button class="btn small" id="rz_lanc" type="button" disabled>Lançar na tabela</button><span class="hint" id="rz_out"></span></div>
+      <h3 style="font-size:14px;margin-top:14px">Calor — IBUTG (NHO-06 · NR-15 Anexo 3)</h3>
+      <div class="grid g2">
+        <label class="field">Tbn — bulbo úmido natural (°C)<input id="ib_tbn" type="number" step="0.1" inputmode="decimal"></label>
+        <label class="field">Tg — temperatura de globo (°C)<input id="ib_tg" type="number" step="0.1" inputmode="decimal"></label>
+        <label class="field">Tbs — bulbo seco (°C, só externo)<input id="ib_tbs" type="number" step="0.1" inputmode="decimal"></label>
+        <label class="field">Ambiente<select id="ib_sol"><option value="int">Sem carga solar (interno)</option><option value="ext">Com carga solar (externo)</option></select></label>
+      </div>
+      <div class="row-actions"><button class="btn small" id="ib_calc" type="button">Calcular</button><button class="btn small" id="ib_lanc" type="button" disabled>Lançar na tabela</button><span class="hint" id="ib_out"></span></div>
+      <p class="hint" style="margin-top:8px">O enquadramento final do calor depende da taxa metabólica e do regime trabalho/descanso (Anexo 3 da NR-15) — confira a tabela antes de concluir.</p>
+    </div>
     <div class="card">
       <h2>📈 Avaliações quantitativas <span class="seal">O QUE O PERITO ACHAR RELEVANTE</span></h2>
       <p class="sub">Campo livre: ruído, calor (IBUTG), umidade, iluminância, poeira, vibração, concentração química… Preencha só o pertinente ao processo.</p>
@@ -579,7 +600,7 @@ function blankState(){const adr=uid();return{
   profEmpresa:[],partes:{autor:"",autorAdv:"",reu:"",reuAdv:""},vinculo:{funcao:"",setor:"",admissao:"",saida:""},
   periodos:[],periculosidade:{caracterizada:"Não",base:""},epiComprov:{fornecimento:"",treinamento:"",troca:"",higienizacao:"",fiscalizacao:""},
   equipe:[{id:adr,nome:"Adroaldo Marques de Oliveira",formacao:"Engenheiro de Segurança do Trabalho",registro:"CREA-PR 168996",email:"",tel:""}],
-  peritoId:adr,assistentes:[],objeto:"",art:"",tipoPericia:"Insalubridade",registroInspecao:"",atividades:[],agentes:AGENTES_NR15.map(a=>({anexo:a[0],nome:a[1],situacao:"Não constatada exposição significativa",analise:"",grau:"Não caracterizado"})),
+  peritoId:adr,assistentes:[],objeto:"",art:"",tipoPericia:"Insalubridade",registroInspecao:"",entrevistas:"",paradigma:"",atividades:[],agentes:AGENTES_NR15.map(a=>({anexo:a[0],nome:a[1],situacao:"Não constatada exposição significativa",analise:"",grau:"Não caracterizado"})),
   vistoria:{data:"",hora:"",clima:"",local:"",presentes:"",desc:"",metodo:DEFAULT_METODO},
   medicoes:[],aparelhos:[],epiDocs:[],
   docs:DOC_BASE.map(t=>({id:uid(),tipo:t,apresentado:"",validade:"",obs:"",hasText:false})),
@@ -627,7 +648,7 @@ const BIND=[
   ["#pt_reu",s=>s.partes.reu,(s,v)=>s.partes.reu=v],["#pt_reu_adv",s=>s.partes.reuAdv,(s,v)=>s.partes.reuAdv=v],
   ["#vc_funcao",s=>s.vinculo.funcao,(s,v)=>s.vinculo.funcao=v],["#vc_setor",s=>s.vinculo.setor,(s,v)=>s.vinculo.setor=v],
   ["#vc_admissao",s=>s.vinculo.admissao,(s,v)=>s.vinculo.admissao=v],["#vc_saida",s=>s.vinculo.saida,(s,v)=>s.vinculo.saida=v],
-  ["#peric_car",s=>s.periculosidade.caracterizada,(s,v)=>s.periculosidade.caracterizada=v],["#peric_base",s=>s.periculosidade.base,(s,v)=>s.periculosidade.base=v],
+  ["#v_entrev",s=>s.entrevistas,(s,v)=>s.entrevistas=v],["#v_parad",s=>s.paradigma,(s,v)=>s.paradigma=v],["#peric_car",s=>s.periculosidade.caracterizada,(s,v)=>s.periculosidade.caracterizada=v],["#peric_base",s=>s.periculosidade.base,(s,v)=>s.periculosidade.base=v],
   ["#ec_forn",s=>s.epiComprov.fornecimento,(s,v)=>s.epiComprov.fornecimento=v],["#ec_trein",s=>s.epiComprov.treinamento,(s,v)=>s.epiComprov.treinamento=v],["#ec_troca",s=>s.epiComprov.troca,(s,v)=>s.epiComprov.troca=v],["#ec_hig",s=>s.epiComprov.higienizacao,(s,v)=>s.epiComprov.higienizacao=v],["#ec_fisc",s=>s.epiComprov.fiscalizacao,(s,v)=>s.epiComprov.fiscalizacao=v],
   ["#s_objeto",s=>s.objeto,(s,v)=>s.objeto=v],["#s_art",s=>s.art,(s,v)=>s.art=v],["#s_tipo",s=>s.tipoPericia,(s,v)=>s.tipoPericia=v],["#v_registro",s=>s.registroInspecao,(s,v)=>s.registroInspecao=v],
   ["#v_data",s=>s.vistoria.data,(s,v)=>s.vistoria.data=v],["#v_hora",s=>s.vistoria.hora,(s,v)=>s.vistoria.hora=v],
@@ -754,6 +775,12 @@ function renderMed(){const tb=$("#medTable").querySelector("tbody");tb.innerHTML
   tb.querySelectorAll("[data-mr]").forEach(s=>s.addEventListener("change",()=>{const m=state.medicoes.find(x=>x.id===s.dataset.mr);if(m){m.resultado=s.value;save();}}));
   tb.querySelectorAll("[data-mx]").forEach(x=>x.addEventListener("click",()=>{state.medicoes=state.medicoes.filter(m=>m.id!==x.dataset.mx);save();renderMed();}));renderVistMed();}
 $("#addMed").addEventListener("click",()=>{state.medicoes.push({id:uid(),agente:"",valor:"",unidade:"",limite:"",tecnica:"",resultado:"",certNum:"",certVal:""});save();renderMed();});
+let rzLast=null,ibLast=null;
+function rzCalc(){const o=$("#rz_out");const L=parseFloat(($("#rz_l")||{}).value),T=parseFloat(($("#rz_t")||{}).value);if(isNaN(L)||isNaN(T)||T<=0){if(o)o.textContent="Informe o nível L e o tempo de exposição.";return;}const Tref=8/Math.pow(2,(L-85)/5);const D=100*T/Tref;const NEN=85+16.61*Math.log10(D/100);const acima=NEN>85.05;rzLast={valor:NEN.toFixed(1),acima};if(o)o.innerHTML=`Tref=${Tref.toFixed(2)} h · Dose=${D.toFixed(0)}% · <b>NEN=${NEN.toFixed(1)} dB(A)</b> &rarr; ${acima?"acima do limite (insalubre — grau médio 20%)":"dentro do limite"}`;const b=$("#rz_lanc");if(b)b.disabled=false;}
+function rzLanc(){if(!rzLast)return;state.medicoes.push({id:uid(),agente:"Ruído contínuo",valor:rzLast.valor,unidade:"dB(A)",limite:"85",tecnica:"Dosímetro/decibelímetro (NHO-01, q=5)",resultado:rzLast.acima?"Acima do limite":"Dentro do limite",certNum:"",certVal:""});save();renderMed();flash("Ruído lançado na tabela de medições.");}
+function ibCalc(){const o=$("#ib_out");const tbn=parseFloat(($("#ib_tbn")||{}).value),tg=parseFloat(($("#ib_tg")||{}).value),ext=(($("#ib_sol")||{}).value==="ext"),tbs=parseFloat(($("#ib_tbs")||{}).value);if(isNaN(tbn)||isNaN(tg)||(ext&&isNaN(tbs))){if(o)o.textContent="Informe Tbn, Tg"+(ext?" e Tbs":"")+".";return;}const ibutg=ext?(0.7*tbn+0.2*tg+0.1*tbs):(0.7*tbn+0.3*tg);ibLast={valor:ibutg.toFixed(1)};if(o)o.innerHTML=`<b>IBUTG = ${ibutg.toFixed(1)} °C</b> (${ext?"com":"sem"} carga solar). Compare com o Anexo 3 da NR-15 pela taxa metabólica e regime.`;const b=$("#ib_lanc");if(b)b.disabled=false;}
+function ibLanc(){if(!ibLast)return;state.medicoes.push({id:uid(),agente:"Calor (IBUTG)",valor:ibLast.valor,unidade:"°C",limite:"Anexo 3 NR-15",tecnica:"Medidor de IBUTG (NHO-06)",resultado:"",certNum:"",certVal:""});save();renderMed();flash("IBUTG lançado na tabela de medições.");}
+{const map={rz_calc:rzCalc,rz_lanc:rzLanc,ib_calc:ibCalc,ib_lanc:ibLanc};Object.keys(map).forEach(id=>{const b=$("#"+id);if(b)b.addEventListener("click",map[id]);});}
 
 /* relatórios de aparelho */
 wireDrop("#dropApt","#aptInput",files=>handleApt(files),true);
@@ -783,7 +810,7 @@ async function handleFiles(files){if(isLocked()){flash("Perícia encerrada — s
     if(isImg){if(nFotos>=MAX_FOTOS){rejFoto++;continue;}}
     else{if(nVids>=MAX_VIDEOS){rejVid++;continue;}const dur=await videoDuracao(f);if(dur>MAX_VID_SEG+0.5){rejDur++;continue;}}
     const id=uid();try{const b=isImg?await downscale(f):f;await idbPut(id,b);}catch(e){await idbPut(id,f);}
-    state.media.push({id,kind:isImg?"img":"vid",legenda:"",norma:""});if(isImg)nFotos++;else nVids++;add++;}
+    state.media.push({id,kind:isImg?"img":"vid",legenda:"",norma:"",ts:Date.now()});if(isImg)nFotos++;else nVids++;add++;}
   save();renderMedia();
   const avisos=[];if(rejFoto)avisos.push(rejFoto+" foto(s) acima do limite de "+MAX_FOTOS);if(rejVid)avisos.push(rejVid+" vídeo(s) acima do limite de "+MAX_VIDEOS);if(rejDur)avisos.push(rejDur+" vídeo(s) com mais de 1 min");
   if(add&&avisos.length)flash(add+" adicionada(s). Ignorado(s): "+avisos.join("; ")+".");
@@ -806,11 +833,15 @@ $$("[data-addq]").forEach(b=>b.addEventListener("click",()=>addQuesito(b.dataset
 function renderQuesitos(){const wrap=$("#quesitosList");wrap.innerHTML="";$("#quesEmpty").hidden=state.quesitos.length>0;
   const ordered=[...state.quesitos].sort((a,b)=>ORDER.indexOf(a.origem)-ORDER.indexOf(b.origem));const cnt={};
   ordered.forEach(q=>{cnt[q.origem]=(cnt[q.origem]||0)+1;const n=cnt[q.origem];const cls=q.origem==="Juiz"?"juiz":q.origem==="Reclamada"?"reclamada":q.origem==="Autora"?"autora":"mp";
-    const el=document.createElement("div");el.className="ques";el.innerHTML=`<div class="head"><span class="pill ${cls}">${esc(q.origem)}</span><span class="qnum">Quesito ${String(n).padStart(2,"0")}</span><span class="spacer"></span><select class="orig" data-orig="${q.id}">${ORDER.map(o=>`<option ${o===q.origem?"selected":""}>${o}</option>`).join("")}</select><button class="btn danger small" data-delq="${q.id}">Remover</button></div><div class="inner"><div class="qlabel">Pergunta</div><textarea class="pergunta" data-qp="${q.id}" placeholder="Transcreva o quesito…">${esc(q.pergunta)}</textarea><div class="qlabel">Resposta do perito</div><textarea class="resposta" data-qa="${q.id}" placeholder="Resposta técnica, objetiva e fundamentada…">${esc(q.resposta)}</textarea></div>`;wrap.appendChild(el);});
+    const el=document.createElement("div");el.className="ques";el.innerHTML=`<div class="head"><span class="pill ${cls}">${esc(q.origem)}</span><span class="qnum">Quesito ${String(n).padStart(2,"0")}</span><span class="spacer"></span><select class="orig" data-orig="${q.id}">${ORDER.map(o=>`<option ${o===q.origem?"selected":""}>${o}</option>`).join("")}</select><button class="btn danger small" data-delq="${q.id}">Remover</button></div><div class="inner"><div class="qlabel">Pergunta</div><textarea class="pergunta" data-qp="${q.id}" placeholder="Transcreva o quesito…">${esc(q.pergunta)}</textarea><div class="qlabel">Resposta do perito</div><textarea class="resposta" data-qa="${q.id}" placeholder="Resposta técnica, objetiva e fundamentada…">${esc(q.resposta)}</textarea><div class="row-actions" style="margin-top:6px"><button class="btn small" data-qpre="${q.id}" type="button">Prejudicado</button><button class="btn small" data-qna="${q.id}" type="button">Não se aplica</button><button class="btn small" data-qrem="${q.id}" type="button">+ Remissão</button></div></div>`;wrap.appendChild(el);});
   wrap.querySelectorAll("[data-qp]").forEach(t=>t.addEventListener("input",()=>{const q=state.quesitos.find(x=>x.id===t.dataset.qp);if(q){q.pergunta=t.value;save();}}));
   wrap.querySelectorAll("[data-qa]").forEach(t=>t.addEventListener("input",()=>{const q=state.quesitos.find(x=>x.id===t.dataset.qa);if(q){q.resposta=t.value;save();}}));
   wrap.querySelectorAll("[data-orig]").forEach(s=>s.addEventListener("change",()=>{const q=state.quesitos.find(x=>x.id===s.dataset.orig);if(q){q.origem=s.value;save();renderQuesitos();}}));
-  wrap.querySelectorAll("[data-delq]").forEach(b=>b.addEventListener("click",()=>{state.quesitos=state.quesitos.filter(x=>x.id!==b.dataset.delq);save();renderQuesitos();}));}
+  wrap.querySelectorAll("[data-delq]").forEach(b=>b.addEventListener("click",()=>{state.quesitos=state.quesitos.filter(x=>x.id!==b.dataset.delq);save();renderQuesitos();}));
+  const setResp=(id,val,append)=>{const q=state.quesitos.find(x=>x.id===id);if(!q)return;q.resposta=append?((q.resposta?q.resposta.trim()+" ":"")+val):val;save();renderQuesitos();};
+  wrap.querySelectorAll("[data-qpre]").forEach(b=>b.addEventListener("click",()=>setResp(b.dataset.qpre,"Prejudicado.",false)));
+  wrap.querySelectorAll("[data-qna]").forEach(b=>b.addEventListener("click",()=>setResp(b.dataset.qna,"Não se aplica ao objeto desta perícia.",false)));
+  wrap.querySelectorAll("[data-qrem]").forEach(b=>b.addEventListener("click",()=>setResp(b.dataset.qrem,"Vide item ___ / Foto nº ___ deste laudo.",true)));}
 
 /* normas */
 function renderNormas(){const wrap=$("#normasList");wrap.innerHTML="";state.normas.forEach(n=>{const el=document.createElement("div");el.className="norma-item";el.innerHTML=`<label class="chk"><input type="checkbox" data-non="${esc(n.code)}" ${n.on?"checked":""}></label><span class="code">${esc(n.code)}</span><span class="desc">${esc(n.desc)}</span><button class="btn danger small" data-deln="${esc(n.code)}">×</button>`;wrap.appendChild(el);});
@@ -1019,7 +1050,7 @@ Responda SOMENTE com JSON: {"agentes":[{"anexo":"Anexo 3","situacao":"...","anal
 {const _ig=$("#iaAgentes");if(_ig)_ig.addEventListener("click",iaAgentesFn);}
 /* ===== laudo ===== */
 async function imgDataUrl(id){const b=await idbGet(id);if(!b)return"";return await new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>res("");r.readAsDataURL(b);});}
-async function buildModel(){const imgs=state.media.filter(m=>m.kind==="img");const photos=[];for(const m of imgs)photos.push({legenda:m.legenda,norma:m.norma,data:await imgDataUrl(m.id)});return{photos,vids:state.media.filter(m=>m.kind==="vid").length,normasOn:state.normas.filter(n=>n.on)};}
+async function buildModel(){const imgs=state.media.filter(m=>m.kind==="img");const photos=[];for(const m of imgs)photos.push({legenda:m.legenda,norma:m.norma,data:await imgDataUrl(m.id),ts:m.ts||0});return{photos,vids:state.media.filter(m=>m.kind==="vid").length,normasOn:state.normas.filter(n=>n.on)};}
 async function generateLaudo(){const doc=$("#laudoDoc");const{photos,vids,normasOn}=await buildModel();
   const S=state,P=S.processo,PA=S.partes,V=S.vistoria,VC=S.vinculo,EMP=S.empresa,PE=getPerito(),AS=getAssist(),A=S.auditoria||{};
   const em=t=>t?esc(t):`<span class="empty">[a preencher]</span>`;const para=t=>esc(t||"").split(/\n+/).filter(Boolean).map(p=>`<p>${p}</p>`).join("")||`<p class="empty">[a preencher]</p>`;
@@ -1036,7 +1067,7 @@ async function generateLaudo(){const doc=$("#laudoDoc");const{photos,vids,normas
   const calVenc=S.medicoes.some(m=>m.certVal&&V.data&&m.certVal<V.data);
   let medHTML=S.medicoes.length?`<table class="ldoc"><tr><th>Agente</th><th>Valor</th><th>Unid.</th><th>Limite</th><th>Instrumento</th><th>Cert. calibr.</th><th>Resultado</th></tr>`+S.medicoes.map(m=>{const venc=(m.certVal&&V.data&&m.certVal<V.data);return `<tr><td>${esc(m.agente)||"—"}</td><td>${esc(m.valor)||"—"}</td><td>${esc(m.unidade)||"—"}</td><td>${esc(m.limite)||"—"}</td><td>${esc(m.tecnica)||"—"}</td><td>${m.certNum?esc(m.certNum):"—"}${m.certVal?" (val. "+fmtDate(m.certVal)+(venc?" — VENCIDO":"")+")":""}</td><td>${esc(m.resultado)||"—"}</td></tr>`;}).join("")+`</table>`+(calVenc?`<p class="empty">Atenção: há instrumento com certificado de calibração vencido na data da vistoria.</p>`:`<p class="sub" style="font-size:12px">As medições foram realizadas com instrumento calibrado por laboratório rastreável, conforme certificado indicado.</p>`):"";
   const aptN=state.aparelhos.length;if(aptN)medHTML+=`<p>Foram anexados ${aptN} relatório(s) do(s) instrumento(s) de medição.</p>`;
-  let photoHTML="",pn=0;photos.forEach(p=>{pn++;const nm=p.norma?` <span class="mono">(${esc(p.norma)})</span>`:"";photoHTML+=`<div class="photo-doc"><img src="${p.data}" alt=""><div class="cap"><b>Foto ${String(pn).padStart(2,"0")}</b> — ${esc(p.legenda)||"[legenda]"}${nm}</div></div>`;});
+  let photoHTML="",pn=0;photos.forEach(p=>{pn++;const nm=p.norma?` <span class="mono">(${esc(p.norma)})</span>`:"";photoHTML+=`<div class="photo-doc"><img src="${p.data}" alt=""><div class="cap"><b>Foto ${String(pn).padStart(2,"0")}</b> — ${esc(p.legenda)||"[legenda]"}${nm}${p.ts?` <span class="mono" style="font-size:10px;color:var(--muted)">· registrada em ${fmtTs(p.ts)}</span>`:""}</div></div>`;});
   const vidHTML=vids?`<p>Compõem ainda o acervo ${vids} registro(s) audiovisual(is), anexado(s) em meio digital.</p>`:"";
   const groups=[["Juiz","QUESITOS DO JUÍZO"],["Reclamada","QUESITOS DA RECLAMADA"],["Autora","QUESITOS DA PARTE AUTORA"],["MP","QUESITOS DO MINISTÉRIO PÚBLICO"]];let quesHTML="";
   groups.forEach(([org,title])=>{const l=S.quesitos.filter(q=>q.origem===org);if(!l.length)return;quesHTML+=`<h2>${title}</h2>`;l.forEach((q,i)=>{quesHTML+=`<div class="q-block"><span class="qlab">Quesito ${String(i+1).padStart(2,"0")}</span><p class="qp">${em(q.pergunta)}</p><p class="qa"><b>Resposta:</b> ${esc(q.resposta)||`<span class="empty">[resposta pendente]</span>`}</p></div>`;});});
@@ -1072,7 +1103,7 @@ async function generateLaudo(){const doc=$("#laudoDoc");const{photos,vids,normas
     <h2>${S_()}. CONCEITOS</h2>${concHTML}
     <h2>${S_()}. OBJETIVO</h2><p>Laudo pericial de <b>${esc(S.tipoPericia)}</b>.</p>${para(S.objeto)}
     <h2>${S_()}. PERÍODO DE TRABALHO</h2>${periodoHTML}
-    <h2>${S_()}. ANÁLISES PRELIMINARES — ATIVIDADES</h2>${atvHTML}
+    <h2>${S_()}. ANÁLISES PRELIMINARES — ATIVIDADES</h2>${atvHTML}${S.paradigma?`<p><b>Local/caso paradigma:</b> ${esc(S.paradigma)}</p>`:""}${S.entrevistas?`<p><b>Entrevistas na diligência:</b> ${esc(S.entrevistas)}</p>`:""}
     <h2>${S_()}. REGISTRO DA INSPEÇÃO</h2>${S.registroInspecao?para(S.registroInspecao):`<p class="empty">[registro da inspeção a preencher]</p>`}
     <h2>${S_()}. DA METODOLOGIA</h2>${para(V.metodo)}
     <h2>${S_()}. DA PERÍCIA TÉCNICA</h2>${docApresHTML}
@@ -1113,7 +1144,7 @@ async function exportPdf(){const{photos}=await generateLaudo();const J=window.js
   doc.setFont("helvetica","bold");doc.setFontSize(16);doc.text("LAUDO PERICIAL",W/2,y,{align:"center"});nl(6);doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(90,90,90);doc.text(`Autos nº ${P.numero||"—"}  ·  ${P.vara||"—"}`,W/2,y,{align:"center"});nl(8);doc.setTextColor(20,20,20);
   H("I. IDENTIFICAÇÃO");[["Processo nº",P.numero],["Ação",P.acao],["Juízo",P.vara],["Comarca",P.comarca],["Reclamante",PA.autor],["Reclamada",(EMP.razao||PA.reu)+(EMP.cnpj?" — CNPJ "+EMP.cnpj:"")],["Perito",[PE.nome,PE.formacao,PE.registro].filter(Boolean).join(" — ")],AS.length?["Assistente(s)",AS.map(a=>a.nome).join("; ")]:null,S.art?["ART",S.art]:null].filter(Boolean).forEach(([k,v])=>{if(v)body(`${k}: ${v}`);});
   body("Tipo da perícia: "+S.tipoPericia);H("II. OBJETIVO");body(S.objeto||"[a preencher]");body("Período: função "+(S.vinculo.funcao||"—")+", setor "+(S.vinculo.setor||"—")+", de "+(fmtDate(S.vinculo.admissao)||"—")+" a "+(fmtDate(S.vinculo.saida)||"atual")+".");if(S.periodos&&S.periodos.length){body("Períodos de apuração:");S.periodos.forEach(pp=>body("• "+(fmtDate(pp.inicio)||"—")+" a "+(fmtDate(pp.fim)||"atual")+": "+(pp.funcao||"—")+" / "+(pp.setor||"—")+(pp.obs?" — "+pp.obs:"")));}H("III. DA METODOLOGIA");body(V.metodo);
-  H("IV. DA VISTORIA");body(`Data: ${fmtDate(V.data)||"—"} ${V.hora||""}`);body(`Local: ${V.local||"—"}`);body(`Condições: ${V.clima||"—"}`);body(`Presentes: ${V.presentes||"—"}`);if(V.desc)body(V.desc);if(S.atividades.length){H("ATIVIDADES");S.atividades.forEach(a=>body("• "+(a.desc||"—")+" ("+a.regime+(a.pct?", "+a.pct+"% da jornada":"")+")"));}if(S.registroInspecao){H("REGISTRO DA INSPEÇÃO");body(S.registroInspecao);}
+  H("IV. DA VISTORIA");body(`Data: ${fmtDate(V.data)||"—"} ${V.hora||""}`);body(`Local: ${V.local||"—"}`);body(`Condições: ${V.clima||"—"}`);body(`Presentes: ${V.presentes||"—"}`);if(V.desc)body(V.desc);if(S.atividades.length){H("ATIVIDADES");S.atividades.forEach(a=>body("• "+(a.desc||"—")+" ("+a.regime+(a.pct?", "+a.pct+"% da jornada":"")+")"));}if(S.registroInspecao){H("REGISTRO DA INSPEÇÃO");body(S.registroInspecao);}if(S.paradigma)body("Local/caso paradigma: "+S.paradigma);if(S.entrevistas){H("ENTREVISTAS");body(S.entrevistas);}
   H("V. DOCUMENTAÇÃO ANALISADA");const du=S.docs.filter(d=>d.apresentado);if(du.length)du.forEach(d=>body(`• ${d.tipo}: ${d.apresentado}${d.validade?" ("+d.validade+")":""}${d.obs?" — "+d.obs:""}`));else body("[marque a conformidade]");
   if(S.epi.length){H("EPI (NR-06)");S.epi.forEach(e=>{const venc=(e.caVal&&V.data&&e.caVal<V.data);body("• "+(e.equip||"—")+" (CA "+(e.ca||"—")+(e.caVal?", val. "+fmtDate(e.caVal)+(venc?" VENCIDO":""):"")+")"+(e.agente?" — agente: "+e.agente:"")+(e.efic?" — eficácia: "+e.efic:""));});const ec=S.epiComprov||{};const ecI=[["Fornecimento",ec.fornecimento],["Treinamento",ec.treinamento],["Troca",ec.troca],["Higienização",ec.higienizacao],["Fiscalização",ec.fiscalizacao]].filter(x=>x[1]);if(ecI.length)body("Comprovação NR-06 — "+ecI.map(x=>x[0]+": "+x[1]).join("; ")+".");}
   const gr=computeGaps();if(S.epi.length&&gr.gaps){if(gr.gaps.length)body(`EPI (NR-06): ${gr.gaps.length} intervalo(s) sem comprovação contínua no período ${fmtDate(gr.adm)}–${fmtDate(gr.sai)}: ${gr.gaps.map(g=>fmtDate(g.from)+" a "+fmtDate(g.to)).join("; ")}.`);else body(`EPI (NR-06): cobertura sem lacunas no período ${fmtDate(gr.adm)}–${fmtDate(gr.sai)}.`);}
@@ -1191,6 +1222,10 @@ function checkLaudo(){const S=state;const items=[];const add=(ok,label)=>items.p
   add(S.art&&S.art.trim(),"ART da perícia informada");
   add(S.vistoria.data||S.vistoria.local,"Diligência registrada — data/local/presentes (art. 474)");
   add(S.media.filter(m=>m.kind==="img").length>0,"Registro fotográfico / anexos (art. 473, §3º)");
+  add(S.atividades.length>0,"Atividades e habitualidade registradas (NR-15)");
+  add(!S.agentes.some(a=>a.situacao==="Exposição caracterizada"&&(!a.grau||a.grau==="Não caracterizado")),"Grau definido para todo agente caracterizado (NR-15)");
+  add(!S.medicoes.length||S.medicoes.every(m=>m.certNum&&m.certNum.trim()),"Instrumentos com certificado de calibração informado");
+  add(!S.medicoes.some(m=>m.certVal&&S.vistoria.data&&m.certVal<S.vistoria.data),"Certificados de calibração vigentes na data da vistoria");
   const wrap=$("#cplList");if(wrap)wrap.innerHTML=items.map(i=>`<div style="display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px"><span style="color:${i.ok?'var(--ok)':'var(--danger)'};font-weight:800;flex:none">${i.ok?'✓':'✗'}</span><span>${esc(i.label)}</span></div>`).join("")+(items.some(i=>!i.ok)?`<p class="hint" style="margin-top:8px;color:var(--danger)">⚠ Há pendências — resolva antes de entregar o laudo.</p>`:`<p class="hint" style="margin-top:8px;color:var(--ok)">✓ Estrutura completa conforme o CPC.</p>`);}
 
 /* ===== aceite / escusa ===== */
