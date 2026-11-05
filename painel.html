@@ -171,11 +171,12 @@ function render(){
         <button class="btn small" data-act="open">↗ Abrir</button>
         <button class="btn small" data-act="toggle">✎ Editar</button>
       </div>
-      <div class="meta">${esc(p.parte)||"—"} · ${esc(p.modulo||"Perícia")} · prazo: ${prazoTxt}${p.obs?" · "+esc(p.obs):""}</div>
+      <div class="meta">${esc(p.parte)||"—"} · ${esc(p.modulo||"Perícia")} · ${esc(p.tipoPrazo||"Entrega do laudo")}: ${prazoTxt}${p.obs?" · "+esc(p.obs):""}</div>
       <div class="edit">
         <div class="grid2">
           <label class="field">Situação<select data-f="status"><option value="aberto" ${p.status!=="finalizada"?"selected":""}>Em aberto</option><option value="finalizada" ${p.status==="finalizada"?"selected":""}>Finalizada</option></select></label>
-          <label class="field">Prazo de entrega<input type="date" data-f="prazo" value="${esc(p.prazo)}"></label>
+          <label class="field">Tipo de prazo<select data-f="tipoPrazo">${["Entrega do laudo","Esclarecimentos","Parecer do assistente (15 dias)","Manifestação das partes"].map(o=>`<option ${o===(p.tipoPrazo||"Entrega do laudo")?"selected":""}>${o}</option>`).join("")}</select></label>
+          <label class="field">Data do prazo<input type="date" data-f="prazo" value="${esc(p.prazo)}"></label>
         </div>
         <label class="field">Observações<input data-f="obs" value="${esc(p.obs)}" placeholder="anotações livres"></label>
         <p class="sub" style="margin:2px 0 10px">Número, parte e módulo vêm da ${esc(p.modulo||"Perícia")} e são atualizados automaticamente.</p>
@@ -217,7 +218,7 @@ function exportPdf(){
       const d=diasAte(p.prazo);
       let pr=p.prazo?fmtBr(p.prazo):"sem prazo";
       if(p.status!=="finalizada"&&d!==null)pr+=d<0?" (venc. há "+(-d)+"d)":d===0?" (hoje)":" (em "+d+"d)";
-      const linha="• "+(p.numero||"(sem número)")+"  —  "+(p.parte||"—")+"  ["+(p.modulo||"Perícia")+"]  prazo: "+pr;
+      const linha="• "+(p.numero||"(sem número)")+"  —  "+(p.parte||"—")+"  ["+(p.modulo||"Perícia")+"]  "+(p.tipoPrazo||"Entrega do laudo")+": "+pr;
       const wrapped=doc.splitTextToSize(linha,W-2*M);
       doc.text(wrapped,M,y);y+=wrapped.length*4.6+1.5;
     });

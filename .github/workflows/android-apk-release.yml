@@ -1,0 +1,96 @@
+name: Build Android APK (release assinado)
+
+# APK de RELEASE assinado, para distribuição.
+# Opcional: só funciona se você cadastrar os 4 segredos abaixo em
+# Settings -> Secrets and variables -> Actions:
+#   ANDROID_KEYSTORE_BASE64  (o arquivo .jks em base64)
+#   ANDROID_KEYSTORE_PASSWORD
+#   ANDROID_KEY_ALIAS
+#   ANDROID_KEY_PASSWORD
+# Sem esses segredos, use o fluxo normal "Build Android APK" (debug).
+# Rode manualmente em Actions -> este workflow -> Run workflow.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Verificar segredos de assinatura
+        id: check
+        run: |
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Sem segredos de assinatura — cadastre ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS e ANDROID_KEY_PASSWORD para gerar o APK assinado."
+          fi
+
+      - name: Montar a pasta web (www)
+        if: steps.check.outputs.ok == 'true'
+        run: |
+          mkdir -p www
+          cp index.html assistencia.html painel.html manifest.webmanifest sw.js icon-192.png icon-512.png www/
+          cp -r vendor www/
+
+      - name: Instalar Capacitor
+        if: steps.check.outputs.ok == 'true'
+        run: npm install --no-save @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
+
+      - name: Adicionar plataforma Android
+        if: steps.check.outputs.ok == 'true'
+        run: npx cap add android
+
+      - name: Apontar o SDK e aceitar licenças
+        if: steps.check.outputs.ok == 'true'
+        run: |
+          SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          echo "sdk.dir=$SDK" > android/local.properties
+          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
+
+      - name: Sincronizar
+        if: steps.check.outputs.ok == 'true'
+        run: npx cap sync android
+
+      - name: Compilar APK (release, não assinado)
+        if: steps.check.outputs.ok == 'true'
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Assinar o APK
+        if: steps.check.outputs.ok == 'true'
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$KS_B64" | base64 -d > keystore.jks
+          SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          BT=$(ls -d "$SDK"/build-tools/* | sort -V | tail -1)
+          UNSIGNED=android/app/build/outputs/apk/release/app-release-unsigned.apk
+          "$BT/apksigner" sign --ks keystore.jks --ks-pass pass:"$KS_PASS" --ks-key-alias "$KEY_ALIAS" --key-pass pass:"$KEY_PASS" --out app-release-signed.apk "$UNSIGNED"
+          "$BT/apksigner" verify app-release-signed.apk
+          rm -f keystore.jks
+
+      - name: Publicar o APK assinado
+        if: steps.check.outputs.ok == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: perito-laudo-apk-release
+          path: app-release-signed.apk
+          if-no-files-found: error
