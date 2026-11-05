@@ -257,6 +257,12 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
       <p class="hint" style="margin-top:8px">O período (admissão → saída) é usado para checar lacunas na ficha de EPI (aba Documentos).</p>
     </div>
     <div class="card">
+      <h2>🗓️ Períodos de apuração <span class="seal">LINHA DO TEMPO</span></h2>
+      <p class="sub">Se as condições mudaram no contrato (setor, função, layout, EPI), registre cada período. O laudo dirá a que período cada conclusão se aplica. Vazio = usa admissão → saída.</p>
+      <div id="perList"></div>
+      <div class="add-bar"><button class="btn small" id="addPeriodo">+ Período</button></div>
+    </div>
+    <div class="card">
       <h2>🧑‍🔧 Equipe técnica pericial</h2>
       <p class="sub">Cadastre os profissionais uma vez; depois escolha quem foi o <b>perito</b> e quem foi o <b>assistente técnico</b> — os dados aparecem preenchidos no laudo.</p>
       <div id="equipeList"></div>
@@ -293,9 +299,20 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
       <div class="drop" id="dropEpiDoc"><span class="ic">🦺</span><b>Anexar a ficha de EPI entregue (PDF ou foto)</b><span>o sistema tenta ler o PDF; se não conseguir (foto/digitalizado), faça o cadastro manual na tabela.</span></div>
       <input type="file" id="epiDocInput" accept="application/pdf,image/*" multiple hidden>
       <div id="epiDocList" style="margin:12px 0"></div>
-      <div class="tbl-wrap"><table class="data" id="epiTable"><thead><tr><th>Equipamento / EPI</th><th>CA</th><th>Início</th><th>Fim</th><th>Obs.</th><th></th></tr></thead><tbody></tbody></table></div>
+      <div class="tbl-wrap"><table class="data" id="epiTable"><thead><tr><th>Equipamento / EPI</th><th>CA</th><th>Início</th><th>Fim</th><th>Obs.</th><th>Val. CA</th><th>Agente</th><th>Eficácia</th><th></th></tr></thead><tbody></tbody></table></div>
       <div class="row-actions" style="margin-top:10px"><button class="btn small" id="addEpi">+ Linha de EPI</button></div>
       <div id="epiGap"></div>
+      <div style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px">
+        <h3 style="font-size:14px">Comprovação do EPI <span class="seal">NR-06</span></h3>
+        <p class="sub">Sem fornecimento + troca periódica + higienização + treinamento + fiscalização do uso comprovados, não há neutralização do agente.</p>
+        <div class="grid g2">
+          <label class="field">Fornecimento<select id="ec_forn"><option value=""></option><option>Comprovado</option><option>Não comprovado</option><option>Não se aplica</option></select></label>
+          <label class="field">Treinamento (uso)<select id="ec_trein"><option value=""></option><option>Comprovado</option><option>Não comprovado</option><option>Não se aplica</option></select></label>
+          <label class="field">Troca periódica<select id="ec_troca"><option value=""></option><option>Comprovado</option><option>Não comprovado</option><option>Não se aplica</option></select></label>
+          <label class="field">Higienização<select id="ec_hig"><option value=""></option><option>Comprovado</option><option>Não comprovado</option><option>Não se aplica</option></select></label>
+          <label class="field">Fiscalização do uso<select id="ec_fisc"><option value=""></option><option>Comprovado</option><option>Não comprovado</option><option>Não se aplica</option></select></label>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -365,7 +382,7 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
     <div class="card">
       <h2>📈 Avaliações quantitativas <span class="seal">O QUE O PERITO ACHAR RELEVANTE</span></h2>
       <p class="sub">Campo livre: ruído, calor (IBUTG), umidade, iluminância, poeira, vibração, concentração química… Preencha só o pertinente ao processo.</p>
-      <div class="tbl-wrap"><table class="data" id="medTable"><thead><tr><th>Agente / grandeza</th><th>Valor</th><th>Unidade</th><th>Limite (NR-15)</th><th>Instrumento</th><th>Resultado</th><th></th></tr></thead><tbody></tbody></table></div>
+      <div class="tbl-wrap"><table class="data" id="medTable"><thead><tr><th>Agente / grandeza</th><th>Valor</th><th>Unidade</th><th>Limite (NR-15)</th><th>Instrumento</th><th>Resultado</th><th>Cert. calibr.</th><th>Validade</th><th></th></tr></thead><tbody></tbody></table></div>
       <datalist id="dlAgente"><option>Ruído contínuo</option><option>Ruído de impacto</option><option>Calor (IBUTG)</option><option>Umidade relativa</option><option>Iluminância</option><option>Poeira total</option><option>Poeira respirável</option><option>Vibração (VMB)</option><option>Vibração (VCI)</option><option>Concentração química</option></datalist>
       <datalist id="dlUnidade"><option>dB(A)</option><option>dB(C)</option><option>°C</option><option>%UR</option><option>lux</option><option>mg/m³</option><option>ppm</option><option>m/s²</option><option>f/cm³</option></datalist>
       <div class="row-actions" style="margin-top:10px"><button class="btn small" id="addMed">+ Linha de medição</button><button class="btn ia small" id="iaMed">✨ Preencher pela IA (lê relatórios/fotos)</button><span class="hint" id="iaMedStatus">Fotos e registro manual abaixo; a IA lê os relatórios do aparelho e as fotos da vistoria e preenche a tabela.</span></div>
@@ -418,6 +435,13 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
       <p class="sub">Situação e análise de cada agente dos Anexos da NR-15. Entram na seção “Riscos ocupacionais por agente”.</p>
       <div class="row-actions" style="margin-bottom:10px"><button class="btn ia small" id="iaAgentes">✨ Analisar agentes (IA)</button><span class="hint" id="agStatus"></span></div>
       <div id="agList"></div>
+      <div style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px">
+        <h3 style="font-size:14px">Periculosidade (NR-16)</h3>
+        <div class="grid g2">
+          <label class="field">Caracterizada?<select id="peric_car"><option>Não</option><option>Sim</option></select></label>
+          <label class="field">Fundamento (NR-16)<input id="peric_base" placeholder="Ex.: Anexo 4 – energia elétrica / inflamáveis / explosivos…"></label>
+        </div>
+      </div>
     </div>
     <div class="card">
       <h2>🧭 Análise do processo <span class="seal ia">USO INTERNO — NÃO ENTRA NO LAUDO</span></h2>
@@ -553,8 +577,9 @@ function blankState(){const adr=uid();return{
   painelId:uid(),peticao:"",processo:{numero:"",acao:"",vara:"",comarca:"",valor:"",nomeacao:""},
   empresa:{razao:"",cnpj:"",cnae:"",atividade:"",empregados:"",grau:"",endereco:""},
   profEmpresa:[],partes:{autor:"",autorAdv:"",reu:"",reuAdv:""},vinculo:{funcao:"",setor:"",admissao:"",saida:""},
+  periodos:[],periculosidade:{caracterizada:"Não",base:""},epiComprov:{fornecimento:"",treinamento:"",troca:"",higienizacao:"",fiscalizacao:""},
   equipe:[{id:adr,nome:"Adroaldo Marques de Oliveira",formacao:"Engenheiro de Segurança do Trabalho",registro:"CREA-PR 168996",email:"",tel:""}],
-  peritoId:adr,assistentes:[],objeto:"",art:"",tipoPericia:"Insalubridade",registroInspecao:"",atividades:[],agentes:AGENTES_NR15.map(a=>({anexo:a[0],nome:a[1],situacao:"Não constatada exposição significativa",analise:""})),
+  peritoId:adr,assistentes:[],objeto:"",art:"",tipoPericia:"Insalubridade",registroInspecao:"",atividades:[],agentes:AGENTES_NR15.map(a=>({anexo:a[0],nome:a[1],situacao:"Não constatada exposição significativa",analise:"",grau:"Não caracterizado"})),
   vistoria:{data:"",hora:"",clima:"",local:"",presentes:"",desc:"",metodo:DEFAULT_METODO},
   medicoes:[],aparelhos:[],epiDocs:[],
   docs:DOC_BASE.map(t=>({id:uid(),tipo:t,apresentado:"",validade:"",obs:"",hasText:false})),
@@ -602,6 +627,8 @@ const BIND=[
   ["#pt_reu",s=>s.partes.reu,(s,v)=>s.partes.reu=v],["#pt_reu_adv",s=>s.partes.reuAdv,(s,v)=>s.partes.reuAdv=v],
   ["#vc_funcao",s=>s.vinculo.funcao,(s,v)=>s.vinculo.funcao=v],["#vc_setor",s=>s.vinculo.setor,(s,v)=>s.vinculo.setor=v],
   ["#vc_admissao",s=>s.vinculo.admissao,(s,v)=>s.vinculo.admissao=v],["#vc_saida",s=>s.vinculo.saida,(s,v)=>s.vinculo.saida=v],
+  ["#peric_car",s=>s.periculosidade.caracterizada,(s,v)=>s.periculosidade.caracterizada=v],["#peric_base",s=>s.periculosidade.base,(s,v)=>s.periculosidade.base=v],
+  ["#ec_forn",s=>s.epiComprov.fornecimento,(s,v)=>s.epiComprov.fornecimento=v],["#ec_trein",s=>s.epiComprov.treinamento,(s,v)=>s.epiComprov.treinamento=v],["#ec_troca",s=>s.epiComprov.troca,(s,v)=>s.epiComprov.troca=v],["#ec_hig",s=>s.epiComprov.higienizacao,(s,v)=>s.epiComprov.higienizacao=v],["#ec_fisc",s=>s.epiComprov.fiscalizacao,(s,v)=>s.epiComprov.fiscalizacao=v],
   ["#s_objeto",s=>s.objeto,(s,v)=>s.objeto=v],["#s_art",s=>s.art,(s,v)=>s.art=v],["#s_tipo",s=>s.tipoPericia,(s,v)=>s.tipoPericia=v],["#v_registro",s=>s.registroInspecao,(s,v)=>s.registroInspecao=v],
   ["#v_data",s=>s.vistoria.data,(s,v)=>s.vistoria.data=v],["#v_hora",s=>s.vistoria.hora,(s,v)=>s.vistoria.hora=v],
   ["#v_clima",s=>s.vistoria.clima,(s,v)=>s.vistoria.clima=v],["#v_local",s=>s.vistoria.local,(s,v)=>s.vistoria.local=v],
@@ -704,11 +731,11 @@ $("#docSearch").addEventListener("input",async e=>{const q=e.target.value.trim()
 
 /* EPI */
 function renderEpi(){const tb=$("#epiTable").querySelector("tbody");tb.innerHTML="";
-  state.epi.forEach(e=>{const tr=document.createElement("tr");tr.innerHTML=`<td><input data-ee="${e.id}" value="${esc(e.equip)}" placeholder="Protetor auricular…"></td><td><input data-ec="${e.id}" value="${esc(e.ca)}" placeholder="CA" style="max-width:90px"></td><td><input type="date" data-ei="${e.id}" value="${esc(e.inicio)}"></td><td><input type="date" data-ef="${e.id}" value="${esc(e.fim)}"></td><td><input data-eo="${e.id}" value="${esc(e.obs)}" placeholder="Troca/periodicidade"></td><td><button class="del" data-ex="${e.id}">×</button></td>`;tb.appendChild(tr);});
+  state.epi.forEach(e=>{const tr=document.createElement("tr");tr.innerHTML=`<td><input data-ee="${e.id}" value="${esc(e.equip)}" placeholder="Protetor auricular…"></td><td><input data-ec="${e.id}" value="${esc(e.ca)}" placeholder="CA" style="max-width:90px"></td><td><input type="date" data-ei="${e.id}" value="${esc(e.inicio)}"></td><td><input type="date" data-ef="${e.id}" value="${esc(e.fim)}"></td><td><input data-eo="${e.id}" value="${esc(e.obs)}" placeholder="Troca/periodicidade"></td><td><input type="date" data-ev="${e.id}" value="${esc(e.caVal||'')}" title="Validade do CA"></td><td><input data-eg="${e.id}" value="${esc(e.agente||'')}" placeholder="agente" style="max-width:110px"></td><td><select data-ez="${e.id}"><option value="">—</option><option ${e.efic==="Neutraliza"?"selected":""}>Neutraliza</option><option ${e.efic==="Parcial"?"selected":""}>Parcial</option><option ${e.efic==="Não neutraliza"?"selected":""}>Não neutraliza</option></select></td><td><button class="del" data-ex="${e.id}">×</button></td>`;tb.appendChild(tr);});
   const b=(sel,key,field)=>tb.querySelectorAll(sel).forEach(i=>i.addEventListener("input",()=>{const e=state.epi.find(x=>x.id===i.dataset[key]);if(e){e[field]=i.value;save();if(key==="ei"||key==="ef")renderEpiGap();}}));
-  b("[data-ee]","ee","equip");b("[data-ec]","ec","ca");b("[data-ei]","ei","inicio");b("[data-ef]","ef","fim");b("[data-eo]","eo","obs");
+  b("[data-ee]","ee","equip");b("[data-ec]","ec","ca");b("[data-ei]","ei","inicio");b("[data-ef]","ef","fim");b("[data-eo]","eo","obs");b("[data-ev]","ev","caVal");b("[data-eg]","eg","agente");tb.querySelectorAll("[data-ez]").forEach(s=>s.addEventListener("change",()=>{const e=state.epi.find(x=>x.id===s.dataset.ez);if(e){e.efic=s.value;save();}}));
   tb.querySelectorAll("[data-ex]").forEach(x=>x.addEventListener("click",()=>{state.epi=state.epi.filter(e=>e.id!==x.dataset.ex);save();renderEpi();}));renderEpiGap();}
-$("#addEpi").addEventListener("click",()=>{state.epi.push({id:uid(),equip:"",ca:"",inicio:"",fim:"",obs:""});save();renderEpi();});
+$("#addEpi").addEventListener("click",()=>{state.epi.push({id:uid(),equip:"",ca:"",inicio:"",fim:"",obs:"",caVal:"",efic:"",agente:""});save();renderEpi();});
 function computeGaps(){const adm=state.vinculo.admissao,sai=state.vinculo.saida||new Date().toISOString().slice(0,10);
   if(!adm)return{err:"Informe a data de admissão (aba Processo) para checar lacunas."};
   const per=state.epi.filter(e=>e.inicio).map(e=>({i:e.inicio,f:e.fim||sai})).filter(p=>p.f>=p.i).sort((a,b)=>a.i<b.i?-1:1);
@@ -721,12 +748,12 @@ function renderEpiGap(){const box=$("#epiGap");const r=computeGaps();
 
 /* medições */
 function renderMed(){const tb=$("#medTable").querySelector("tbody");tb.innerHTML="";
-  state.medicoes.forEach(m=>{const tr=document.createElement("tr");tr.innerHTML=`<td><input list="dlAgente" data-ma="${m.id}" value="${esc(m.agente)}"></td><td><input data-mv="${m.id}" value="${esc(m.valor)}" style="max-width:90px"></td><td><input list="dlUnidade" data-mu="${m.id}" value="${esc(m.unidade)}" style="max-width:90px"></td><td><input data-ml="${m.id}" value="${esc(m.limite)}" style="max-width:100px"></td><td><input data-mt="${m.id}" value="${esc(m.tecnica)}" placeholder="Decibelímetro…"></td><td><select data-mr="${m.id}"><option value="">—</option><option ${m.resultado==="Dentro do limite"?"selected":""}>Dentro do limite</option><option ${m.resultado==="Acima do limite"?"selected":""}>Acima do limite</option><option ${m.resultado==="Não aplicável"?"selected":""}>Não aplicável</option></select></td><td><button class="del" data-mx="${m.id}">×</button></td>`;tb.appendChild(tr);});
+  state.medicoes.forEach(m=>{const tr=document.createElement("tr");tr.innerHTML=`<td><input list="dlAgente" data-ma="${m.id}" value="${esc(m.agente)}"></td><td><input data-mv="${m.id}" value="${esc(m.valor)}" style="max-width:90px"></td><td><input list="dlUnidade" data-mu="${m.id}" value="${esc(m.unidade)}" style="max-width:90px"></td><td><input data-ml="${m.id}" value="${esc(m.limite)}" style="max-width:100px"></td><td><input data-mt="${m.id}" value="${esc(m.tecnica)}" placeholder="Decibelímetro…"></td><td><select data-mr="${m.id}"><option value="">—</option><option ${m.resultado==="Dentro do limite"?"selected":""}>Dentro do limite</option><option ${m.resultado==="Acima do limite"?"selected":""}>Acima do limite</option><option ${m.resultado==="Não aplicável"?"selected":""}>Não aplicável</option></select></td><td><input data-mcn="${m.id}" value="${esc(m.certNum||'')}" placeholder="nº certificado" style="max-width:120px"></td><td><input type="date" data-mcv="${m.id}" value="${esc(m.certVal||'')}"></td><td><button class="del" data-mx="${m.id}">×</button></td>`;tb.appendChild(tr);});
   const b=(sel,key,field)=>tb.querySelectorAll(sel).forEach(i=>i.addEventListener("input",()=>{const m=state.medicoes.find(x=>x.id===i.dataset[key]);if(m){m[field]=i.value;save();}}));
-  b("[data-ma]","ma","agente");b("[data-mv]","mv","valor");b("[data-mu]","mu","unidade");b("[data-ml]","ml","limite");b("[data-mt]","mt","tecnica");
+  b("[data-ma]","ma","agente");b("[data-mv]","mv","valor");b("[data-mu]","mu","unidade");b("[data-ml]","ml","limite");b("[data-mt]","mt","tecnica");b("[data-mcn]","mcn","certNum");b("[data-mcv]","mcv","certVal");
   tb.querySelectorAll("[data-mr]").forEach(s=>s.addEventListener("change",()=>{const m=state.medicoes.find(x=>x.id===s.dataset.mr);if(m){m.resultado=s.value;save();}}));
   tb.querySelectorAll("[data-mx]").forEach(x=>x.addEventListener("click",()=>{state.medicoes=state.medicoes.filter(m=>m.id!==x.dataset.mx);save();renderMed();}));renderVistMed();}
-$("#addMed").addEventListener("click",()=>{state.medicoes.push({id:uid(),agente:"",valor:"",unidade:"",limite:"",tecnica:"",resultado:""});save();renderMed();});
+$("#addMed").addEventListener("click",()=>{state.medicoes.push({id:uid(),agente:"",valor:"",unidade:"",limite:"",tecnica:"",resultado:"",certNum:"",certVal:""});save();renderMed();});
 
 /* relatórios de aparelho */
 wireDrop("#dropApt","#aptInput",files=>handleApt(files),true);
@@ -889,14 +916,14 @@ ${quesitos||"(sem quesitos)"}
 
 Classifique cada imagem: se mostra algo ligado ao OBJETO do processo, escreva a legenda técnica (relevante=true). Se mostra um achado de segurança que NÃO se relaciona ao objeto, marque relevante=false e lance esse achado em "ncs" — pois o laudo só trata do objeto; o que é visto na perícia mas é alheio ao processo vai para o relatório de não conformidades.
 Responda SOMENTE com JSON:
-{"fotos":[{"i":1,"legenda":"descrição técnica objetiva ligada ao objeto","relevante":true}],"respostas":[{"id":"<id do quesito>","resposta":"resposta técnica fundamentada"}],"ncs":[{"descricao":"achado de segurança fora do objeto do processo","grau":"Baixa|Média|Alta|Grave e iminente","norma":"NR-xx","recomendacao":"medida corretiva"}],"caracterizacao":"relatório de vistoria: caracterização do local e da atividade do reclamante, cruzando documentos e imagens","atividades":[{"desc":"atividade do reclamante","regime":"habitual/intermitente|habitual/permanente|eventual"}],"agentes":[{"anexo":"Anexo 3","situacao":"Não constatada exposição significativa|Exposição caracterizada|Não aplicável","analise":"breve análise do agente para a função"}],"conclusao":"conclusão do perito, objetiva e fundamentada nas NR"}`;
+{"fotos":[{"i":1,"legenda":"descrição técnica objetiva ligada ao objeto","relevante":true}],"respostas":[{"id":"<id do quesito>","resposta":"resposta técnica fundamentada"}],"ncs":[{"descricao":"achado de segurança fora do objeto do processo","grau":"Baixa|Média|Alta|Grave e iminente","norma":"NR-xx","recomendacao":"medida corretiva"}],"caracterizacao":"relatório de vistoria: caracterização do local e da atividade do reclamante, cruzando documentos e imagens","atividades":[{"desc":"atividade do reclamante","regime":"habitual/intermitente|habitual/permanente|eventual","pct":"percentual aproximado da jornada (apenas número)"}],"agentes":[{"anexo":"Anexo 3","situacao":"Não constatada exposição significativa|Exposição caracterizada|Não aplicável","analise":"breve análise do agente para a função","grau":"Não caracterizado|Grau mínimo (10%)|Grau médio (20%)|Grau máximo (40%)"}],"conclusao":"conclusão do perito, objetiva e fundamentada nas NR"}`;
   try{const data=await s.json(prompt,{images:blobs.length?blobs:undefined,modelTier:"complex"});let n=0,nc=0;
     if(Array.isArray(data.fotos))data.fotos.forEach(f=>{const idx=(f.i|0)-1;const m=sent[idx];if(m&&!m.legenda&&f.legenda&&f.relevante!==false){m.legenda=String(f.legenda);n++;}});
     if(Array.isArray(data.respostas))data.respostas.forEach(r=>{const q=state.quesitos.find(x=>x.id===r.id);if(q&&!q.resposta&&r.resposta){q.resposta=String(r.resposta);n++;}});
     if(Array.isArray(data.ncs))data.ncs.forEach(x=>{if(x&&x.descricao){state.ncs.push({id:uid(),desc:String(x.descricao),grau:String(x.grau||"Média"),norma:String(x.norma||""),recom:String(x.recomendacao||"")});nc++;}});
     if(data.caracterizacao&&!state.vistoria.desc.trim()){state.vistoria.desc=String(data.caracterizacao);const dv=$("#v_desc");if(dv)dv.value=state.vistoria.desc;n++;}
-    if(Array.isArray(data.atividades))data.atividades.forEach(x=>{if(x&&x.desc&&!state.atividades.some(z=>z.desc===String(x.desc))){state.atividades.push({id:uid(),desc:String(x.desc),regime:String(x.regime||"habitual/intermitente")});n++;}});
-    if(Array.isArray(data.agentes))data.agentes.forEach(x=>{const a=state.agentes.find(z=>z.anexo.toLowerCase()===String(x.anexo||"").toLowerCase());if(a){if(x.situacao)a.situacao=String(x.situacao);if(x.analise)a.analise=String(x.analise);}});
+    if(Array.isArray(data.atividades))data.atividades.forEach(x=>{if(x&&x.desc&&!state.atividades.some(z=>z.desc===String(x.desc))){state.atividades.push({id:uid(),desc:String(x.desc),regime:String(x.regime||"habitual/intermitente"),pct:String(x.pct||x.percentual||"")});n++;}});
+    if(Array.isArray(data.agentes))data.agentes.forEach(x=>{const a=state.agentes.find(z=>z.anexo.toLowerCase()===String(x.anexo||"").toLowerCase());if(a){if(x.situacao)a.situacao=String(x.situacao);if(x.analise)a.analise=String(x.analise);if(x.grau)a.grau=String(x.grau);}});
     if(data.conclusao&&!state.conclusao.trim()){state.conclusao=String(data.conclusao);$("#concl").value=state.conclusao;n++;}
     save();renderMedia();renderQuesitos();renderNc();renderAtividades();renderAgentes();generateLaudo();st.style.color="var(--ok)";st.textContent=`Rascunho gerado — ${n} campo(s) preenchido(s)${nc?`, ${nc} não conformidade(s) enviada(s) ao relatório à parte`:""}. Revise antes de imprimir.`;flash("Rascunho da IA pronto — revise.");
   }catch(e){const msg=iaErr(e);st.style.color="var(--warn)";st.textContent=msg;flash(msg);}finally{btn.disabled=false;}}
@@ -946,20 +973,27 @@ Extraia as MEDICOES/avaliacoes quantitativas a partir dos relatorios de instrume
 Relatorios (texto):${aptx||" —"}
 Responda SOMENTE com JSON: {"medicoes":[{"agente":"Ruido continuo","valor":"85","unidade":"dB(A)","limite":"85 dB(A)","tecnica":"Dosimetro","resultado":"Acima do limite"}]}`;
   try{const data=await s.json(prompt,{images:blobs.length?blobs:undefined,modelTier:"complex"});let n=0;
-    if(Array.isArray(data.medicoes))data.medicoes.forEach(x=>{if(x&&(x.agente||x.valor)){state.medicoes.push({id:uid(),agente:String(x.agente||""),valor:String(x.valor||""),unidade:String(x.unidade||""),limite:String(x.limite||""),tecnica:String(x.tecnica||x.instrumento||""),resultado:String(x.resultado||"")});n++;}});
+    if(Array.isArray(data.medicoes))data.medicoes.forEach(x=>{if(x&&(x.agente||x.valor)){state.medicoes.push({id:uid(),agente:String(x.agente||""),valor:String(x.valor||""),unidade:String(x.unidade||""),limite:String(x.limite||""),tecnica:String(x.tecnica||x.instrumento||""),resultado:String(x.resultado||""),certNum:String(x.certNum||x.certificado||""),certVal:String(x.certVal||x.validade||"")});n++;}});
     save();renderMed();if(st){st.style.color="var(--ok)";st.textContent=n+" medicao(oes) extraida(s) — confira os valores.";}flash(n+" medicao(oes) pela IA.");}
   catch(e){if(st){st.style.color="var(--warn)";st.textContent=iaErr(e);}}finally{if(b)b.disabled=false;}}
 {const _im=$("#iaMed");if(_im)_im.addEventListener("click",iaMedicoesFn);}
 
 /* ===== atividades / agentes / tipo (Etapa B) ===== */
-function renderAtividades(){const w=$("#atvList");if(!w)return;w.innerHTML="";state.atividades.forEach(a=>{const el=document.createElement("div");el.className="person";el.innerHTML=`<input data-ad="${a.id}" value="${esc(a.desc)}" placeholder="Atividade do reclamante" style="flex:1;min-width:180px"><select data-ar="${a.id}" style="width:auto"><option ${a.regime==="habitual/intermitente"?"selected":""}>habitual/intermitente</option><option ${a.regime==="habitual/permanente"?"selected":""}>habitual/permanente</option><option ${a.regime==="eventual"?"selected":""}>eventual</option></select><button class="btn danger small" data-ax="${a.id}">×</button>`;w.appendChild(el);});
+function renderAtividades(){const w=$("#atvList");if(!w)return;w.innerHTML="";state.atividades.forEach(a=>{const el=document.createElement("div");el.className="person";el.innerHTML=`<input data-ad="${a.id}" value="${esc(a.desc)}" placeholder="Atividade do reclamante" style="flex:1;min-width:180px"><select data-ar="${a.id}" style="width:auto"><option ${a.regime==="habitual/intermitente"?"selected":""}>habitual/intermitente</option><option ${a.regime==="habitual/permanente"?"selected":""}>habitual/permanente</option><option ${a.regime==="eventual"?"selected":""}>eventual</option></select><input data-ap="${a.id}" type="number" min="0" max="100" value="${esc(a.pct||'')}" placeholder="% jorn." style="width:84px" title="% da jornada"><button class="btn danger small" data-ax="${a.id}">×</button>`;w.appendChild(el);});
   w.querySelectorAll("[data-ad]").forEach(i=>i.addEventListener("input",()=>{const a=state.atividades.find(x=>x.id===i.dataset.ad);if(a){a.desc=i.value;save();}}));
   w.querySelectorAll("[data-ar]").forEach(sx=>sx.addEventListener("change",()=>{const a=state.atividades.find(x=>x.id===sx.dataset.ar);if(a){a.regime=sx.value;save();}}));
+  w.querySelectorAll("[data-ap]").forEach(i=>i.addEventListener("input",()=>{const a=state.atividades.find(x=>x.id===i.dataset.ap);if(a){a.pct=i.value;save();}}));
   w.querySelectorAll("[data-ax]").forEach(b=>b.addEventListener("click",()=>{state.atividades=state.atividades.filter(x=>x.id!==b.dataset.ax);save();renderAtividades();}));}
-{const _aa=$("#addAtv");if(_aa)_aa.addEventListener("click",()=>{state.atividades.push({id:uid(),desc:"",regime:"habitual/intermitente"});save();renderAtividades();});}
-function renderAgentes(){const w=$("#agList");if(!w)return;w.innerHTML="";const opts=["Não constatada exposição significativa","Exposição caracterizada","Não aplicável"];state.agentes.forEach((a,i)=>{const el=document.createElement("div");el.className="doc-row";el.innerHTML=`<div class="top"><span class="tname">${esc(a.anexo)} — ${esc(a.nome)}</span><select data-ags="${i}" style="width:auto;min-width:240px">${opts.map(o=>`<option ${o===a.situacao?"selected":""}>${o}</option>`).join("")}</select></div><textarea data-aga="${i}" placeholder="Análise (opcional)" style="margin-top:8px;min-height:48px">${esc(a.analise)}</textarea>`;w.appendChild(el);});
+{const _aa=$("#addAtv");if(_aa)_aa.addEventListener("click",()=>{state.atividades.push({id:uid(),desc:"",regime:"habitual/intermitente",pct:""});save();renderAtividades();});}
+function renderPeriodos(){const w=$("#perList");if(!w)return;w.innerHTML="";(state.periodos||[]).forEach(pp=>{const el=document.createElement("div");el.className="person";el.style.flexWrap="wrap";el.innerHTML=`<input type="date" data-pi="${pp.id}" value="${esc(pp.inicio||'')}" title="Início"><input type="date" data-pf="${pp.id}" value="${esc(pp.fim||'')}" title="Fim"><input data-pfu="${pp.id}" value="${esc(pp.funcao||'')}" placeholder="Função" style="flex:1;min-width:120px"><input data-pse="${pp.id}" value="${esc(pp.setor||'')}" placeholder="Setor" style="flex:1;min-width:120px"><input data-po="${pp.id}" value="${esc(pp.obs||'')}" placeholder="Condição / observação" style="flex:2;min-width:160px"><button class="btn danger small" data-px="${pp.id}">×</button>`;w.appendChild(el);});
+  const bp=(sel,key,field)=>w.querySelectorAll(sel).forEach(i=>i.addEventListener("input",()=>{const pp=state.periodos.find(x=>x.id===i.dataset[key]);if(pp){pp[field]=i.value;save();}}));
+  bp("[data-pi]","pi","inicio");bp("[data-pf]","pf","fim");bp("[data-pfu]","pfu","funcao");bp("[data-pse]","pse","setor");bp("[data-po]","po","obs");
+  w.querySelectorAll("[data-px]").forEach(b=>b.addEventListener("click",()=>{state.periodos=state.periodos.filter(x=>x.id!==b.dataset.px);save();renderPeriodos();}));}
+{const _ap=$("#addPeriodo");if(_ap)_ap.addEventListener("click",()=>{if(!state.periodos)state.periodos=[];state.periodos.push({id:uid(),inicio:"",fim:"",funcao:"",setor:"",obs:""});save();renderPeriodos();});}
+function renderAgentes(){const w=$("#agList");if(!w)return;w.innerHTML="";const opts=["Não constatada exposição significativa","Exposição caracterizada","Não aplicável"];const GRAUS=["Não caracterizado","Grau mínimo (10%)","Grau médio (20%)","Grau máximo (40%)"];state.agentes.forEach((a,i)=>{const el=document.createElement("div");el.className="doc-row";el.innerHTML=`<div class="top"><span class="tname">${esc(a.anexo)} — ${esc(a.nome)}</span><select data-ags="${i}" style="width:auto;min-width:240px">${opts.map(o=>`<option ${o===a.situacao?"selected":""}>${o}</option>`).join("")}</select><select data-agg="${i}" style="width:auto;min-width:160px;margin-left:6px" title="Enquadramento">${GRAUS.map(g=>`<option ${g===(a.grau||"Não caracterizado")?"selected":""}>${g}</option>`).join("")}</select></div><textarea data-aga="${i}" placeholder="Análise (opcional)" style="margin-top:8px;min-height:48px">${esc(a.analise)}</textarea>`;w.appendChild(el);});
   w.querySelectorAll("[data-ags]").forEach(sx=>sx.addEventListener("change",()=>{const a=state.agentes[+sx.dataset.ags];if(a){a.situacao=sx.value;save();}}));
-  w.querySelectorAll("[data-aga]").forEach(t=>t.addEventListener("input",()=>{const a=state.agentes[+t.dataset.aga];if(a){a.analise=t.value;save();}}));}
+  w.querySelectorAll("[data-aga]").forEach(t=>t.addEventListener("input",()=>{const a=state.agentes[+t.dataset.aga];if(a){a.analise=t.value;save();}}));
+  w.querySelectorAll("[data-agg]").forEach(sx=>sx.addEventListener("change",()=>{const a=state.agentes[+sx.dataset.agg];if(a){a.grau=sx.value;save();generateLaudo();}}));}
 async function iaAtvFn(){const st=$("#atvStatus");const s=await getSample();if(!s){if(st){st.style.color="var(--warn)";st.textContent="Configure o Gemini (aba IA/Config).";}return;}
   const b=$("#iaAtv");if(b)b.disabled=true;if(st){st.style.color="var(--muted)";st.innerHTML='<span class="spin"></span> Extraindo atividades…';}
   const prompt=`${IA_RULE}
@@ -967,7 +1001,7 @@ Liste as ATIVIDADES do reclamante (função: ${state.vinculo.funcao||"—"}) a p
 Petição (trecho): ${(state.peticao||"").slice(0,5000)}
 Caracterização: ${(state.vistoria.desc||"").slice(0,1500)}
 Responda SOMENTE com JSON: {"atividades":[{"desc":"...","regime":"habitual/intermitente"}]}`;
-  try{const d=await s.json(prompt,{modelTier:"default"});let nq=0;if(Array.isArray(d.atividades))d.atividades.forEach(x=>{if(x&&x.desc&&!state.atividades.some(z=>z.desc===String(x.desc))){state.atividades.push({id:uid(),desc:String(x.desc),regime:String(x.regime||"habitual/intermitente")});nq++;}});save();renderAtividades();if(st){st.style.color="var(--ok)";st.textContent=nq+" atividade(s) extraída(s) — revise.";}flash(nq+" atividade(s) pela IA.");}
+  try{const d=await s.json(prompt,{modelTier:"default"});let nq=0;if(Array.isArray(d.atividades))d.atividades.forEach(x=>{if(x&&x.desc&&!state.atividades.some(z=>z.desc===String(x.desc))){state.atividades.push({id:uid(),desc:String(x.desc),regime:String(x.regime||"habitual/intermitente"),pct:String(x.pct||x.percentual||"")});nq++;}});save();renderAtividades();if(st){st.style.color="var(--ok)";st.textContent=nq+" atividade(s) extraída(s) — revise.";}flash(nq+" atividade(s) pela IA.");}
   catch(e){if(st){st.style.color="var(--warn)";st.textContent=iaErr(e);}}finally{if(b)b.disabled=false;}}
 {const _ya=$("#iaAtv");if(_ya)_ya.addEventListener("click",iaAtvFn);}
 async function iaAgentesFn(){const st=$("#agStatus");const s=await getSample();if(!s){if(st){st.style.color="var(--warn)";st.textContent="Configure o Gemini (aba IA/Config).";}return;}
@@ -978,8 +1012,9 @@ Analise, agente por agente (Anexos da NR-15), se há exposição insalubre para 
 Função: ${state.vinculo.funcao||"—"}; Atividades: ${state.atividades.map(a=>a.desc+" ("+a.regime+")").join("; ")||"—"}
 Medições: ${med||"—"}; Caracterização: ${(state.vistoria.desc||"").slice(0,1500)}
 Anexos a avaliar: ${state.agentes.map(a=>a.anexo+" "+a.nome).join("; ")}
-Responda SOMENTE com JSON: {"agentes":[{"anexo":"Anexo 3","situacao":"...","analise":"..."}]}`;
-  try{const d=await s.json(prompt,{modelTier:"complex"});if(Array.isArray(d.agentes))d.agentes.forEach(x=>{const a=state.agentes.find(z=>z.anexo.toLowerCase()===String(x.anexo||"").toLowerCase());if(a){if(x.situacao)a.situacao=String(x.situacao);if(x.analise)a.analise=String(x.analise);}});save();renderAgentes();generateLaudo();if(st){st.style.color="var(--ok)";st.textContent="Agentes analisados — revise.";}flash("Agentes analisados pela IA.");}
+Para cada anexo, quando houver exposição caracterizada, indique também o grau de insalubridade: "Grau mínimo (10%)", "Grau médio (20%)" ou "Grau máximo (40%)"; caso contrário "Não caracterizado". Não invente dados.
+Responda SOMENTE com JSON: {"agentes":[{"anexo":"Anexo 3","situacao":"...","analise":"...","grau":"Não caracterizado|Grau mínimo (10%)|Grau médio (20%)|Grau máximo (40%)"}]}`;
+  try{const d=await s.json(prompt,{modelTier:"complex"});if(Array.isArray(d.agentes))d.agentes.forEach(x=>{const a=state.agentes.find(z=>z.anexo.toLowerCase()===String(x.anexo||"").toLowerCase());if(a){if(x.situacao)a.situacao=String(x.situacao);if(x.analise)a.analise=String(x.analise);if(x.grau)a.grau=String(x.grau);}});save();renderAgentes();generateLaudo();if(st){st.style.color="var(--ok)";st.textContent="Agentes analisados — revise.";}flash("Agentes analisados pela IA.");}
   catch(e){if(st){st.style.color="var(--warn)";st.textContent=iaErr(e);}}finally{if(b)b.disabled=false;}}
 {const _ig=$("#iaAgentes");if(_ig)_ig.addEventListener("click",iaAgentesFn);}
 /* ===== laudo ===== */
@@ -992,8 +1027,14 @@ async function generateLaudo(){const doc=$("#laudoDoc");const{photos,vids,normas
   const artHTML=S.art?`<p>A presente perícia está amparada pela <b>ART nº ${esc(S.art)}</b>, que atribui a responsabilidade técnica ao perito subscritor.</p>`:"";
   const profTxt=S.profEmpresa.filter(p=>p.nome).map(p=>`${esc(p.nome)} (${esc(p.funcao)}${p.registro?" – "+esc(p.registro):""})`).join("; ");
   const dUsed=S.docs.filter(d=>d.apresentado);let docHTML=dUsed.length?`<table class="ldoc"><tr><th>Documento</th><th>Apresentado</th><th>Validade</th><th>Observação</th></tr>`+dUsed.map(d=>`<tr><td>${esc(d.tipo)}</td><td>${esc(d.apresentado)}</td><td>${esc(d.validade)||"—"}</td><td>${esc(d.obs)||"—"}</td></tr>`).join("")+`</table>`:`<p class="empty">[marque a conformidade dos documentos]</p>`;
-  const gr=computeGaps();let epiHTML="";if(S.epi.length){epiHTML=`<p>Quanto ao fornecimento de EPI (NR-06):</p>`;if(gr.gaps&&gr.gaps.length)epiHTML+=`<p>Verificou-se, no período de ${fmtDate(gr.adm)} a ${fmtDate(gr.sai)}, <b>${gr.gaps.length} intervalo(s) sem comprovação de fornecimento contínuo de EPI</b>: ${gr.gaps.map(g=>fmtDate(g.from)+" a "+fmtDate(g.to)).join("; ")}.</p>`;else if(gr.gaps)epiHTML+=`<p>A documentação de EPI apresentada cobre o período de ${fmtDate(gr.adm)} a ${fmtDate(gr.sai)}, sem lacunas identificadas.</p>`;}
-  let medHTML=S.medicoes.length?`<table class="ldoc"><tr><th>Agente</th><th>Valor</th><th>Unid.</th><th>Limite</th><th>Instrumento</th><th>Resultado</th></tr>`+S.medicoes.map(m=>`<tr><td>${esc(m.agente)||"—"}</td><td>${esc(m.valor)||"—"}</td><td>${esc(m.unidade)||"—"}</td><td>${esc(m.limite)||"—"}</td><td>${esc(m.tecnica)||"—"}</td><td>${esc(m.resultado)||"—"}</td></tr>`).join("")+`</table>`:"";
+  const gr=computeGaps();let epiHTML="";if(S.epi.length){epiHTML=`<p>Quanto ao EPI (NR-06):</p>`;if(gr.gaps&&gr.gaps.length)epiHTML+=`<p>Verificou-se, no período de ${fmtDate(gr.adm)} a ${fmtDate(gr.sai)}, <b>${gr.gaps.length} intervalo(s) sem comprovação de fornecimento contínuo de EPI</b>: ${gr.gaps.map(g=>fmtDate(g.from)+" a "+fmtDate(g.to)).join("; ")}.</p>`;else if(gr.gaps)epiHTML+=`<p>A documentação de EPI apresentada cobre o período de ${fmtDate(gr.adm)} a ${fmtDate(gr.sai)}, sem lacunas identificadas.</p>`;
+  epiHTML+=`<table class="ldoc"><tr><th>EPI</th><th>CA</th><th>Validade CA</th><th>Agente</th><th>Eficácia</th></tr>`+S.epi.map(e=>{const venc=(e.caVal&&V.data&&e.caVal<V.data);return `<tr><td>${esc(e.equip)||"—"}</td><td>${esc(e.ca)||"—"}</td><td>${e.caVal?fmtDate(e.caVal)+(venc?" — vencido":""):"—"}</td><td>${esc(e.agente)||"—"}</td><td>${esc(e.efic)||"—"}</td></tr>`;}).join("")+`</table>`;
+  const ec=S.epiComprov||{};const ecItens=[["Fornecimento",ec.fornecimento],["Treinamento",ec.treinamento],["Troca periódica",ec.troca],["Higienização",ec.higienizacao],["Fiscalização do uso",ec.fiscalizacao]].filter(x=>x[1]);
+  if(ecItens.length)epiHTML+=`<p>Comprovação exigida pela NR-06 — `+ecItens.map(x=>`${x[0]}: <b>${esc(x[1])}</b>`).join("; ")+`.</p>`;
+  const naoComp=ecItens.filter(x=>x[1]==="Não comprovado").map(x=>x[0]);
+  if(naoComp.length)epiHTML+=`<p>Constatou-se <b>ausência de comprovação</b> de: ${naoComp.join(", ")}. Sem a comprovação integral (fornecimento, troca periódica, higienização, treinamento e fiscalização do uso), não se reconhece a efetiva neutralização do agente por EPI.</p>`;}
+  const calVenc=S.medicoes.some(m=>m.certVal&&V.data&&m.certVal<V.data);
+  let medHTML=S.medicoes.length?`<table class="ldoc"><tr><th>Agente</th><th>Valor</th><th>Unid.</th><th>Limite</th><th>Instrumento</th><th>Cert. calibr.</th><th>Resultado</th></tr>`+S.medicoes.map(m=>{const venc=(m.certVal&&V.data&&m.certVal<V.data);return `<tr><td>${esc(m.agente)||"—"}</td><td>${esc(m.valor)||"—"}</td><td>${esc(m.unidade)||"—"}</td><td>${esc(m.limite)||"—"}</td><td>${esc(m.tecnica)||"—"}</td><td>${m.certNum?esc(m.certNum):"—"}${m.certVal?" (val. "+fmtDate(m.certVal)+(venc?" — VENCIDO":"")+")":""}</td><td>${esc(m.resultado)||"—"}</td></tr>`;}).join("")+`</table>`+(calVenc?`<p class="empty">Atenção: há instrumento com certificado de calibração vencido na data da vistoria.</p>`:`<p class="sub" style="font-size:12px">As medições foram realizadas com instrumento calibrado por laboratório rastreável, conforme certificado indicado.</p>`):"";
   const aptN=state.aparelhos.length;if(aptN)medHTML+=`<p>Foram anexados ${aptN} relatório(s) do(s) instrumento(s) de medição.</p>`;
   let photoHTML="",pn=0;photos.forEach(p=>{pn++;const nm=p.norma?` <span class="mono">(${esc(p.norma)})</span>`:"";photoHTML+=`<div class="photo-doc"><img src="${p.data}" alt=""><div class="cap"><b>Foto ${String(pn).padStart(2,"0")}</b> — ${esc(p.legenda)||"[legenda]"}${nm}</div></div>`;});
   const vidHTML=vids?`<p>Compõem ainda o acervo ${vids} registro(s) audiovisual(is), anexado(s) em meio digital.</p>`:"";
@@ -1001,14 +1042,21 @@ async function generateLaudo(){const doc=$("#laudoDoc");const{photos,vids,normas
   groups.forEach(([org,title])=>{const l=S.quesitos.filter(q=>q.origem===org);if(!l.length)return;quesHTML+=`<h2>${title}</h2>`;l.forEach((q,i)=>{quesHTML+=`<div class="q-block"><span class="qlab">Quesito ${String(i+1).padStart(2,"0")}</span><p class="qp">${em(q.pergunta)}</p><p class="qa"><b>Resposta:</b> ${esc(q.resposta)||`<span class="empty">[resposta pendente]</span>`}</p></div>`;});});
   if(!quesHTML)quesHTML=`<h2>RESPOSTA AOS QUESITOS</h2><p class="empty">[nenhum quesito cadastrado]</p>`;
   const local=V.local?esc(V.local.split(/[,–-]/).slice(-2).join(", ").trim()):em(P.comarca);const hoje=new Date().toLocaleDateString("pt-BR",{day:"2-digit",month:"long",year:"numeric"});
-  const atvHTML=S.atividades.length?`<ul>`+S.atividades.map(a=>`<li>${esc(a.desc)||"—"}${a.regime?` <span class="mono">(${esc(a.regime)})</span>`:""}</li>`).join("")+`</ul>`:`<p class="empty">[atividades a preencher]</p>`;
-  const agHTML=S.agentes.map(a=>`<p><b>${esc(a.anexo)} — ${esc(a.nome)}:</b> ${esc(a.situacao)||"—"}.${a.analise?` ${esc(a.analise)}`:""}</p>`).join("");
+  const atvHTML=S.atividades.length?`<table class="ldoc"><tr><th>Atividade</th><th>Regime</th><th>% da jornada</th></tr>`+S.atividades.map(a=>`<tr><td>${esc(a.desc)||"—"}</td><td>${esc(a.regime)||"—"}</td><td>${a.pct?esc(a.pct)+"%":"—"}</td></tr>`).join("")+`</table><p class="sub" style="font-size:12px">A habitualidade e o tempo de exposição são fatores determinantes para a caracterização, nos termos da NR-15.</p>`:`<p class="empty">[atividades a preencher]</p>`;
+  const agHTML=S.agentes.map(a=>`<p><b>${esc(a.anexo)} — ${esc(a.nome)}:</b> ${esc(a.situacao)||"—"}${(a.grau&&a.grau!=="Não caracterizado")?` — <b>${esc(a.grau)}</b>`:""}.${a.analise?` ${esc(a.analise)}`:""}</p>`).join("");
+  const GRAUPCT={"Grau mínimo (10%)":10,"Grau médio (20%)":20,"Grau máximo (40%)":40};
+  let maxPct=0,maxGrau="";S.agentes.forEach(a=>{const pc=GRAUPCT[a.grau||""];if(pc&&pc>maxPct){maxPct=pc;maxGrau=a.grau;}});
+  const enqRows=S.agentes.filter(a=>a.situacao!=="Não aplicável").map(a=>`<tr><td>${esc(a.anexo)} — ${esc(a.nome)}</td><td>${esc(a.situacao)}</td><td>${(a.grau&&a.grau!=="Não caracterizado")?esc(a.grau):"—"}</td></tr>`).join("");
+  const enqTable=enqRows?`<table class="ldoc"><tr><th>Agente (NR-15)</th><th>Situação</th><th>Enquadramento</th></tr>${enqRows}</table>`:"";
+  const enqConcl=maxPct>0?`<p>Com base nas análises, caracteriza-se <b>insalubridade em ${maxGrau.toLowerCase()}</b> para a função e o período examinados. Nos termos da NR-15, havendo mais de um agente insalubre, o adicional incide uma única vez e sobre o grau mais elevado, correspondendo ao <b>adicional de ${maxPct}%</b>.</p>`:`<p>Com base nas análises, <b>não se caracteriza insalubridade</b> para a função e o período examinados, nos termos da NR-15.</p>`;
+  const pericConcl=(S.periculosidade&&S.periculosidade.caracterizada==="Sim")?`<p>Quanto à periculosidade, <b>caracteriza-se condição perigosa (adicional de 30%)</b>${S.periculosidade.base?`, com fundamento em ${esc(S.periculosidade.base)}`:""}, nos termos da NR-16.</p>`:`<p>Quanto à periculosidade, <b>não se caracteriza condição perigosa</b> nos termos da NR-16.</p>`;
   const abrevHTML=`<dl class="kv">`+ABREV.map(x=>`<dt class="mono">${esc(x[0])}</dt><dd>${esc(x[1])}</dd>`).join("")+`</dl>`;
   const concHTML=`<dl class="kv">`+CONCEITOS.map(x=>`<dt>${esc(x[0])}</dt><dd>${esc(x[1])}</dd>`).join("")+`</dl>`;
   const biblioHTML=`<ul>`+BIBLIO.map(b=>`<li>${esc(b)}</li>`).join("")+`</ul>`;
   const docA=S.docs.filter(d=>d.apresentado==="Sim").map(d=>esc(d.tipo));const docApresHTML=docA.length?`<p>Documentos apresentados pela empresa: ${docA.join("; ")}.</p>`:"";
-  const periodoHTML=`<dl class="kv"><dt>Função</dt><dd>${em(VC.funcao)}</dd><dt>Setor</dt><dd>${em(VC.setor)}</dd><dt>Admissão</dt><dd>${em(fmtDate(VC.admissao))}</dd><dt>Saída / data-base</dt><dd>${fmtDate(VC.saida)||"atual"}</dd></dl>`;
-  let s=0;const S_=()=>["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV","XVI","XVII","XVIII"][s++];
+  const perTimeline=(S.periodos&&S.periodos.length)?`<p>Períodos de apuração considerados (as conclusões referem-se a cada período indicado):</p><table class="ldoc"><tr><th>Início</th><th>Fim</th><th>Função</th><th>Setor</th><th>Condição</th></tr>`+S.periodos.map(pp=>`<tr><td>${fmtDate(pp.inicio)||"—"}</td><td>${fmtDate(pp.fim)||"atual"}</td><td>${esc(pp.funcao)||"—"}</td><td>${esc(pp.setor)||"—"}</td><td>${esc(pp.obs)||"—"}</td></tr>`).join("")+`</table>`:"";
+  const periodoHTML=`<dl class="kv"><dt>Função</dt><dd>${em(VC.funcao)}</dd><dt>Setor</dt><dd>${em(VC.setor)}</dd><dt>Admissão</dt><dd>${em(fmtDate(VC.admissao))}</dd><dt>Saída / data-base</dt><dd>${fmtDate(VC.saida)||"atual"}</dd></dl>`+perTimeline;
+  let s=0;const S_=()=>["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV","XVI","XVII","XVIII","XIX","XX","XXI"][s++];
   doc.innerHTML=`<img class="lh" src="${LOGO_HEADER}" alt="UrbanClin">
     <h1>LAUDO PERICIAL</h1><div class="doc-sub">Autos nº ${em(P.numero)} · ${em(P.vara)} · ${em(P.comarca)}</div>
     <h2>${S_()}. IDENTIFICAÇÃO</h2>
@@ -1035,6 +1083,7 @@ async function generateLaudo(){const doc=$("#laudoDoc");const{photos,vids,normas
     <h2>${S_()}. RISCOS OCUPACIONAIS POR AGENTE (NR-15)</h2>${agHTML}
     <h2>${S_()}. ANÁLISE E CONSTATAÇÕES — REGISTRO FOTOGRÁFICO</h2>${photoHTML||`<p class="empty">[nenhuma foto anexada]</p>`}${vidHTML}
     <h2>${S_()}. RESPOSTA AOS QUESITOS</h2>${quesHTML}
+    <h2>${S_()}. ENQUADRAMENTO TÉCNICO</h2>${enqTable}${enqConcl}${pericConcl}
     <h2>${S_()}. CONCLUSÃO</h2>${para(S.conclusao)}
     <h2>${S_()}. ENCERRAMENTO</h2><p>Nada mais havendo a considerar, encerra-se o presente Laudo Técnico Pericial, composto pelas folhas assinadas e rubricadas, que reflete fielmente as condições constatadas na data da diligência.</p>
     <h2>${S_()}. BIBLIOGRAFIA</h2>${biblioHTML}
@@ -1063,17 +1112,19 @@ async function exportPdf(){const{photos}=await generateLaudo();const J=window.js
   const body=(t,o={})=>{if(t==null||t==="")return;doc.setFont("helvetica",o.b?"bold":"normal");doc.setFontSize(o.s||10);doc.splitTextToSize(String(t),CW).forEach(ln=>{if(y>BOT){doc.addPage();y=TOP;}doc.text(ln,o.align==="center"?W/2:M,y,{align:o.align||"left"});y+=(o.s||10)*0.42+1.2;});nl(1);};
   doc.setFont("helvetica","bold");doc.setFontSize(16);doc.text("LAUDO PERICIAL",W/2,y,{align:"center"});nl(6);doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(90,90,90);doc.text(`Autos nº ${P.numero||"—"}  ·  ${P.vara||"—"}`,W/2,y,{align:"center"});nl(8);doc.setTextColor(20,20,20);
   H("I. IDENTIFICAÇÃO");[["Processo nº",P.numero],["Ação",P.acao],["Juízo",P.vara],["Comarca",P.comarca],["Reclamante",PA.autor],["Reclamada",(EMP.razao||PA.reu)+(EMP.cnpj?" — CNPJ "+EMP.cnpj:"")],["Perito",[PE.nome,PE.formacao,PE.registro].filter(Boolean).join(" — ")],AS.length?["Assistente(s)",AS.map(a=>a.nome).join("; ")]:null,S.art?["ART",S.art]:null].filter(Boolean).forEach(([k,v])=>{if(v)body(`${k}: ${v}`);});
-  body("Tipo da perícia: "+S.tipoPericia);H("II. OBJETIVO");body(S.objeto||"[a preencher]");body("Período: função "+(S.vinculo.funcao||"—")+", setor "+(S.vinculo.setor||"—")+", de "+(fmtDate(S.vinculo.admissao)||"—")+" a "+(fmtDate(S.vinculo.saida)||"atual")+".");H("III. DA METODOLOGIA");body(V.metodo);
-  H("IV. DA VISTORIA");body(`Data: ${fmtDate(V.data)||"—"} ${V.hora||""}`);body(`Local: ${V.local||"—"}`);body(`Condições: ${V.clima||"—"}`);body(`Presentes: ${V.presentes||"—"}`);if(V.desc)body(V.desc);if(S.atividades.length){H("ATIVIDADES");S.atividades.forEach(a=>body("• "+(a.desc||"—")+" ("+a.regime+")"));}if(S.registroInspecao){H("REGISTRO DA INSPEÇÃO");body(S.registroInspecao);}
+  body("Tipo da perícia: "+S.tipoPericia);H("II. OBJETIVO");body(S.objeto||"[a preencher]");body("Período: função "+(S.vinculo.funcao||"—")+", setor "+(S.vinculo.setor||"—")+", de "+(fmtDate(S.vinculo.admissao)||"—")+" a "+(fmtDate(S.vinculo.saida)||"atual")+".");if(S.periodos&&S.periodos.length){body("Períodos de apuração:");S.periodos.forEach(pp=>body("• "+(fmtDate(pp.inicio)||"—")+" a "+(fmtDate(pp.fim)||"atual")+": "+(pp.funcao||"—")+" / "+(pp.setor||"—")+(pp.obs?" — "+pp.obs:"")));}H("III. DA METODOLOGIA");body(V.metodo);
+  H("IV. DA VISTORIA");body(`Data: ${fmtDate(V.data)||"—"} ${V.hora||""}`);body(`Local: ${V.local||"—"}`);body(`Condições: ${V.clima||"—"}`);body(`Presentes: ${V.presentes||"—"}`);if(V.desc)body(V.desc);if(S.atividades.length){H("ATIVIDADES");S.atividades.forEach(a=>body("• "+(a.desc||"—")+" ("+a.regime+(a.pct?", "+a.pct+"% da jornada":"")+")"));}if(S.registroInspecao){H("REGISTRO DA INSPEÇÃO");body(S.registroInspecao);}
   H("V. DOCUMENTAÇÃO ANALISADA");const du=S.docs.filter(d=>d.apresentado);if(du.length)du.forEach(d=>body(`• ${d.tipo}: ${d.apresentado}${d.validade?" ("+d.validade+")":""}${d.obs?" — "+d.obs:""}`));else body("[marque a conformidade]");
+  if(S.epi.length){H("EPI (NR-06)");S.epi.forEach(e=>{const venc=(e.caVal&&V.data&&e.caVal<V.data);body("• "+(e.equip||"—")+" (CA "+(e.ca||"—")+(e.caVal?", val. "+fmtDate(e.caVal)+(venc?" VENCIDO":""):"")+")"+(e.agente?" — agente: "+e.agente:"")+(e.efic?" — eficácia: "+e.efic:""));});const ec=S.epiComprov||{};const ecI=[["Fornecimento",ec.fornecimento],["Treinamento",ec.treinamento],["Troca",ec.troca],["Higienização",ec.higienizacao],["Fiscalização",ec.fiscalizacao]].filter(x=>x[1]);if(ecI.length)body("Comprovação NR-06 — "+ecI.map(x=>x[0]+": "+x[1]).join("; ")+".");}
   const gr=computeGaps();if(S.epi.length&&gr.gaps){if(gr.gaps.length)body(`EPI (NR-06): ${gr.gaps.length} intervalo(s) sem comprovação contínua no período ${fmtDate(gr.adm)}–${fmtDate(gr.sai)}: ${gr.gaps.map(g=>fmtDate(g.from)+" a "+fmtDate(g.to)).join("; ")}.`);else body(`EPI (NR-06): cobertura sem lacunas no período ${fmtDate(gr.adm)}–${fmtDate(gr.sai)}.`);}
   H("VI. FUNDAMENTAÇÃO TÉCNICA");const non=S.normas.filter(n=>n.on);if(non.length){body("Referências consideradas:");non.forEach(n=>body(`• ${n.code} — ${n.desc}`));}else body("[selecione as referências]");if(S.art)body(`Perícia amparada pela ART nº ${S.art}.`);
-  if(S.medicoes.length){H("VII. AVALIAÇÕES QUANTITATIVAS");S.medicoes.forEach(m=>body(`• ${m.agente||"—"}: ${m.valor||"—"} ${m.unidade||""} (limite ${m.limite||"—"}) — ${m.resultado||"—"} [${m.tecnica||"—"}]`));if(S.aparelhos.length)body(`Anexados ${S.aparelhos.length} relatório(s) de instrumento.`);}
+  if(S.medicoes.length){H("VII. AVALIAÇÕES QUANTITATIVAS");S.medicoes.forEach(m=>{const venc=(m.certVal&&V.data&&m.certVal<V.data);body(`• ${m.agente||"—"}: ${m.valor||"—"} ${m.unidade||""} (limite ${m.limite||"—"}) — ${m.resultado||"—"} [${m.tecnica||"—"}${m.certNum?", cert. "+m.certNum:""}${m.certVal?" val. "+fmtDate(m.certVal)+(venc?" VENCIDO":""):""}]`);});if(S.aparelhos.length)body(`Anexados ${S.aparelhos.length} relatório(s) de instrumento.`);}
   H("RISCOS OCUPACIONAIS POR AGENTE (NR-15)");S.agentes.forEach(a=>body("• "+a.anexo+" — "+a.nome+": "+(a.situacao||"—")+(a.analise?". "+a.analise:"")));
   H("ANÁLISE E CONSTATAÇÕES — REGISTRO FOTOGRÁFICO");let pn=0;
   for(const p of photos){pn++;try{const dim=await imgSize(p.data);let w=dim.w,h=dim.h;const r=Math.min(CW/w,90/h);w*=r;h*=r;if(y+h>BOT){doc.addPage();y=TOP;}doc.addImage(p.data,"JPEG",M,y,w,h);y+=h+2;body(`Foto ${String(pn).padStart(2,"0")} — ${p.legenda||"[legenda]"}${p.norma?" ("+p.norma+")":""}`,{s:8});}catch(e){}}
   if(!photos.length)body("[nenhuma foto anexada]");
   H("RESPOSTA AOS QUESITOS");[["Juiz","QUESITOS DO JUÍZO"],["Reclamada","QUESITOS DA RECLAMADA"],["Autora","QUESITOS DA PARTE AUTORA"],["MP","QUESITOS DO MINISTÉRIO PÚBLICO"]].forEach(([org,t])=>{const l=S.quesitos.filter(q=>q.origem===org);if(!l.length)return;body(t,{b:true,s:10.5});l.forEach((q,i)=>{body(`Quesito ${String(i+1).padStart(2,"0")}: ${q.pergunta||"[—]"}`,{b:true,s:9.5});body(`Resposta: ${q.resposta||"[pendente]"}`,{s:9.5});});});
+  (()=>{const GP={"Grau mínimo (10%)":10,"Grau médio (20%)":20,"Grau máximo (40%)":40};let mp=0,mg="";S.agentes.forEach(a=>{const pc=GP[a.grau||""];if(pc&&pc>mp){mp=pc;mg=a.grau;}});H("ENQUADRAMENTO TÉCNICO");S.agentes.filter(a=>a.situacao!=="Não aplicável").forEach(a=>body("• "+a.anexo+" — "+a.nome+": "+(a.situacao||"—")+((a.grau&&a.grau!=="Não caracterizado")?" ("+a.grau+")":"")));body(mp>0?"Insalubridade caracterizada em "+mg.toLowerCase()+" — adicional de "+mp+"% (NR-15, sobre o grau mais elevado).":"Insalubridade não caracterizada (NR-15).");body((S.periculosidade&&S.periculosidade.caracterizada==="Sim")?"Periculosidade caracterizada — adicional de 30% (NR-16)"+(S.periculosidade.base?", fundamento: "+S.periculosidade.base:"")+".":"Periculosidade não caracterizada (NR-16).");})();
   H("CONCLUSÃO");body(S.conclusao||"[a preencher]");H("ENCERRAMENTO");body("Nada mais havendo a considerar, encerra-se o presente Laudo Técnico Pericial.");H("BIBLIOGRAFIA");BIBLIO.forEach(bb=>body("• "+bb));nl(6);const local=V.local?V.local.split(/[,–-]/).slice(-2).join(", ").trim():(P.comarca||"");
   body(`${local}, ${new Date().toLocaleDateString("pt-BR",{day:"2-digit",month:"long",year:"numeric"})}.`,{align:"center"});nl(10);if(y>BOT){doc.addPage();y=TOP;}doc.line(W/2-35,y,W/2+35,y);nl(4);body(PE.nome||"",{b:true,align:"center"});body([PE.formacao,PE.registro].filter(Boolean).join(" — "),{align:"center",s:9});if(S.art)body("ART nº "+S.art,{align:"center",s:9});
   await stampLogos(doc,W,M,CW);
@@ -1179,7 +1230,7 @@ function renderVistMed(){const w=$("#vistMedResumo");if(!w)return;let h="";
   if(state.medicoes.length)h+=`<div class="tbl-wrap"><table class="data" style="min-width:auto"><thead><tr><th>Agente</th><th>Valor</th><th>Unid.</th><th>Limite</th><th>Resultado</th></tr></thead><tbody>`+state.medicoes.map(m=>`<tr><td>${esc(m.agente)||"—"}</td><td>${esc(m.valor)||"—"}</td><td>${esc(m.unidade)||"—"}</td><td>${esc(m.limite)||"—"}</td><td>${esc(m.resultado)||"—"}</td></tr>`).join("")+`</tbody></table></div>`;
   if(!h)h=`<div class="hint">Nenhum relatório/medição ainda. Anexe e analise na aba Medições.</div>`;
   w.innerHTML=h;}
-function renderAll(){renderProf();renderEquipe();renderDocs();renderEpi();renderEpiDocs();renderMed();renderApt();renderQuesitos();renderNormas();renderAtividades();renderAgentes();renderMedia();renderNc();renderAudit();applyLock();checkLaudo();}
+function renderAll(){renderProf();renderEquipe();renderDocs();renderEpi();renderEpiDocs();renderMed();renderApt();renderQuesitos();renderNormas();renderAtividades();renderAgentes();renderPeriodos();renderMedia();renderNc();renderAudit();applyLock();checkLaudo();}
 hydrate();bindInputs();renderAll();
 if(!$("#v_metodo").value)$("#v_metodo").value=state.vistoria.metodo;
 $("#saveTxt").textContent="Salva automaticamente";
