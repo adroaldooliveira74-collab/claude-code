@@ -304,6 +304,12 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
       <div class="add-bar"><input id="nd_tipo" placeholder="Outro documento" style="flex:1;min-width:150px"><button class="btn small" id="addDoc">+ Adicionar documento</button></div>
     </div>
     <div class="card">
+      <h2>🔗 Coerência documental <span class="seal ia">USO INTERNO — NÃO ENTRA NO LAUDO</span></h2>
+      <p class="sub">A IA cruza LTCAT × PGR × PCMSO × LIP (já lidos) com a função e os agentes caracterizados, apontando incoerências.</p>
+      <div class="row-actions"><button class="btn ia small" id="iaMatriz">✨ Checar coerência (IA)</button><span class="hint" id="matrizStatus"></span></div>
+      <div id="matrizOut" style="margin-top:10px;white-space:pre-wrap;font-size:13.5px"></div>
+    </div>
+    <div class="card">
       <h2>🦺 Ficha de EPI — verificação de lacunas <span class="seal">NR-06</span></h2>
       <p class="sub">Lance cada EPI com o período de fornecimento. O sistema compara com o vínculo (admissão → saída) e aponta os intervalos sem cobertura — o caso típico de alegação de neutralização por EPI sem comprovação contínua.</p>
       <div class="drop" id="dropEpiDoc"><span class="ic">🦺</span><b>Anexar a ficha de EPI entregue (PDF ou foto)</b><span>o sistema tenta ler o PDF; se não conseguir (foto/digitalizado), faça o cadastro manual na tabela.</span></div>
@@ -368,6 +374,11 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
       <div id="atvList"></div>
       <div class="add-bar"><button class="btn small" id="addAtv">+ Atividade</button><button class="btn ia small" id="iaAtv">✨ Puxar atividades (IA)</button><span class="hint" id="atvStatus"></span></div>
       <label class="field" style="margin-top:12px">Registro da inspeção<textarea id="v_registro" rows="4" placeholder="Como se deu a diligência: entrevistas, jornada informada, EPI, início pré-agendado, etc."></textarea></label>
+    </div>
+    <div class="card">
+      <h2>🧭 Roteiro de inspeção <span class="seal">GUIA DE CAMPO</span></h2>
+      <p class="sub">Marque o que foi verificado em campo, por agente — apoio à diligência (não entra no laudo).</p>
+      <div id="roteiroList"></div>
     </div>
     <div class="card">
       <h2>📷 Registro fotográfico e audiovisual <span class="seal">PADRÃO VISTORIA</span></h2>
@@ -498,6 +509,7 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
     <div class="doc-toolbar">
       <button class="btn primary" id="genBtn">↻ Montar / atualizar laudo</button>
       <button class="btn" id="pdfBtn">⬇ Baixar PDF</button>
+      <button class="btn" id="wordBtn">⬇ Word</button>
       <button class="btn" id="copyBtn">⧉ Copiar texto</button>
     </div>
     <div class="doc" id="laudoDoc"><p class="empty">Preencha as abas e clique em “Montar / atualizar laudo”.</p></div>
@@ -564,7 +576,7 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
     <div class="card">
       <h2>💾 Backup / transferencia</h2>
       <p class="sub">Exporte TUDO (dados + fotos + documentos) para um arquivo. No PC, importe esse arquivo para liberar espaco no celular sem perder nada.</p>
-      <div class="row-actions"><button class="btn primary" id="bkExport">⬇ Exportar tudo (backup)</button><button class="btn" id="bkImport">⬆ Importar backup</button><label class="chk" style="display:flex;gap:6px;align-items:center;font-size:12.5px;font-weight:500"><input type="checkbox" id="bkRead">abrir como leitura</label></div>
+      <div class="row-actions"><button class="btn primary" id="bkExport">⬇ Exportar este processo</button><button class="btn" id="bkExportAll">⬇ Exportar TODOS</button><button class="btn" id="bkImport">⬆ Importar backup</button><label class="chk" style="display:flex;gap:6px;align-items:center;font-size:12.5px;font-weight:500"><input type="checkbox" id="bkRead">abrir como leitura</label></div>
       <input type="file" id="bkFile" accept=".json,application/json" hidden>
     </div>
     <div class="card">
@@ -616,7 +628,7 @@ function blankState(){const adr=uid();return{
   profEmpresa:[],partes:{autor:"",autorAdv:"",reu:"",reuAdv:""},vinculo:{funcao:"",setor:"",admissao:"",saida:""},
   periodos:[],periculosidade:{caracterizada:"Não",base:""},epiComprov:{fornecimento:"",treinamento:"",troca:"",higienizacao:"",fiscalizacao:""},
   equipe:[{id:adr,nome:"Adroaldo Marques de Oliveira",formacao:"Engenheiro de Segurança do Trabalho",registro:"CREA-PR 168996",email:"",tel:""}],
-  peritoId:adr,assistentes:[],objeto:"",art:"",tipoPericia:"Insalubridade",registroInspecao:"",entrevistas:"",paradigma:"",atividades:[],agentes:AGENTES_NR15.map(a=>({anexo:a[0],nome:a[1],situacao:"Não constatada exposição significativa",analise:"",grau:"Não caracterizado"})),
+  peritoId:adr,assistentes:[],objeto:"",art:"",tipoPericia:"Insalubridade",registroInspecao:"",entrevistas:"",paradigma:"",roteiro:{},atividades:[],agentes:AGENTES_NR15.map(a=>({anexo:a[0],nome:a[1],situacao:"Não constatada exposição significativa",analise:"",grau:"Não caracterizado"})),
   vistoria:{data:"",hora:"",clima:"",local:"",presentes:"",desc:"",metodo:DEFAULT_METODO},
   medicoes:[],aparelhos:[],epiDocs:[],
   docs:DOC_BASE.map(t=>({id:uid(),tipo:t,apresentado:"",validade:"",obs:"",hasText:false})),
@@ -723,7 +735,12 @@ function wireDrop(dropSel,inputSel,onFile,multi){const d=$(dropSel),inp=$(inputS
   inp.addEventListener("change",()=>{if(inp.files.length)multi?onFile(inp.files):onFile(inp.files[0]);inp.value="";});}
 async function handlePdf(file,kind){const resSel=kind==="pet"?"#petResult":"#qResult";$(resSel).style.color="var(--muted)";$(resSel).innerHTML='<span class="spin"></span> Lendo PDF…';
   try{const txt=await pdfToText(file);if(!txt.trim())throw 0;kind==="pet"?parsePeticao(txt):importQuesitos(txt);}
-  catch(e){$(resSel).style.color="var(--warn)";$(resSel).textContent="Não consegui ler (PDF imagem/digitalizado?). Use “Colar texto”.";flash("Falha ao ler o PDF.");}}
+  catch(e){
+    if(getKey()){try{$(resSel).innerHTML='<span class="spin"></span> PDF digitalizado — lendo com IA (OCR)…';const t=await ocrPdf(file);if(t&&t.trim()){kind==="pet"?parsePeticao(t):importQuesitos(t);flash("Lido com IA (OCR) — revise.");return;}}catch(e2){}}
+    $(resSel).style.color="var(--warn)";$(resSel).textContent="Não consegui ler (PDF imagem/digitalizado?). Configure o Gemini para OCR automático, ou use “Colar texto”.";flash("Falha ao ler o PDF.");
+  }}
+async function pdfPagesToImages(file,maxPages){const data=new Uint8Array(await file.arrayBuffer());const pdf=await pdfjsLib.getDocument({data}).promise;const out=[];const n=Math.min(pdf.numPages,maxPages||6);for(let i=1;i<=n;i++){const page=await pdf.getPage(i);const vp=page.getViewport({scale:1.6});const cv=document.createElement("canvas");cv.width=vp.width;cv.height=vp.height;const ctx=cv.getContext("2d");await page.render({canvasContext:ctx,viewport:vp}).promise;const blob=await new Promise(r=>cv.toBlob(r,"image/jpeg",0.8));if(blob)out.push(blob);}return out;}
+async function ocrPdf(file){if(!getKey())throw new Error("sem-chave");const imgs=await pdfPagesToImages(file,6);if(!imgs.length)throw new Error("sem-paginas");return (await geminiGenerate("Transcreva fielmente TODO o texto deste documento digitalizado, mantendo a ordem e a estrutura. Responda apenas o texto, sem comentários.",{images:imgs},false)||"").trim();}
 wireDrop("#dropPet","#petInput",f=>handlePdf(f,"pet"));
 wireDrop("#dropQ","#qInput",f=>handlePdf(f,"q"));
 $("#togglePet").addEventListener("click",()=>{const w=$("#petTextWrap");w.hidden=!w.hidden;});
@@ -908,11 +925,17 @@ async function exportBackup(){const ids=[];state.media.forEach(m=>ids.push(m.id)
   for(const id of ids){const b=await idbGet(id);if(b==null)continue;if(typeof b==="string")payload.media[id]={t:"text",d:b};else payload.media[id]={t:"blob",m:b.type||"application/octet-stream",d:await blobToB64(b)};}
   const nome=(state.processo.numero||"pericia").replace(/[^\dA-Za-z]+/g,"_").slice(0,40);
   await saveFile(new Blob([JSON.stringify(payload)],{type:"application/json"}),"backup_"+nome+".perito.json");}
-async function importBackup(file,readonly){let p;try{p=JSON.parse(await file.text());}catch(e){flash("Arquivo invalido.");return;}if(!p||!p.state){flash("Backup nao reconhecido.");return;}
+async function importBackup(file,readonly){let p;try{p=JSON.parse(await file.text());}catch(e){flash("Arquivo invalido.");return;}
+  if(p&&p._all&&Array.isArray(p.records)){let n=0;for(const rec of p.records){try{if(rec.media){for(const id in rec.media){const it=rec.media[id];if(it.t==="text")await idbPut(id,it.d);else await idbPut(id,b64ToBlob(it.d,it.m));}}const st=Object.assign(blankState(),rec.state);if(!st.painelId)st.painelId=uid();localStorage.setItem(REC(st.painelId),JSON.stringify(st));const idx=readIdx().filter(r=>r.pid!==st.painelId);idx.unshift(idxEntry(st));writeIdx(idx);n++;}catch(e){}}flash(n+" processo(s) importado(s). Abra em 📁 Processos.");const idx=readIdx();if(idx.length){state=Object.assign(blankState(),JSON.parse(localStorage.getItem(REC(idx[0].pid))));localStorage.setItem(ACTIVE_KEY,state.painelId);hydrate();renderAll();generateLaudo();}return;}
+  if(!p||!p.state){flash("Backup nao reconhecido.");return;}
   if(p.media){for(const id in p.media){const it=p.media[id];try{if(it.t==="text")await idbPut(id,it.d);else await idbPut(id,b64ToBlob(it.d,it.m));}catch(e){}}}
   state=Object.assign(blankState(),p.state);if(!state.painelId)state.painelId=uid();if(readonly&&state.auditoria)state.auditoria.locked=true;try{localStorage.setItem(LS_KEY,JSON.stringify(state));saveRecord();}catch(e){}
   hydrate();renderAll();generateLaudo();flash("Backup importado"+(readonly?" (somente leitura)":"")+".");}
-function initBackup(){const be=$("#bkExport");if(be)be.addEventListener("click",exportBackup);const bi=$("#bkImport");if(bi)bi.addEventListener("click",()=>$("#bkFile").click());const bf=$("#bkFile");if(bf)bf.addEventListener("change",()=>{if(bf.files[0])importBackup(bf.files[0],$("#bkRead")&&$("#bkRead").checked);bf.value="";});}
+async function collectMedia(st){const ids=[];(st.media||[]).forEach(m=>ids.push(m.id));(st.docs||[]).forEach(d=>{if(d.hasText)ids.push("doctext_"+d.id);});(st.aparelhos||[]).forEach(a=>ids.push(a.kind==="pdf"?"apt_"+a.id:a.id));(st.epiDocs||[]).forEach(e=>ids.push(e.kind==="pdf"?"epidoc_"+e.id:e.id));const media={};for(const id of ids){const b=await idbGet(id);if(b==null)continue;if(typeof b==="string")media[id]={t:"text",d:b};else media[id]={t:"blob",m:b.type||"application/octet-stream",d:await blobToB64(b)};}return media;}
+async function exportAll(){try{saveRecord();}catch(e){}const idx=readIdx();const records=[];for(const r of idx){try{const raw=localStorage.getItem(REC(r.pid));if(!raw)continue;const st=JSON.parse(raw);records.push({state:st,media:await collectMedia(st)});}catch(e){}}
+  const payload={_app:"perito-laudo",_v:5,_all:true,ts:new Date().toISOString(),records};
+  await saveFile(new Blob([JSON.stringify(payload)],{type:"application/json"}),"backup_TODOS_"+new Date().toISOString().slice(0,10)+".perito.json");flash(records.length+" processo(s) exportado(s).");}
+function initBackup(){const be=$("#bkExport");if(be)be.addEventListener("click",exportBackup);const ba=$("#bkExportAll");if(ba)ba.addEventListener("click",exportAll);const bi=$("#bkImport");if(bi)bi.addEventListener("click",()=>$("#bkFile").click());const bf=$("#bkFile");if(bf)bf.addEventListener("change",()=>{if(bf.files[0])importBackup(bf.files[0],$("#bkRead")&&$("#bkRead").checked);bf.value="";});}
 async function stampLogos(doc,W,M,CW){try{const d=await imgSize(LOGO_HEADER);const r=(d.w/d.h)||1.4;const hH=16,hW=hH*r;const fH=13,fW=fH*r;const N=doc.getNumberOfPages();const L=["UrbanClin · Medicina e Segurança do Trabalho","Perobal - PR · Atendimento em todo o Estado do Paraná","(47) 99167-1874 · a.marques_74@live.com"];const th=L.length*3;const fy=297-5-th-fH;for(let i=1;i<=N;i++){doc.setPage(i);doc.addImage(LOGO_HEADER,"JPEG",(W-hW)/2,6,hW,hH);doc.addImage(LOGO_FOOTER,"JPEG",(W-fW)/2,fy,fW,fH);doc.setFontSize(7.5);doc.setTextColor(90,110,90);L.forEach((ln,k)=>doc.text(ln,W/2,fy+fH+3+k*3,{align:"center"}));doc.setFontSize(7);doc.setTextColor(150);doc.text("Pag. "+i+"/"+N,W-M,296,{align:"right"});}}catch(e){}}
 async function simplePdf(title,bodyText,filename){const J=window.jspdf&&window.jspdf.jsPDF;if(!J){flash("Gerador de PDF indisponivel.");return;}const doc=new J({unit:"mm",format:"a4"});const W=210,M=18,CW=W-2*M,TOP=34,BOT=256;let y=TOP;
   doc.setFont("helvetica","bold");doc.setFontSize(13);doc.setTextColor(20,20,20);doc.splitTextToSize(title,CW).forEach(l=>{doc.text(l,W/2,y,{align:"center"});y+=6;});y+=3;
@@ -1044,6 +1067,22 @@ function renderPeriodos(){const w=$("#perList");if(!w)return;w.innerHTML="";(sta
   bp("[data-pi]","pi","inicio");bp("[data-pf]","pf","fim");bp("[data-pfu]","pfu","funcao");bp("[data-pse]","pse","setor");bp("[data-po]","po","obs");
   w.querySelectorAll("[data-px]").forEach(b=>b.addEventListener("click",()=>{state.periodos=state.periodos.filter(x=>x.id!==b.dataset.px);save();renderPeriodos();}));}
 {const _ap=$("#addPeriodo");if(_ap)_ap.addEventListener("click",()=>{if(!state.periodos)state.periodos=[];state.periodos.push({id:uid(),inicio:"",fim:"",funcao:"",setor:"",obs:""});save();renderPeriodos();});}
+const ROTEIRO=[["Ruído",["Fontes geradoras identificadas","Tempo de exposição/jornada aferido","Dosímetro/decibelímetro utilizado","EPI auditivo e CA verificados"]],["Calor",["Fontes de calor identificadas","IBUTG medido (globo/bulbo úmido)","Taxa metabólica/atividade avaliada","Regime trabalho-descanso observado"]],["Agentes químicos",["Produtos/FISPQ identificados","Via de contato definida","Ventilação/exaustão avaliada","EPI respiratório/luvas e CA"]],["Agentes biológicos",["Contato com material biológico/pacientes","Resíduos e descarte","Vacinação/PCMSO conferidos"]],["Periculosidade (NR-16)",["Inflamáveis/explosivos","Energia elétrica (SEP)","Área de risco e habitualidade"]]];
+function renderRoteiro(){const w=$("#roteiroList");if(!w)return;if(!state.roteiro)state.roteiro={};w.innerHTML=ROTEIRO.map(g=>`<div style="margin-bottom:10px"><div style="font-weight:700;font-size:13px;color:var(--accent)">${g[0]}</div>`+g[1].map(it=>{const k=g[0]+"::"+it;return `<label style="display:flex;gap:8px;align-items:flex-start;padding:4px 0;font-size:13.5px"><input type="checkbox" data-rk="${esc(k)}" ${state.roteiro[k]?"checked":""} style="width:auto;margin-top:3px">${esc(it)}</label>`;}).join("")+`</div>`).join("");
+  w.querySelectorAll("[data-rk]").forEach(c=>c.addEventListener("change",()=>{state.roteiro[c.dataset.rk]=c.checked;save();}));}
+async function iaMatrizFn(){const st=$("#matrizStatus");const s=await getSample();if(!s){if(st){st.style.color="var(--warn)";st.textContent="Configure o Gemini (aba IA/Config).";}return;}
+  const b=$("#iaMatriz");if(b)b.disabled=true;if(st){st.style.color="var(--muted)";st.innerHTML='<span class="spin"></span> Cruzando documentos…';}
+  let docsTxt="";for(const d of state.docs){if(d.hasText){try{const t=await idbGet("doctext_"+d.id);if(t)docsTxt+="\n==== "+d.tipo+" ====\n"+String(t).slice(0,6000);}catch(e){}}}
+  if(!docsTxt.trim()){if(st){st.style.color="var(--warn)";st.textContent="Nenhum documento lido ainda (anexe e leia LTCAT, PGR, PCMSO…).";}if(b)b.disabled=false;return;}
+  const ag=state.agentes.filter(a=>a.situacao==="Exposição caracterizada").map(a=>a.anexo+" "+a.nome).join("; ");
+  const prompt=`${IA_RULE}
+Cruze os documentos da empresa (LTCAT, PGR/PPRA, PCMSO, LIP) abaixo e aponte INCOERÊNCIAS técnicas relevantes para a perícia, em tópicos objetivos. Verifique, por exemplo: agentes do LTCAT ausentes no PGR; falta de exame no PCMSO compatível com o agente (ex.: audiometria para ruído); divergência de função/setor; EPI citado sem CA; datas/vigências. Não invente; se faltar base documental, diga.
+Função: ${state.vinculo.funcao||"—"}; Agentes caracterizados: ${ag||"—"}
+Documentos:${docsTxt.slice(0,16000)}
+Responda em tópicos curtos (uso interno do perito).`;
+  try{const r=await s(prompt,{modelTier:"complex"});const t=((r&&r.text)||"").trim();const out=$("#matrizOut");if(out)out.textContent=t||"Sem incoerências relevantes apontadas.";if(st){st.style.color="var(--ok)";st.textContent="Análise concluída (uso interno).";}}
+  catch(e){if(st){st.style.color="var(--warn)";st.textContent=iaErr(e);}}finally{if(b)b.disabled=false;}}
+{const _im=$("#iaMatriz");if(_im)_im.addEventListener("click",iaMatrizFn);}
 function renderAgentes(){const w=$("#agList");if(!w)return;w.innerHTML="";const opts=["Não constatada exposição significativa","Exposição caracterizada","Não aplicável"];const GRAUS=["Não caracterizado","Grau mínimo (10%)","Grau médio (20%)","Grau máximo (40%)"];state.agentes.forEach((a,i)=>{const el=document.createElement("div");el.className="doc-row";el.innerHTML=`<div class="top"><span class="tname">${esc(a.anexo)} — ${esc(a.nome)}</span><select data-ags="${i}" style="width:auto;min-width:240px">${opts.map(o=>`<option ${o===a.situacao?"selected":""}>${o}</option>`).join("")}</select><select data-agg="${i}" style="width:auto;min-width:160px;margin-left:6px" title="Enquadramento">${GRAUS.map(g=>`<option ${g===(a.grau||"Não caracterizado")?"selected":""}>${g}</option>`).join("")}</select></div><textarea data-aga="${i}" placeholder="Análise (opcional)" style="margin-top:8px;min-height:48px">${esc(a.analise)}</textarea>`;w.appendChild(el);});
   w.querySelectorAll("[data-ags]").forEach(sx=>sx.addEventListener("change",()=>{const a=state.agentes[+sx.dataset.ags];if(a){a.situacao=sx.value;save();}}));
   w.querySelectorAll("[data-aga]").forEach(t=>t.addEventListener("input",()=>{const a=state.agentes[+t.dataset.aga];if(a){a.analise=t.value;save();}}));
@@ -1185,7 +1224,7 @@ async function exportPdf(){const{photos}=await generateLaudo();const J=window.js
   await saveFile(doc.output("blob"),fname("pdf"));}
 
 $("#genBtn").addEventListener("click",()=>{generateLaudo();flash("Laudo atualizado.");});
-$("#pdfBtn").addEventListener("click",exportPdf);$("#ncWord").addEventListener("click",exportNcPdf);
+$("#pdfBtn").addEventListener("click",exportPdf);{const _w=$("#wordBtn");if(_w)_w.addEventListener("click",exportWord);}$("#ncWord").addEventListener("click",exportNcPdf);
 $("#copyBtn").addEventListener("click",async()=>{await generateLaudo();const txt=$("#laudoDoc").innerText.replace(/\n{3,}/g,"\n\n").trim();try{await navigator.clipboard.writeText(txt);flash("Laudo copiado — cole no Word.");}catch(e){const r=document.createRange();r.selectNodeContents($("#laudoDoc"));const s=getSelection();s.removeAllRanges();s.addRange(r);flash("Selecionado — Ctrl/Cmd+C.");}});
 
 $("#themeBtn").addEventListener("click",()=>{const c=document.documentElement.getAttribute("data-theme");const dark=c?c==="dark":matchMedia("(prefers-color-scheme: dark)").matches;document.documentElement.setAttribute("data-theme",dark?"light":"dark");try{localStorage.setItem("perito_theme",dark?"light":"dark");}catch(e){}});
@@ -1303,7 +1342,7 @@ function renderVistMed(){const w=$("#vistMedResumo");if(!w)return;let h="";
   if(state.medicoes.length)h+=`<div class="tbl-wrap"><table class="data" style="min-width:auto"><thead><tr><th>Agente</th><th>Valor</th><th>Unid.</th><th>Limite</th><th>Resultado</th></tr></thead><tbody>`+state.medicoes.map(m=>`<tr><td>${esc(m.agente)||"—"}</td><td>${esc(m.valor)||"—"}</td><td>${esc(m.unidade)||"—"}</td><td>${esc(m.limite)||"—"}</td><td>${esc(m.resultado)||"—"}</td></tr>`).join("")+`</tbody></table></div>`;
   if(!h)h=`<div class="hint">Nenhum relatório/medição ainda. Anexe e analise na aba Medições.</div>`;
   w.innerHTML=h;}
-function renderAll(){renderProf();renderEquipe();renderDocs();renderEpi();renderEpiDocs();renderMed();renderApt();renderQuesitos();renderNormas();renderAtividades();renderAgentes();renderPeriodos();renderMedia();renderNc();renderAudit();applyLock();checkLaudo();}
+function renderAll(){renderProf();renderEquipe();renderDocs();renderEpi();renderEpiDocs();renderMed();renderApt();renderQuesitos();renderNormas();renderAtividades();renderAgentes();renderPeriodos();renderRoteiro();renderMedia();renderNc();renderAudit();applyLock();checkLaudo();}
 hydrate();bindInputs();renderAll();
 if(!$("#v_metodo").value)$("#v_metodo").value=state.vistoria.metodo;
 $("#saveTxt").textContent="Salva automaticamente";

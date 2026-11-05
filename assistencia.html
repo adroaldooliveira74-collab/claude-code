@@ -346,6 +346,16 @@ table.data .del{color:var(--danger);border:1px solid var(--line);background:var(
   <!-- 4 · MEDIÇÕES -->
   <section class="panel" data-tab="medicoes">
     <div class="card">
+      <h2>🧮 Calculadoras técnicas <span class="seal">NHO-01 / NHO-06</span></h2>
+      <p class="sub">Confira os números do laudo: calcule e lance na tabela.</p>
+      <h3 style="font-size:14px;margin-top:6px">Ruído — dose e NEN (NHO-01 · q=5 · 85 dB(A))</h3>
+      <div class="grid g2"><label class="field">Nível L (dB(A))<input id="rz_l" type="number" step="0.1" inputmode="decimal"></label><label class="field">Tempo de exposição (h/dia)<input id="rz_t" type="number" step="0.1" value="8" inputmode="decimal"></label></div>
+      <div class="row-actions"><button class="btn small" id="rz_calc" type="button">Calcular</button><button class="btn small" id="rz_lanc" type="button" disabled>Lançar na tabela</button><span class="hint" id="rz_out"></span></div>
+      <h3 style="font-size:14px;margin-top:14px">Calor — IBUTG (NHO-06 · NR-15 Anexo 3)</h3>
+      <div class="grid g2"><label class="field">Tbn (°C)<input id="ib_tbn" type="number" step="0.1" inputmode="decimal"></label><label class="field">Tg (°C)<input id="ib_tg" type="number" step="0.1" inputmode="decimal"></label><label class="field">Tbs (°C, só externo)<input id="ib_tbs" type="number" step="0.1" inputmode="decimal"></label><label class="field">Ambiente<select id="ib_sol"><option value="int">Sem carga solar (interno)</option><option value="ext">Com carga solar (externo)</option></select></label></div>
+      <div class="row-actions"><button class="btn small" id="ib_calc" type="button">Calcular</button><button class="btn small" id="ib_lanc" type="button" disabled>Lançar na tabela</button><span class="hint" id="ib_out"></span></div>
+    </div>
+    <div class="card">
       <h2>📈 Avaliações quantitativas <span class="seal">O QUE O PERITO ACHAR RELEVANTE</span></h2>
       <p class="sub">Campo livre: ruído, calor (IBUTG), umidade, iluminância, poeira, vibração, concentração química… Preencha só o pertinente ao processo.</p>
       <div class="tbl-wrap"><table class="data" id="medTable"><thead><tr><th>Agente / grandeza</th><th>Valor</th><th>Unidade</th><th>Limite (NR-15)</th><th>Instrumento</th><th>Resultado</th><th></th></tr></thead><tbody></tbody></table></div>
@@ -413,6 +423,7 @@ table.data .del{color:var(--danger);border:1px solid var(--line);background:var(
     <div class="doc-toolbar">
       <button class="btn primary" id="genBtn">↻ Montar / atualizar relatório</button>
       <button class="btn" id="pdfBtn">⬇ Baixar PDF</button>
+      <button class="btn" id="wordBtn">⬇ Word</button>
       <button class="btn" id="copyBtn">⧉ Copiar texto</button>
     </div>
     <div class="doc" id="laudoDoc"><p class="empty">Preencha as abas e clique em “Montar / atualizar relatório”.</p></div>
@@ -703,6 +714,12 @@ function renderMed(){const tb=$("#medTable").querySelector("tbody");tb.innerHTML
   tb.querySelectorAll("[data-mr]").forEach(s=>s.addEventListener("change",()=>{const m=state.medicoes.find(x=>x.id===s.dataset.mr);if(m){m.resultado=s.value;save();}}));
   tb.querySelectorAll("[data-mx]").forEach(x=>x.addEventListener("click",()=>{state.medicoes=state.medicoes.filter(m=>m.id!==x.dataset.mx);save();renderMed();}));renderVistMed();}
 $("#addMed").addEventListener("click",()=>{state.medicoes.push({id:uid(),agente:"",valor:"",unidade:"",limite:"",tecnica:"",resultado:""});save();renderMed();});
+let rzLast=null,ibLast=null;
+function rzCalc(){const o=$("#rz_out");const L=parseFloat(($("#rz_l")||{}).value),T=parseFloat(($("#rz_t")||{}).value);if(isNaN(L)||isNaN(T)||T<=0){if(o)o.textContent="Informe L e tempo.";return;}const Tref=8/Math.pow(2,(L-85)/5);const D=100*T/Tref;const NEN=85+16.61*Math.log10(D/100);const acima=NEN>85.05;rzLast={valor:NEN.toFixed(1),acima};if(o)o.innerHTML=`Tref=${Tref.toFixed(2)} h · Dose=${D.toFixed(0)}% · <b>NEN=${NEN.toFixed(1)} dB(A)</b> &rarr; ${acima?"acima do limite (grau médio 20%)":"dentro do limite"}`;const b=$("#rz_lanc");if(b)b.disabled=false;}
+function rzLanc(){if(!rzLast)return;state.medicoes.push({id:uid(),agente:"Ruído contínuo",valor:rzLast.valor,unidade:"dB(A)",limite:"85",tecnica:"Dosímetro/decibelímetro (NHO-01, q=5)",resultado:rzLast.acima?"Acima do limite":"Dentro do limite"});save();renderMed();flash("Ruído lançado.");}
+function ibCalc(){const o=$("#ib_out");const tbn=parseFloat(($("#ib_tbn")||{}).value),tg=parseFloat(($("#ib_tg")||{}).value),ext=(($("#ib_sol")||{}).value==="ext"),tbs=parseFloat(($("#ib_tbs")||{}).value);if(isNaN(tbn)||isNaN(tg)||(ext&&isNaN(tbs))){if(o)o.textContent="Informe Tbn, Tg"+(ext?" e Tbs":"")+".";return;}const ibutg=ext?(0.7*tbn+0.2*tg+0.1*tbs):(0.7*tbn+0.3*tg);ibLast={valor:ibutg.toFixed(1)};if(o)o.innerHTML=`<b>IBUTG = ${ibutg.toFixed(1)} °C</b> (${ext?"com":"sem"} carga solar). Compare com o Anexo 3 da NR-15.`;const b=$("#ib_lanc");if(b)b.disabled=false;}
+function ibLanc(){if(!ibLast)return;state.medicoes.push({id:uid(),agente:"Calor (IBUTG)",valor:ibLast.valor,unidade:"°C",limite:"Anexo 3 NR-15",tecnica:"Medidor de IBUTG (NHO-06)",resultado:""});save();renderMed();flash("IBUTG lançado.");}
+{const map={rz_calc:rzCalc,rz_lanc:rzLanc,ib_calc:ibCalc,ib_lanc:ibLanc};Object.keys(map).forEach(id=>{const b=$("#"+id);if(b)b.addEventListener("click",map[id]);});}
 
 /* relatórios de aparelho */
 wireDrop("#dropApt","#aptInput",files=>handleApt(files),true);
@@ -943,7 +960,7 @@ async function iaParecer(){const st=$("#iaParecerStatus");const s=await getSampl
   const laudo=await idbGet("laudotext")||"";const furos=state.quesitos.filter(q=>q.origem==="Laudo").map((q,i)=>(i+1)+") "+q.pergunta+" => "+q.resposta).join("\n");
   const b=$("#iaParecer");if(b)b.disabled=true;st.style.color="var(--muted)";st.innerHTML='<span class="spin"></span> Montando o parecer…';
   const prompt=`${IA_RULE}
-Você é ASSISTENTE TÉCNICO da RECLAMADA. Redija um PARECER TÉCNICO fundamentado, em português formal, concluindo pela IMPUGNAÇÃO do laudo pericial, cruzando laudo + petição + vistoria. Estruture: 1) Síntese; 2) Das fragilidades do laudo (ponto a ponto); 3) Da divergência com a realidade/petição; 4) Conclusão e pedido (requer a desconsideração/impugnação do laudo e, se cabível, esclarecimentos ou nova perícia). Técnica de SST; sem jurisprudência.
+Você é ASSISTENTE TÉCNICO da RECLAMADA. Redija um PARECER TÉCNICO fundamentado, em português formal, concluindo pela IMPUGNAÇÃO do laudo pericial, cruzando laudo + petição + vistoria. Estruture em seções numeradas: 1) Síntese; 2) Pontos de concordância (o que o laudo acertou); 3) Das fragilidades e divergências técnicas, ponto a ponto (método, cálculo/metrologia, habitualidade, EPI e CA, enquadramento); 4) Da divergência com a realidade e com a petição; 5) QUESITOS DE ESCLARECIMENTO SUGERIDOS (lista numerada de perguntas objetivas ao perito, nos termos do art. 477, §2º, do CPC); 6) Conclusão e pedido (impugnação/reconsideração, esclarecimentos ou nova perícia). Técnica de SST; sem jurisprudência.
 Fragilidades levantadas:
 ${furos||"(use sua própria análise do laudo)"}
 Petição (trecho): ${(state.peticao||"").slice(0,4000)}
@@ -1038,7 +1055,7 @@ async function exportPdf(){const{photos}=await generateLaudo();const J=window.js
   await saveFile(doc.output("blob"),fname("pdf"));}
 
 $("#genBtn").addEventListener("click",()=>{generateLaudo();flash("Laudo atualizado.");});
-$("#pdfBtn").addEventListener("click",exportPdf);$("#ncWord").addEventListener("click",exportNcPdf);
+$("#pdfBtn").addEventListener("click",exportPdf);{const _w=$("#wordBtn");if(_w)_w.addEventListener("click",exportWord);}$("#ncWord").addEventListener("click",exportNcPdf);
 $("#copyBtn").addEventListener("click",async()=>{await generateLaudo();const txt=$("#laudoDoc").innerText.replace(/\n{3,}/g,"\n\n").trim();try{await navigator.clipboard.writeText(txt);flash("Laudo copiado — cole no Word.");}catch(e){const r=document.createRange();r.selectNodeContents($("#laudoDoc"));const s=getSelection();s.removeAllRanges();s.addRange(r);flash("Selecionado — Ctrl/Cmd+C.");}});
 
 $("#themeBtn").addEventListener("click",()=>{const c=document.documentElement.getAttribute("data-theme");const dark=c?c==="dark":matchMedia("(prefers-color-scheme: dark)").matches;document.documentElement.setAttribute("data-theme",dark?"light":"dark");try{localStorage.setItem("perito_theme",dark?"light":"dark");}catch(e){}});

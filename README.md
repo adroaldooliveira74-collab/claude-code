@@ -66,3 +66,17 @@ Observação: o APK empacota o app (funciona offline); as funções de **IA (Gem
 
 ---
 Identidade visual e dados profissionais: **UrbanClin — Medicina e Segurança do Trabalho**.
+
+
+## APK Android assinado (release)
+
+O fluxo padrão "Build Android APK" gera um APK **debug** (instalável direto, bom para uso pessoal).
+Para um APK **assinado de release** (distribuição), cadastre em *Settings → Secrets and variables → Actions*:
+
+- `ANDROID_KEYSTORE_BASE64` — seu keystore `.jks` em base64 (`base64 -w0 keystore.jks`)
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
+
+Depois rode manualmente o workflow **"Build Android APK (release assinado)"** em *Actions*.
+O APK assinado fica em *Artifacts* (`perito-laudo-apk-release`).
