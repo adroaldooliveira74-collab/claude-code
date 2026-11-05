@@ -417,6 +417,7 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
         <label class="field">Tg — temperatura de globo (°C)<input id="ib_tg" type="number" step="0.1" inputmode="decimal"></label>
         <label class="field">Tbs — bulbo seco (°C, só externo)<input id="ib_tbs" type="number" step="0.1" inputmode="decimal"></label>
         <label class="field">Ambiente<select id="ib_sol"><option value="int">Sem carga solar (interno)</option><option value="ext">Com carga solar (externo)</option></select></label>
+        <label class="field">Tipo de atividade (Anexo 3)<select id="ib_ativ"><option>Leve</option><option selected>Moderada</option><option>Pesada</option></select></label>
       </div>
       <div class="row-actions"><button class="btn small" id="ib_calc" type="button">Calcular</button><button class="btn small" id="ib_lanc" type="button" disabled>Lançar na tabela</button><span class="hint" id="ib_out"></span></div>
       <p class="hint" style="margin-top:8px">O enquadramento final do calor depende da taxa metabólica e do regime trabalho/descanso (Anexo 3 da NR-15) — confira a tabela antes de concluir.</p>
@@ -428,6 +429,17 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
       <datalist id="dlAgente"><option>Ruído contínuo</option><option>Ruído de impacto</option><option>Calor (IBUTG)</option><option>Umidade relativa</option><option>Iluminância</option><option>Poeira total</option><option>Poeira respirável</option><option>Vibração (VMB)</option><option>Vibração (VCI)</option><option>Concentração química</option></datalist>
       <datalist id="dlUnidade"><option>dB(A)</option><option>dB(C)</option><option>°C</option><option>%UR</option><option>lux</option><option>mg/m³</option><option>ppm</option><option>m/s²</option><option>f/cm³</option></datalist>
       <div class="row-actions" style="margin-top:10px"><button class="btn small" id="addMed">+ Linha de medição</button><button class="btn ia small" id="iaMed">✨ Preencher pela IA (lê relatórios/fotos)</button><span class="hint" id="iaMedStatus">Fotos e registro manual abaixo; a IA lê os relatórios do aparelho e as fotos da vistoria e preenche a tabela.</span></div>
+      <div style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px">
+        <h3 style="font-size:14px">Metodologia das medições</h3>
+        <p class="sub">Entra na seção de avaliações quantitativas do laudo (rastreabilidade).</p>
+        <div class="grid g2">
+          <label class="field">GHE — grupo homogêneo de exposição<input id="mm_ghe" placeholder="Ex.: Operadores da linha de montagem"></label>
+          <label class="field">Nº de pontos de medição<input id="mm_pontos" inputmode="numeric" placeholder="Ex.: 3"></label>
+          <label class="field">Nº de leituras por ponto<input id="mm_leituras" inputmode="numeric" placeholder="Ex.: 3"></label>
+          <label class="field">Incerteza declarada<input id="mm_incerteza" placeholder="Ex.: ± 1,5 dB(A)"></label>
+        </div>
+        <label class="field" style="margin-top:10px">Observações da metodologia<textarea id="mm_obs" rows="2" placeholder="Condições, jornada avaliada, conformidade com NHO-01/06…"></textarea></label>
+      </div>
     </div>
     <div class="card">
       <h2>🧾 Relatórios do aparelho <span class="seal">PDF + FOTO + MANUAL</span></h2>
@@ -630,7 +642,7 @@ function blankState(){const adr=uid();return{
   equipe:[{id:adr,nome:"Adroaldo Marques de Oliveira",formacao:"Engenheiro de Segurança do Trabalho",registro:"CREA-PR 168996",email:"",tel:""}],
   peritoId:adr,assistentes:[],objeto:"",art:"",tipoPericia:"Insalubridade",registroInspecao:"",entrevistas:"",paradigma:"",roteiro:{},atividades:[],agentes:AGENTES_NR15.map(a=>({anexo:a[0],nome:a[1],situacao:"Não constatada exposição significativa",analise:"",grau:"Não caracterizado"})),
   vistoria:{data:"",hora:"",clima:"",local:"",presentes:"",desc:"",metodo:DEFAULT_METODO},
-  medicoes:[],aparelhos:[],epiDocs:[],
+  medicoes:[],medMetodo:{ghe:"",pontos:"",leituras:"",incerteza:"",obs:""},aparelhos:[],epiDocs:[],
   docs:DOC_BASE.map(t=>({id:uid(),tipo:t,apresentado:"",validade:"",obs:"",hasText:false})),
   epi:[],quesitos:[],normas:NORMAS_BASE.map(n=>({code:n[0],desc:n[1],on:n[2]})),
   media:[],ncs:[],conclusao:"",analise:"",
@@ -683,7 +695,7 @@ const BIND=[
   ["#pt_reu",s=>s.partes.reu,(s,v)=>s.partes.reu=v],["#pt_reu_adv",s=>s.partes.reuAdv,(s,v)=>s.partes.reuAdv=v],
   ["#vc_funcao",s=>s.vinculo.funcao,(s,v)=>s.vinculo.funcao=v],["#vc_setor",s=>s.vinculo.setor,(s,v)=>s.vinculo.setor=v],
   ["#vc_admissao",s=>s.vinculo.admissao,(s,v)=>s.vinculo.admissao=v],["#vc_saida",s=>s.vinculo.saida,(s,v)=>s.vinculo.saida=v],
-  ["#v_entrev",s=>s.entrevistas,(s,v)=>s.entrevistas=v],["#v_parad",s=>s.paradigma,(s,v)=>s.paradigma=v],["#peric_car",s=>s.periculosidade.caracterizada,(s,v)=>s.periculosidade.caracterizada=v],["#peric_base",s=>s.periculosidade.base,(s,v)=>s.periculosidade.base=v],
+  ["#v_entrev",s=>s.entrevistas,(s,v)=>s.entrevistas=v],["#v_parad",s=>s.paradigma,(s,v)=>s.paradigma=v],["#mm_ghe",s=>s.medMetodo.ghe,(s,v)=>s.medMetodo.ghe=v],["#mm_pontos",s=>s.medMetodo.pontos,(s,v)=>s.medMetodo.pontos=v],["#mm_leituras",s=>s.medMetodo.leituras,(s,v)=>s.medMetodo.leituras=v],["#mm_incerteza",s=>s.medMetodo.incerteza,(s,v)=>s.medMetodo.incerteza=v],["#mm_obs",s=>s.medMetodo.obs,(s,v)=>s.medMetodo.obs=v],["#peric_car",s=>s.periculosidade.caracterizada,(s,v)=>s.periculosidade.caracterizada=v],["#peric_base",s=>s.periculosidade.base,(s,v)=>s.periculosidade.base=v],
   ["#ec_forn",s=>s.epiComprov.fornecimento,(s,v)=>s.epiComprov.fornecimento=v],["#ec_trein",s=>s.epiComprov.treinamento,(s,v)=>s.epiComprov.treinamento=v],["#ec_troca",s=>s.epiComprov.troca,(s,v)=>s.epiComprov.troca=v],["#ec_hig",s=>s.epiComprov.higienizacao,(s,v)=>s.epiComprov.higienizacao=v],["#ec_fisc",s=>s.epiComprov.fiscalizacao,(s,v)=>s.epiComprov.fiscalizacao=v],
   ["#s_objeto",s=>s.objeto,(s,v)=>s.objeto=v],["#s_art",s=>s.art,(s,v)=>s.art=v],["#s_tipo",s=>s.tipoPericia,(s,v)=>s.tipoPericia=v],["#v_registro",s=>s.registroInspecao,(s,v)=>s.registroInspecao=v],
   ["#v_data",s=>s.vistoria.data,(s,v)=>s.vistoria.data=v],["#v_hora",s=>s.vistoria.hora,(s,v)=>s.vistoria.hora=v],
@@ -818,8 +830,14 @@ $("#addMed").addEventListener("click",()=>{state.medicoes.push({id:uid(),agente:
 let rzLast=null,ibLast=null;
 function rzCalc(){const o=$("#rz_out");const L=parseFloat(($("#rz_l")||{}).value),T=parseFloat(($("#rz_t")||{}).value);if(isNaN(L)||isNaN(T)||T<=0){if(o)o.textContent="Informe o nível L e o tempo de exposição.";return;}const Tref=8/Math.pow(2,(L-85)/5);const D=100*T/Tref;const NEN=85+16.61*Math.log10(D/100);const acima=NEN>85.05;rzLast={valor:NEN.toFixed(1),acima};if(o)o.innerHTML=`Tref=${Tref.toFixed(2)} h · Dose=${D.toFixed(0)}% · <b>NEN=${NEN.toFixed(1)} dB(A)</b> &rarr; ${acima?"acima do limite (insalubre — grau médio 20%)":"dentro do limite"}`;const b=$("#rz_lanc");if(b)b.disabled=false;}
 function rzLanc(){if(!rzLast)return;state.medicoes.push({id:uid(),agente:"Ruído contínuo",valor:rzLast.valor,unidade:"dB(A)",limite:"85",tecnica:"Dosímetro/decibelímetro (NHO-01, q=5)",resultado:rzLast.acima?"Acima do limite":"Dentro do limite",certNum:"",certVal:""});save();renderMed();flash("Ruído lançado na tabela de medições.");}
-function ibCalc(){const o=$("#ib_out");const tbn=parseFloat(($("#ib_tbn")||{}).value),tg=parseFloat(($("#ib_tg")||{}).value),ext=(($("#ib_sol")||{}).value==="ext"),tbs=parseFloat(($("#ib_tbs")||{}).value);if(isNaN(tbn)||isNaN(tg)||(ext&&isNaN(tbs))){if(o)o.textContent="Informe Tbn, Tg"+(ext?" e Tbs":"")+".";return;}const ibutg=ext?(0.7*tbn+0.2*tg+0.1*tbs):(0.7*tbn+0.3*tg);ibLast={valor:ibutg.toFixed(1)};if(o)o.innerHTML=`<b>IBUTG = ${ibutg.toFixed(1)} °C</b> (${ext?"com":"sem"} carga solar). Compare com o Anexo 3 da NR-15 pela taxa metabólica e regime.`;const b=$("#ib_lanc");if(b)b.disabled=false;}
-function ibLanc(){if(!ibLast)return;state.medicoes.push({id:uid(),agente:"Calor (IBUTG)",valor:ibLast.valor,unidade:"°C",limite:"Anexo 3 NR-15",tecnica:"Medidor de IBUTG (NHO-06)",resultado:"",certNum:"",certVal:""});save();renderMed();flash("IBUTG lançado na tabela de medições.");}
+function ibCalc(){const o=$("#ib_out");const tbn=parseFloat(($("#ib_tbn")||{}).value),tg=parseFloat(($("#ib_tg")||{}).value),ext=(($("#ib_sol")||{}).value==="ext"),tbs=parseFloat(($("#ib_tbs")||{}).value);const ativ=(($("#ib_ativ")||{}).value)||"Moderada";if(isNaN(tbn)||isNaN(tg)||(ext&&isNaN(tbs))){if(o)o.textContent="Informe Tbn, Tg"+(ext?" e Tbs":"")+".";return;}const ibutg=ext?(0.7*tbn+0.2*tg+0.1*tbs):(0.7*tbn+0.3*tg);
+  const cont={"Leve":30.0,"Moderada":26.7,"Pesada":25.0}[ativ];const maxp={"Leve":32.2,"Moderada":31.1,"Pesada":30.0}[ativ];
+  let verdict,acima;if(ibutg<=cont){verdict="dentro do limite para trabalho contínuo (\u2264 "+cont.toFixed(1)+" °C)";acima=false;}else if(ibutg<=maxp){verdict="acima do limite de trabalho contínuo ("+cont.toFixed(1)+" °C) — exige o regime de pausas do Anexo 3; sem as pausas, insalubre grau médio (20%)";acima=true;}else{verdict="acima do IBUTG máximo permitido ("+maxp.toFixed(1)+" °C) — insalubre grau médio (20%)";acima=true;}
+  ibLast={valor:ibutg.toFixed(1),acima:acima,ativ:ativ,cont:cont};
+  if(o)o.innerHTML=`<b>IBUTG = ${ibutg.toFixed(1)} °C</b> · atividade ${ativ.toLowerCase()} · ${verdict}.`;const b=$("#ib_lanc");if(b)b.disabled=false;}
+function ibLanc(){if(!ibLast)return;state.medicoes.push({id:uid(),agente:"Calor (IBUTG)",valor:ibLast.valor,unidade:"°C",limite:"Anexo 3 ("+ibLast.ativ+": "+ibLast.cont.toFixed(1)+" °C)",tecnica:"Medidor de IBUTG (NHO-06)",resultado:ibLast.acima?"Acima do limite":"Dentro do limite",certNum:"",certVal:""});
+  if(ibLast.acima){const a=state.agentes.find(x=>x.anexo==="Anexo 3");if(a){a.situacao="Exposição caracterizada";a.grau="Grau médio (20%)";if(typeof renderAgentes==="function")renderAgentes();}}
+  save();renderMed();flash("IBUTG lançado"+(ibLast.acima?" — Anexo 3 marcado como caracterizado (20%).":"."));}
 {const map={rz_calc:rzCalc,rz_lanc:rzLanc,ib_calc:ibCalc,ib_lanc:ibLanc};Object.keys(map).forEach(id=>{const b=$("#"+id);if(b)b.addEventListener("click",map[id]);});}
 
 /* relatórios de aparelho */
@@ -1172,7 +1190,7 @@ async function generateLaudo(){const doc=$("#laudoDoc");const{photos,vids,normas
     <dl class="kv"><dt>Data / hora</dt><dd>${em(fmtDate(V.data))}${V.hora?` às ${esc(V.hora)}`:""}</dd><dt>Local</dt><dd>${em(V.local)}</dd><dt>Condições</dt><dd>${em(V.clima)}</dd><dt>Presentes</dt><dd>${em(V.presentes)}</dd>${A.abertura?`<dt>Abertura</dt><dd>${fmtTs(A.abertura.ts)} — ${esc(A.abertura.acomp)} (${esc(A.abertura.papel)})${A.abertura.gpsOk?` · GPS ${A.abertura.lat.toFixed(5)}, ${A.abertura.lon.toFixed(5)} (±${A.abertura.acc} m)`:" · GPS indisponível"}</dd>`:""}${A.fechamento?`<dt>Encerramento</dt><dd>${fmtTs(A.fechamento.ts)} — ${esc(A.fechamento.acomp)}${A.fechamento.gpsOk?` · GPS ${A.fechamento.lat.toFixed(5)}, ${A.fechamento.lon.toFixed(5)}`:""}</dd>`:""}</dl>${V.desc?para(V.desc):""}
     <h2>${S_()}. DA DOCUMENTAÇÃO ANALISADA</h2>${docHTML}${epiHTML}
     <h2>${S_()}. FUNDAMENTAÇÃO TÉCNICA</h2>${normasHTML}${artHTML}
-    ${medHTML?`<h2>${S_()}. DAS AVALIAÇÕES QUANTITATIVAS</h2>${medHTML}`:""}
+    ${medHTML?`<h2>${S_()}. DAS AVALIAÇÕES QUANTITATIVAS</h2>${(()=>{const M=S.medMetodo||{};const ps=[M.ghe?"GHE: "+esc(M.ghe):"",M.pontos?esc(M.pontos)+" ponto(s) de medição":"",M.leituras?esc(M.leituras)+" leitura(s) por ponto":"",M.incerteza?"incerteza declarada "+esc(M.incerteza):""].filter(Boolean).join("; ");return (ps||M.obs)?`<p>${ps}${ps&&M.obs?". ":""}${M.obs?esc(M.obs):""}</p>`:"";})()}${medHTML}`:""}
     <h2>${S_()}. RISCOS OCUPACIONAIS POR AGENTE (NR-15)</h2>${agHTML}
     <h2>${S_()}. ANÁLISE E CONSTATAÇÕES — REGISTRO FOTOGRÁFICO</h2>${photoHTML||`<p class="empty">[nenhuma foto anexada]</p>`}${vidHTML}
     <h2>${S_()}. RESPOSTA AOS QUESITOS</h2>${quesHTML}
@@ -1211,7 +1229,7 @@ async function exportPdf(){const{photos}=await generateLaudo();const J=window.js
   if(S.epi.length){H("EPI (NR-06)");S.epi.forEach(e=>{const venc=(e.caVal&&V.data&&e.caVal<V.data);body("• "+(e.equip||"—")+" (CA "+(e.ca||"—")+(e.caVal?", val. "+fmtDate(e.caVal)+(venc?" VENCIDO":""):"")+")"+(e.agente?" — agente: "+e.agente:"")+(e.efic?" — eficácia: "+e.efic:""));});const ec=S.epiComprov||{};const ecI=[["Fornecimento",ec.fornecimento],["Treinamento",ec.treinamento],["Troca",ec.troca],["Higienização",ec.higienizacao],["Fiscalização",ec.fiscalizacao]].filter(x=>x[1]);if(ecI.length)body("Comprovação NR-06 — "+ecI.map(x=>x[0]+": "+x[1]).join("; ")+".");}
   const gr=computeGaps();if(S.epi.length&&gr.gaps){if(gr.gaps.length)body(`EPI (NR-06): ${gr.gaps.length} intervalo(s) sem comprovação contínua no período ${fmtDate(gr.adm)}–${fmtDate(gr.sai)}: ${gr.gaps.map(g=>fmtDate(g.from)+" a "+fmtDate(g.to)).join("; ")}.`);else body(`EPI (NR-06): cobertura sem lacunas no período ${fmtDate(gr.adm)}–${fmtDate(gr.sai)}.`);}
   H("VI. FUNDAMENTAÇÃO TÉCNICA");const non=S.normas.filter(n=>n.on);if(non.length){body("Referências consideradas:");non.forEach(n=>body(`• ${n.code} — ${n.desc}`));}else body("[selecione as referências]");if(S.art)body(`Perícia amparada pela ART nº ${S.art}.`);
-  if(S.medicoes.length){H("VII. AVALIAÇÕES QUANTITATIVAS");S.medicoes.forEach(m=>{const venc=(m.certVal&&V.data&&m.certVal<V.data);body(`• ${m.agente||"—"}: ${m.valor||"—"} ${m.unidade||""} (limite ${m.limite||"—"}) — ${m.resultado||"—"} [${m.tecnica||"—"}${m.certNum?", cert. "+m.certNum:""}${m.certVal?" val. "+fmtDate(m.certVal)+(venc?" VENCIDO":""):""}]`);});if(S.aparelhos.length)body(`Anexados ${S.aparelhos.length} relatório(s) de instrumento.`);}
+  if(S.medicoes.length){H("VII. AVALIAÇÕES QUANTITATIVAS");{const M=S.medMetodo||{};const ps=[M.ghe?"GHE: "+M.ghe:"",M.pontos?M.pontos+" ponto(s)":"",M.leituras?M.leituras+" leitura(s)/ponto":"",M.incerteza?"incerteza "+M.incerteza:""].filter(Boolean).join("; ");if(ps||M.obs)body("Metodologia: "+ps+(ps&&M.obs?". ":"")+(M.obs||""));}S.medicoes.forEach(m=>{const venc=(m.certVal&&V.data&&m.certVal<V.data);body(`• ${m.agente||"—"}: ${m.valor||"—"} ${m.unidade||""} (limite ${m.limite||"—"}) — ${m.resultado||"—"} [${m.tecnica||"—"}${m.certNum?", cert. "+m.certNum:""}${m.certVal?" val. "+fmtDate(m.certVal)+(venc?" VENCIDO":""):""}]`);});if(S.aparelhos.length)body(`Anexados ${S.aparelhos.length} relatório(s) de instrumento.`);}
   H("RISCOS OCUPACIONAIS POR AGENTE (NR-15)");S.agentes.forEach(a=>body("• "+a.anexo+" — "+a.nome+": "+(a.situacao||"—")+(a.analise?". "+a.analise:"")));
   H("ANÁLISE E CONSTATAÇÕES — REGISTRO FOTOGRÁFICO");let pn=0;
   for(const p of photos){pn++;try{const dim=await imgSize(p.data);let w=dim.w,h=dim.h;const r=Math.min(CW/w,90/h);w*=r;h*=r;if(y+h>BOT){doc.addPage();y=TOP;}doc.addImage(p.data,"JPEG",M,y,w,h);y+=h+2;body(`Foto ${String(pn).padStart(2,"0")} — ${p.legenda||"[legenda]"}${p.norma?" ("+p.norma+")":""}`,{s:8});}catch(e){}}
