@@ -168,6 +168,7 @@ function render(){
         <span class="num">${esc(p.numero)||"(sem número)"}</span>
         <span class="badge ${bk}">${BK[bk]}</span>
         <span class="spacer" style="flex:1"></span>
+        <button class="btn small" data-act="open">↗ Abrir</button>
         <button class="btn small" data-act="toggle">✎ Editar</button>
       </div>
       <div class="meta">${esc(p.parte)||"—"} · ${esc(p.modulo||"Perícia")} · prazo: ${prazoTxt}${p.obs?" · "+esc(p.obs):""}</div>
@@ -184,6 +185,7 @@ function render(){
   });
   // listeners
   lista.querySelectorAll("[data-act='toggle']").forEach(b=>b.addEventListener("click",e=>{e.target.closest(".row").classList.toggle("open");}));
+  lista.querySelectorAll("[data-act='open']").forEach(b=>b.addEventListener("click",e=>{const id=e.target.closest(".row").dataset.id;const pr=procs.find(x=>x.id===id);const mod=(pr&&pr.modulo==="Assistência")?"assistencia.html":"index.html";location.href=mod+"?proc="+encodeURIComponent(id);}));
   lista.querySelectorAll("[data-act='del']").forEach(b=>b.addEventListener("click",e=>{const id=e.target.closest(".row").dataset.id;if(!window.__d||window.__d!==id){window.__d=id;flash("Toque de novo em Excluir para confirmar.");return;}procs=procs.filter(x=>x.id!==id);persist();window.__d=null;render();flash("Processo excluído.");}));
   lista.querySelectorAll("[data-f]").forEach(inp=>{const ev=(inp.tagName==="SELECT"||inp.type==="date")?"change":"input";inp.addEventListener(ev,()=>{const id=inp.closest(".row").dataset.id;const p=procs.find(x=>x.id===id);if(!p)return;p[inp.dataset.f]=inp.value;persist();if(inp.dataset.f!=="numero"&&inp.dataset.f!=="parte"&&inp.dataset.f!=="obs")render();});});
 }
