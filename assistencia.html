@@ -222,7 +222,7 @@ table.data .del{color:var(--danger);border:1px solid var(--line);background:var(
         <label class="field">Vara / juízo <input id="p_vara" placeholder="2ª Vara do Trabalho de Umuarama"></label>
         <label class="field">Comarca / foro <input id="p_comarca" placeholder="Umuarama – PR"></label>
         <label class="field">Valor da causa <input id="p_valor" placeholder="R$ 00.000,00"></label>
-        <label class="field">Data da nomeação do perito <input id="p_nomeacao" type="date"></label>
+        <label class="field">Data da indicação pela reclamada <input id="p_nomeacao" type="date"></label>
       </div>
     </div>
     <div class="card">
@@ -269,7 +269,7 @@ table.data .del{color:var(--danger);border:1px solid var(--line);background:var(
       <div id="equipeList"></div>
       <div class="add-bar"><button class="btn small" id="addEquipe">+ Profissional</button></div>
       <div class="grid g2" style="margin-top:14px">
-        <label class="field">Perito responsável (quem fez a perícia)<select id="selPerito"></select></label>
+        <label class="field">Assistente Técnico responsável<select id="selPerito"></select></label>
         <div><div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:4px">Assistente(s) técnico(s) que acompanharam</div><div class="chk-list" id="assistList"></div></div>
       </div>
       <div class="sel-summary" id="peritoSummary"></div>
@@ -456,10 +456,10 @@ table.data .del{color:var(--danger);border:1px solid var(--line);background:var(
       <h2>💼 Proposta de Assistência Técnica <span class="seal">HONORÁRIOS</span></h2>
       <div class="note green"><b>Regras fixas:</b> R$ 1,00/km rodado (ida e volta, de <b>Perobal-PR</b> até a cidade da perícia) + refeição; até 100 km sem hotel; acima, diária de hotel estimada pela IA. Distância, hotel e refeição são estimativas — <b>confirme</b>.</div>
       <div class="grid g2">
-        <label class="field">Valor arbitrado/ofertado pelo juízo <input id="en_ofertado" placeholder="R$ 0,00"></label>
+        <label class="field">Valor de referência (se houver) <input id="en_ofertado" placeholder="R$ 0,00"></label>
         <label class="field">Honorários propostos <input id="en_proposto" placeholder="R$ 0,00"></label>
         <label class="field">Prazo estimado (dias) <input id="en_prazo" placeholder="30"></label>
-        <label class="field">Dados para depósito <input id="en_banco" placeholder="Banco/agência/conta ou PIX"></label>
+        <label class="field">Forma / dados de pagamento <input id="en_banco" placeholder="PIX, transferência, parcelamento…"></label>
         <label class="field">Distância até o local — só ida (km) <input id="en_km" class="mono" placeholder="0"></label>
         <label class="field">Cidade do local (p/ estimar hotel/refeição) <input id="en_cidade" placeholder="Cidade – UF"></label>
       </div>
@@ -524,7 +524,7 @@ function readIdx(){try{const a=JSON.parse(localStorage.getItem(IDX_KEY)||"[]");r
 function writeIdx(a){try{localStorage.setItem(IDX_KEY,JSON.stringify(a));}catch(e){}}
 function idxEntry(st){return{pid:st.painelId,numero:(st.processo&&st.processo.numero)||"",parte:(st.partes&&(st.partes.reu||st.partes.autor))||"",tipo:st.tipoPericia||"",updated:Date.now()};}
 function saveRecord(){try{if(!state.painelId)state.painelId=uid();localStorage.setItem(REC(state.painelId),JSON.stringify(state));const idx=readIdx().filter(r=>r.pid!==state.painelId);idx.unshift(idxEntry(state));writeIdx(idx);localStorage.setItem(ACTIVE_KEY,state.painelId);}catch(e){}}
-const DEFAULT_METODO="A perícia foi realizada mediante vistoria ao local de trabalho, inspeção visual direta das instalações e dos postos ocupados pelo reclamante, entrevista com os presentes, análise da documentação acostada aos autos (LTCAT, PGR, PCMSO, LIP e fichas de EPI) e, quando necessário, avaliação quantitativa dos agentes ambientais com instrumentos adequados, confrontando as constatações com as Normas Regulamentadoras e as normas de higiene ocupacional (NHO/Fundacentro). Trata-se de método técnico-científico predominantemente aceito pelos especialistas em Segurança e Higiene do Trabalho, aplicado de forma objetiva e reproduzível, nos termos do art. 473, III, do CPC.";
+const DEFAULT_METODO="A presente análise de assistência técnica foi desenvolvida mediante acompanhamento à diligência pericial (quando designada), exame dos autos, da petição inicial e do laudo pericial, análise da documentação acostada (LTCAT, PGR, PCMSO, LIP e fichas de EPI) e, quando pertinente, conferência das avaliações quantitativas e dos critérios adotados pelo perito, confrontando-os com as Normas Regulamentadoras e com as normas de higiene ocupacional (NHO/Fundacentro). O objetivo é a análise crítica do laudo pericial — apontando concordâncias e divergências técnicas — para subsidiar a reclamada e o juízo, sem substituir o perito do processo.";
 const NORMAS_BASE=[
   ["NR-01","Disposições gerais e Gerenciamento de Riscos Ocupacionais (PGR/GRO)",true],
   ["NR-06","Equipamento de Proteção Individual (EPI) e Certificado de Aprovação",true],
@@ -548,7 +548,7 @@ function blankState(){const adr=uid();return{
   empresa:{razao:"",cnpj:"",cnae:"",atividade:"",empregados:"",grau:"",endereco:""},
   profEmpresa:[],partes:{autor:"",autorAdv:"",reu:"",reuAdv:""},vinculo:{funcao:"",setor:"",admissao:"",saida:""},
   equipe:[{id:adr,nome:"Adroaldo Marques de Oliveira",formacao:"Engenheiro de Segurança do Trabalho",registro:"CREA-PR 168996",email:"",tel:""}],
-  peritoId:adr,assistentes:[],objeto:"",art:"",
+  peritoId:adr,assistentes:[],objeto:"",sintese:"",art:"",
   vistoria:{data:"",hora:"",clima:"",local:"",presentes:"",desc:"",metodo:DEFAULT_METODO},
   medicoes:[],aparelhos:[],epiDocs:[],
   docs:DOC_BASE.map(t=>({id:uid(),tipo:t,apresentado:"",validade:"",obs:"",hasText:false})),
@@ -689,7 +689,7 @@ function renderEquipeSel(){const sp=$("#selPerito");sp.innerHTML=state.equipe.ma
   al.querySelectorAll("[data-as]").forEach(c=>c.addEventListener("change",()=>{const id=c.dataset.as;if(c.checked){if(!state.assistentes.includes(id))state.assistentes.push(id);}else state.assistentes=state.assistentes.filter(x=>x!==id);save();renderPeritoSummary();}));
   renderPeritoSummary();}
 $("#selPerito").addEventListener("change",e=>{state.peritoId=e.target.value;state.assistentes=state.assistentes.filter(x=>x!==state.peritoId);save();renderEquipeSel();});
-function renderPeritoSummary(){const p=getPerito();const a=getAssist();$("#peritoSummary").innerHTML=`<b>Perito:</b> ${esc(p.nome||"—")}${p.formacao?`, ${esc(p.formacao)}`:""}${p.registro?` — ${esc(p.registro)}`:""}`+(a.length?`<br><b>Assistente(s):</b> ${a.map(x=>esc(x.nome)+(x.registro?` (${esc(x.registro)})`:"")).join("; ")}`:"");}
+function renderPeritoSummary(){const p=getPerito();const a=getAssist();$("#peritoSummary").innerHTML=`<b>Assistente técnico:</b> ${esc(p.nome||"—")}${p.formacao?`, ${esc(p.formacao)}`:""}${p.registro?` — ${esc(p.registro)}`:""}`+(a.length?`<br><b>Assistente(s):</b> ${a.map(x=>esc(x.nome)+(x.registro?` (${esc(x.registro)})`:"")).join("; ")}`:"");}
 $("#addEquipe").addEventListener("click",()=>{state.equipe.push({id:uid(),nome:"",formacao:"",registro:"",email:"",tel:""});save();renderEquipe();});
 
 /* documentos */
@@ -960,7 +960,11 @@ Responda SOMENTE com JSON: {"medicoes":[{"agente":"Ruido continuo","valor":"85",
 {const _im=$("#iaMed");if(_im)_im.addEventListener("click",iaMedicoesFn);}
 
 /* ===== Assistência: laudo do perito + furos + parecer ===== */
-async function handleLaudoPdf(file){const r=$("#laudoResult");if(r){r.style.color="var(--muted)";r.innerHTML='<span class="spin"></span> Lendo laudo…';}try{const t=await pdfToText(file);if(!t.trim())throw 0;await idbPut("laudotext",t);state.laudoHas=true;save();if(r){r.style.color="var(--ok)";r.textContent="Laudo lido ("+t.length+" caracteres). Agora clique em Analisar.";}flash("Laudo do perito carregado.");}catch(e){if(r){r.style.color="var(--warn)";r.textContent="Não consegui ler (PDF imagem/digitalizado?). Tente outro arquivo.";}}}
+async function pdfPagesToImages(file,maxPages){const data=new Uint8Array(await file.arrayBuffer());const pdf=await pdfjsLib.getDocument({data}).promise;const out=[];const n=Math.min(pdf.numPages,maxPages||8);for(let i=1;i<=n;i++){const page=await pdf.getPage(i);const vp=page.getViewport({scale:1.6});const cv=document.createElement("canvas");cv.width=vp.width;cv.height=vp.height;const ctx=cv.getContext("2d");await page.render({canvasContext:ctx,viewport:vp}).promise;const blob=await new Promise(r=>cv.toBlob(r,"image/jpeg",0.8));if(blob)out.push(blob);}return out;}
+async function ocrPdf(file){if(!getKey())throw new Error("sem-chave");const imgs=await pdfPagesToImages(file,8);if(!imgs.length)throw new Error("sem-paginas");return (await geminiGenerate("Transcreva fielmente TODO o texto deste documento digitalizado, mantendo a ordem e a estrutura. Responda apenas o texto, sem comentários.",{images:imgs},false)||"").trim();}
+async function handleLaudoPdf(file){const r=$("#laudoResult");if(r){r.style.color="var(--muted)";r.innerHTML='<span class="spin"></span> Lendo laudo…';}try{const t=await pdfToText(file);if(!t.trim())throw 0;await idbPut("laudotext",t);state.laudoHas=true;save();if(r){r.style.color="var(--ok)";r.textContent="Laudo lido ("+t.length+" caracteres). Agora clique em Analisar.";}flash("Laudo do perito carregado.");}catch(e){
+  if(getKey()){try{if(r){r.style.color="var(--muted)";r.innerHTML='<span class="spin"></span> PDF digitalizado — lendo com IA (OCR)…';}const t2=await ocrPdf(file);if(t2&&t2.trim()){await idbPut("laudotext",t2);state.laudoHas=true;save();if(r){r.style.color="var(--ok)";r.textContent="Laudo lido com IA/OCR ("+t2.length+" caracteres). Agora clique em Analisar.";}flash("Laudo lido com IA (OCR).");return;}}catch(e2){}}
+  if(r){r.style.color="var(--warn)";r.textContent="Não consegui ler (PDF imagem/digitalizado?). Configure o Gemini para OCR, ou tente outro arquivo.";}}}
 async function iaFuros(){const st=$("#furosStatus");const s=await getSample();if(!s){st.style.color="var(--warn)";st.textContent="Configure o Gemini (aba IA/Config).";return;}
   const laudo=await idbGet("laudotext");if(!laudo){st.style.color="var(--warn)";st.textContent="Importe o PDF do laudo primeiro.";return;}
   const b=$("#iaFuros");if(b)b.disabled=true;st.style.color="var(--muted)";st.innerHTML='<span class="spin"></span> Analisando o laudo…';
@@ -982,14 +986,14 @@ async function iaParecer(){const st=$("#iaParecerStatus");const s=await getSampl
   const laudo=await idbGet("laudotext")||"";const furos=state.quesitos.filter(q=>q.origem==="Laudo").map((q,i)=>(i+1)+") "+q.pergunta+" => "+q.resposta).join("\n");
   const b=$("#iaParecer");if(b)b.disabled=true;st.style.color="var(--muted)";st.innerHTML='<span class="spin"></span> Montando o parecer…';
   const prompt=`${IA_RULE}
-Você é ASSISTENTE TÉCNICO da RECLAMADA. Redija um PARECER TÉCNICO fundamentado, em português formal, concluindo pela IMPUGNAÇÃO do laudo pericial, cruzando laudo + petição + vistoria. Estruture em seções numeradas: 1) Síntese; 2) Pontos de concordância (o que o laudo acertou); 3) Das fragilidades e divergências técnicas, ponto a ponto (método, cálculo/metrologia, habitualidade, EPI e CA, enquadramento); 4) Da divergência com a realidade e com a petição; 5) QUESITOS DE ESCLARECIMENTO SUGERIDOS (lista numerada de perguntas objetivas ao perito, nos termos do art. 477, §2º, do CPC); 6) Conclusão e pedido (impugnação/reconsideração, esclarecimentos ou nova perícia). Técnica de SST; sem jurisprudência.
+Você é ASSISTENTE TÉCNICO da RECLAMADA. Redija um PARECER TÉCNICO fundamentado, em português formal, concluindo pela IMPUGNAÇÃO do laudo pericial, cruzando laudo + petição + vistoria. Estruture em seções numeradas: 1) Síntese; 2) Pontos de concordância (o que o laudo acertou); 3) Das fragilidades e divergências técnicas, ponto a ponto (método, cálculo/metrologia, habitualidade, EPI e CA, enquadramento); 4) Da divergência com a realidade e com a petição; 5) QUESITOS DE ESCLARECIMENTO SUGERIDOS (lista numerada de perguntas objetivas ao perito, nos termos do art. 477, §2º, do CPC); 6) Conclusão e pedido (impugnação/reconsideração, esclarecimentos ou nova perícia). Técnica de SST; sem jurisprudência. Além disso, produza uma SÍNTESE objetiva do que o laudo pericial concluiu.
 Fragilidades levantadas:
 ${furos||"(use sua própria análise do laudo)"}
 Petição (trecho): ${(state.peticao||"").slice(0,4000)}
 Vistoria: ${(state.vistoria.desc||"").slice(0,1500)}
 Laudo (trecho): ${laudo.slice(0,12000)}
-Responda apenas o texto do parecer.`;
-  try{const r=await s(prompt,{modelTier:"complex"});const t=((r&&r.text)||"").trim();if(t){state.conclusao=t;const c=$("#concl");if(c)c.value=t;save();generateLaudo();}st.style.color="var(--ok)";st.textContent="Parecer gerado — revise.";flash("Parecer de impugnação pronto.");}
+Responda SOMENTE com JSON: {"sintese":"síntese objetiva do que o laudo pericial concluiu (3 a 6 linhas)","parecer":"o parecer técnico completo, com as seções 1 a 6"}`;
+  try{const d=await s.json(prompt,{modelTier:"complex"});const par=((d&&d.parecer)||"").trim();const sin=((d&&d.sintese)||"").trim();let any=false;if(sin){state.sintese=sin;any=true;}if(par){state.conclusao=par;const c=$("#concl");if(c)c.value=par;any=true;}if(any){save();generateLaudo();}st.style.color="var(--ok)";st.textContent="Parecer gerado — revise.";flash("Parecer de impugnação pronto.");}
   catch(e){st.style.color="var(--warn)";st.textContent=iaErr(e);}finally{if(b)b.disabled=false;}}
 {const _ip=$("#iaParecer");if(_ip)_ip.addEventListener("click",iaParecer);}
 function genPropostaTxt(){const PE=getPerito(),E=state.encargo,P=state.processo;const cliente=state.partes.reu||state.empresa.razao||"[reclamada]";
@@ -1014,7 +1018,7 @@ async function generateLaudo(){const doc=$("#laudoDoc");const{photos,vids,normas
   groups.forEach(([org,title])=>{const l=S.quesitos.filter(q=>q.origem===org);if(!l.length)return;quesHTML+=`<h2>${title}</h2>`;l.forEach((q,i)=>{quesHTML+=`<div class="q-block"><span class="qlab">Quesito ${String(i+1).padStart(2,"0")}</span><p class="qp">${em(q.pergunta)}</p><p class="qa"><b>Resposta:</b> ${esc(q.resposta)||`<span class="empty">[resposta pendente]</span>`}</p></div>`;});});
   if(!quesHTML)quesHTML=`<h2>RESPOSTA AOS QUESITOS</h2><p class="empty">[nenhum quesito cadastrado]</p>`;
   const local=V.local?esc(V.local.split(/[,–-]/).slice(-2).join(", ").trim()):em(P.comarca);const hoje=new Date().toLocaleDateString("pt-BR",{day:"2-digit",month:"long",year:"numeric"});
-  let s=0;const S_=()=>["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII"][s++];
+  let s=0;const S_=()=>["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV","XVI"][s++];
   doc.innerHTML=`<img class="lh" src="${LOGO_HEADER}" alt="UrbanClin">
     <h1>RELATÓRIO DE ACOMPANHAMENTO PERICIAL</h1><div class="doc-sub">Autos nº ${em(P.numero)} · ${em(P.vara)} · ${em(P.comarca)}</div>
     <h2>${S_()}. IDENTIFICAÇÃO</h2>
@@ -1027,14 +1031,16 @@ async function generateLaudo(){const doc=$("#laudoDoc");const{photos,vids,normas
       ${AS.length?`<dt>Assistente(s)</dt><dd>${AS.map(a=>esc(a.nome)+(a.registro?` (${esc(a.registro)})`:"")).join("; ")}</dd>`:""}
       ${S.art?`<dt>ART</dt><dd class="mono">${esc(S.art)}</dd>`:""}</dl>
     
-    <h2>${S_()}. DA METODOLOGIA</h2>${para(V.metodo)}
-    <h2>${S_()}. DA VISTORIA</h2>
+    <h2>${S_()}. OBJETO DA ANÁLISE</h2>${S.objeto?para(S.objeto):`<p class="empty">[objeto da análise — o que se examina no laudo pericial]</p>`}
+    <h2>${S_()}. SÍNTESE DO LAUDO PERICIAL</h2>${S.sintese?para(S.sintese):`<p class="empty">[síntese do laudo do perito — preencha ou gere pela IA]</p>`}
+    <h2>${S_()}. DA METODOLOGIA DA ANÁLISE</h2>${para(V.metodo)}
+    <h2>${S_()}. DO ACOMPANHAMENTO À DILIGÊNCIA</h2>
     <dl class="kv"><dt>Data / hora</dt><dd>${em(fmtDate(V.data))}${V.hora?` às ${esc(V.hora)}`:""}</dd><dt>Local</dt><dd>${em(V.local)}</dd><dt>Condições</dt><dd>${em(V.clima)}</dd><dt>Presentes</dt><dd>${em(V.presentes)}</dd>${A.abertura?`<dt>Abertura</dt><dd>${fmtTs(A.abertura.ts)} — ${esc(A.abertura.acomp)} (${esc(A.abertura.papel)})${A.abertura.gpsOk?` · GPS ${A.abertura.lat.toFixed(5)}, ${A.abertura.lon.toFixed(5)} (±${A.abertura.acc} m)`:" · GPS indisponível"}</dd>`:""}${A.fechamento?`<dt>Encerramento</dt><dd>${fmtTs(A.fechamento.ts)} — ${esc(A.fechamento.acomp)}${A.fechamento.gpsOk?` · GPS ${A.fechamento.lat.toFixed(5)}, ${A.fechamento.lon.toFixed(5)}`:""}</dd>`:""}</dl>${para(V.desc)}
     
     <h2>${S_()}. FUNDAMENTAÇÃO TÉCNICA</h2>${normasHTML}${artHTML}
     ${medHTML?`<h2>${S_()}. DAS AVALIAÇÕES QUANTITATIVAS</h2>${medHTML}`:""}
     <h2>${S_()}. ANÁLISE E CONSTATAÇÕES — REGISTRO FOTOGRÁFICO</h2>${photoHTML||`<p class="empty">[nenhuma foto anexada]</p>`}${vidHTML}
-    <h2>${S_()}. RESPOSTA AOS QUESITOS</h2>${quesHTML}
+    <h2>${S_()}. ANÁLISE CRÍTICA E QUESITOS DE ESCLARECIMENTO</h2>${quesHTML}
     <h2>${S_()}. CONCLUSÃO</h2>${para(S.conclusao)}
     <p style="font-size:12px;color:var(--muted)">O presente relatório técnico de acompanhamento foi elaborado pelo assistente técnico da reclamada, com finalidade de subsidiar a análise crítica do laudo pericial e eventual pedido de impugnação.</p>
     <div class="sign"><p>${local}, ${hoje}.</p><div class="line"></div><p><b>${em(PE.nome)}</b><br>${esc(PE.formacao)||""}${PE.registro?` — ${esc(PE.registro)}`:""}${S.art?`<br>ART nº ${esc(S.art)}`:""}</p></div>
@@ -1061,11 +1067,11 @@ async function exportPdf(){const{photos}=await generateLaudo();const J=window.js
   const body=(t,o={})=>{if(t==null||t==="")return;doc.setFont("helvetica",o.b?"bold":"normal");doc.setFontSize(o.s||10);doc.splitTextToSize(String(t),CW).forEach(ln=>{if(y>BOT){doc.addPage();y=TOP;}doc.text(ln,o.align==="center"?W/2:M,y,{align:o.align||"left"});y+=(o.s||10)*0.42+1.2;});nl(1);};
   doc.setFont("helvetica","bold");doc.setFontSize(16);doc.text("RELATORIO DE ACOMPANHAMENTO PERICIAL",W/2,y,{align:"center"});nl(6);doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(90,90,90);doc.text(`Autos nº ${P.numero||"—"}  ·  ${P.vara||"—"}`,W/2,y,{align:"center"});nl(8);doc.setTextColor(20,20,20);
   H("I. IDENTIFICAÇÃO");[["Processo nº",P.numero],["Ação",P.acao],["Juízo",P.vara],["Comarca",P.comarca],["Reclamante",PA.autor],["Reclamada",(EMP.razao||PA.reu)+(EMP.cnpj?" — CNPJ "+EMP.cnpj:"")],["Perito",[PE.nome,PE.formacao,PE.registro].filter(Boolean).join(" — ")],AS.length?["Assistente(s)",AS.map(a=>a.nome).join("; ")]:null,S.art?["ART",S.art]:null].filter(Boolean).forEach(([k,v])=>{if(v)body(`${k}: ${v}`);});
-  H("II. DO OBJETO");body(S.objeto||"[a preencher]");H("III. DA METODOLOGIA");body(V.metodo);
-  H("IV. DA VISTORIA");body(`Data: ${fmtDate(V.data)||"—"} ${V.hora||""}`);body(`Local: ${V.local||"—"}`);body(`Condições: ${V.clima||"—"}`);body(`Presentes: ${V.presentes||"—"}`);if(V.desc)body(V.desc);
+  H("II. OBJETO DA ANÁLISE");body(S.objeto||"[a preencher]");if(S.sintese){H("III. SÍNTESE DO LAUDO PERICIAL");body(S.sintese);}H("DA METODOLOGIA DA ANÁLISE");body(V.metodo);
+  H("DO ACOMPANHAMENTO À DILIGÊNCIA");body(`Data: ${fmtDate(V.data)||"—"} ${V.hora||""}`);body(`Local: ${V.local||"—"}`);body(`Condições: ${V.clima||"—"}`);body(`Presentes: ${V.presentes||"—"}`);if(V.desc)body(V.desc);
   H("V. DOCUMENTAÇÃO ANALISADA");const du=S.docs.filter(d=>d.apresentado);if(du.length)du.forEach(d=>body(`• ${d.tipo}: ${d.apresentado}${d.validade?" ("+d.validade+")":""}${d.obs?" — "+d.obs:""}`));else body("[marque a conformidade]");
   const gr=computeGaps();if(S.epi.length&&gr.gaps){if(gr.gaps.length)body(`EPI (NR-06): ${gr.gaps.length} intervalo(s) sem comprovação contínua no período ${fmtDate(gr.adm)}–${fmtDate(gr.sai)}: ${gr.gaps.map(g=>fmtDate(g.from)+" a "+fmtDate(g.to)).join("; ")}.`);else body(`EPI (NR-06): cobertura sem lacunas no período ${fmtDate(gr.adm)}–${fmtDate(gr.sai)}.`);}
-  H("VI. FUNDAMENTAÇÃO TÉCNICA");const non=S.normas.filter(n=>n.on);if(non.length){body("Referências consideradas:");non.forEach(n=>body(`• ${n.code} — ${n.desc}`));}else body("[selecione as referências]");if(S.art)body(`Perícia amparada pela ART nº ${S.art}.`);
+  H("VI. FUNDAMENTAÇÃO TÉCNICA");const non=S.normas.filter(n=>n.on);if(non.length){body("Referências consideradas:");non.forEach(n=>body(`• ${n.code} — ${n.desc}`));}else body("[selecione as referências]");if(S.art)body(`Trabalho de assistência técnica amparado pela ART nº ${S.art}.`);
   if(S.medicoes.length){H("VII. AVALIAÇÕES QUANTITATIVAS");S.medicoes.forEach(m=>body(`• ${m.agente||"—"}: ${m.valor||"—"} ${m.unidade||""} (limite ${m.limite||"—"}) — ${m.resultado||"—"} [${m.tecnica||"—"}]`));if(S.aparelhos.length)body(`Anexados ${S.aparelhos.length} relatório(s) de instrumento.`);}
   H("ANÁLISE E CONSTATAÇÕES — REGISTRO FOTOGRÁFICO");let pn=0;
   for(const p of photos){pn++;try{const dim=await imgSize(p.data);const iw=Math.min(82,CW*0.46);let ih=dim.h*(iw/dim.w);if(ih>78)ih=78;const tx=M+iw+6,tw=CW-iw-6;doc.setFont("helvetica","normal");doc.setFontSize(8.5);const legLines=doc.splitTextToSize("Foto "+String(pn).padStart(2,"0")+" — "+(p.legenda||"[legenda]"),tw);const fundLines=p.norma?doc.splitTextToSize("Fundamentação: "+p.norma,tw):[];const textH=legLines.length*4.2+(fundLines.length?fundLines.length*4.2+2:0);const blockH=Math.max(ih,textH)+6;if(y+blockH>BOT){doc.addPage();y=TOP;}doc.addImage(p.data,"JPEG",M,y,iw,ih);let ty=y+4;doc.setFont("helvetica","normal");doc.setFontSize(8.5);doc.setTextColor(40);doc.text(legLines,tx,ty);ty+=legLines.length*4.2+1;if(fundLines.length){doc.setFont("helvetica","bold");doc.setTextColor(0,90,45);doc.text(fundLines,tx,ty);}doc.setFont("helvetica","normal");doc.setTextColor(40);y+=blockH;}catch(e){}}
