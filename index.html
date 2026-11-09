@@ -58,6 +58,9 @@ a{color:var(--accent)}button{font-family:inherit}
 .procchip{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--accent);background:var(--accent-soft);border:1px solid var(--line);border-radius:999px;padding:3px 10px;max-width:42vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .navprev{display:flex;gap:10px;justify-content:space-between;margin-top:14px}
 .navprev button{flex:1;max-width:48%}
+.doc.reading{font-size:16px;line-height:1.7}
+.doc.reading .photo-doc .cap{font-size:14px}
+.doc.reading h2{font-size:18px}
 main{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 72px;max-width:1000px;margin:0 auto}
 .panel{display:none}.panel[data-active="true"]{display:block;animation:fade .18s ease}
 @keyframes fade{from{opacity:.5}to{opacity:1}}
@@ -184,6 +187,7 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
     <button class="btn" id="goAssist">🧰 Assistência Técnica</button>
     <button class="btn" id="goPainel">📋 Painel de Processos</button>
   </div>
+  <div class="hint" id="homeLast" style="margin-top:14px"></div>
   <div class="hint" id="assistMsg" hidden>Módulo de Assistência Técnica em construção — em breve.</div>
 </div>
 
@@ -427,6 +431,12 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
       </div>
       <div class="row-actions"><button class="btn small" id="ib_calc" type="button">Calcular</button><button class="btn small" id="ib_lanc" type="button" disabled>Lançar na tabela</button><span class="hint" id="ib_out"></span></div>
       <p class="hint" style="margin-top:8px">O enquadramento final do calor depende da taxa metabólica e do regime trabalho/descanso (Anexo 3 da NR-15) — confira a tabela antes de concluir.</p>
+      <h3 style="font-size:14px;margin-top:14px">Vibração (NHO-09 mão-braço / NHO-10 corpo inteiro · NR-15 Anexo 8)</h3>
+      <div class="grid g2">
+        <label class="field">Tipo<select id="vb_tipo"><option value="mb">Mão-braço (VCI)</option><option value="ci">Corpo inteiro (VMB)</option></select></label>
+        <label class="field">aren — aceleração normalizada A(8) (m/s²)<input id="vb_aren" type="number" step="0.01" inputmode="decimal"></label>
+      </div>
+      <div class="row-actions"><button class="btn small" id="vb_calc" type="button">Calcular</button><button class="btn small" id="vb_lanc" type="button" disabled>Lançar na tabela</button><span class="hint" id="vb_out"></span></div>
     </div>
     <div class="card">
       <h2>📈 Avaliações quantitativas <span class="seal">O QUE O PERITO ACHAR RELEVANTE</span></h2>
@@ -526,6 +536,7 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
       <div id="cplList"></div></div>
     <div class="doc-toolbar">
       <button class="btn primary" id="genBtn">↻ Montar / atualizar laudo</button>
+      <button class="btn" id="lerBtn">🔎 Leitura</button>
       <button class="btn" id="pdfBtn">⬇ Baixar PDF</button>
       <button class="btn" id="wordBtn">⬇ Word</button>
       <button class="btn" id="copyBtn">⧉ Copiar texto</button>
@@ -852,7 +863,10 @@ function ibCalc(){const o=$("#ib_out");const tbn=parseFloat(($("#ib_tbn")||{}).v
 function ibLanc(){if(!ibLast)return;state.medicoes.push({id:uid(),agente:"Calor (IBUTG)",valor:ibLast.valor,unidade:"°C",limite:"Anexo 3 ("+ibLast.ativ+": "+ibLast.cont.toFixed(1)+" °C)",tecnica:"Medidor de IBUTG (NHO-06)",resultado:ibLast.acima?"Acima do limite":"Dentro do limite",certNum:"",certVal:""});
   if(ibLast.acima){const a=state.agentes.find(x=>x.anexo==="Anexo 3");if(a){a.situacao="Exposição caracterizada";a.grau="Grau médio (20%)";if(typeof renderAgentes==="function")renderAgentes();}}
   save();renderMed();flash("IBUTG lançado"+(ibLast.acima?" — Anexo 3 marcado como caracterizado (20%).":"."));}
-{const map={rz_calc:rzCalc,rz_lanc:rzLanc,ib_calc:ibCalc,ib_lanc:ibLanc};Object.keys(map).forEach(id=>{const b=$("#"+id);if(b)b.addEventListener("click",map[id]);});}
+let vbLast=null;
+function vbCalc(){const o=$("#vb_out");const t=($("#vb_tipo")||{}).value;const a=parseFloat(($("#vb_aren")||{}).value);if(isNaN(a)){if(o)o.textContent="Informe a aren A(8).";return;}const lim=t==="ci"?{ac:0.5,lt:1.1,nm:"corpo inteiro (NHO-10)"}:{ac:2.5,lt:5.0,nm:"mão-braço (NHO-09)"};let v,acima;if(a>lim.lt){v="acima do limite de exposição ("+lim.lt+" m/s²) — insalubre grau médio (20%, NR-15 Anexo 8)";acima=true;}else if(a>=lim.ac){v="acima do nível de ação ("+lim.ac+" m/s²) — adotar medidas; abaixo do limite";acima=false;}else{v="abaixo do nível de ação ("+lim.ac+" m/s²)";acima=false;}vbLast={valor:String(a),tipo:lim.nm,acima:acima,lim:lim.lt};if(o)o.innerHTML=`<b>aren = ${a} m/s²</b> · ${lim.nm} · ${v}.`;const b=$("#vb_lanc");if(b)b.disabled=false;}
+function vbLanc(){if(!vbLast)return;state.medicoes.push({id:uid(),agente:"Vibração — "+vbLast.tipo,valor:vbLast.valor,unidade:"m/s²",limite:String(vbLast.lim),tecnica:vbLast.tipo,resultado:vbLast.acima?"Acima do limite":"Dentro do limite",certNum:"",certVal:""});if(vbLast.acima){const a=state.agentes.find(x=>x.anexo==="Anexo 8");if(a){a.situacao="Exposição caracterizada";a.grau="Grau médio (20%)";if(typeof renderAgentes==="function")renderAgentes();}}save();renderMed();flash("Vibração lançada"+(vbLast.acima?" — Anexo 8 caracterizado (20%).":"."));}
+{const map={rz_calc:rzCalc,rz_lanc:rzLanc,ib_calc:ibCalc,ib_lanc:ibLanc,vb_calc:vbCalc,vb_lanc:vbLanc};Object.keys(map).forEach(id=>{const b=$("#"+id);if(b)b.addEventListener("click",map[id]);});}
 
 /* relatórios de aparelho */
 wireDrop("#dropApt","#aptInput",files=>handleApt(files),true);
@@ -893,10 +907,16 @@ const objUrls=[];
 async function renderMedia(){objUrls.forEach(u=>URL.revokeObjectURL(u));objUrls.length=0;const grid=$("#mediaGrid");grid.innerHTML="";$("#mediaEmpty").hidden=state.media.length>0;$("#mediaCount").textContent=state.media.length+(state.media.length===1?" mídia":" mídias");
   const opts=`<option value="">— norma —</option>`+state.normas.map(n=>`<option value="${esc(n.code)}">${esc(n.code)}</option>`).join("");let pn=0;
   for(const m of state.media){const b=await idbGet(m.id);const u=b?URL.createObjectURL(b):"";if(u)objUrls.push(u);const isImg=m.kind==="img";if(isImg)pn++;
-    const el=document.createElement("div");el.className="ph";el.innerHTML=`<div class="frame">${isImg?`<img src="${u}" alt="">`:`<video src="${u}" controls preload="metadata"></video>`}<span class="tag">${isImg?"FOTO "+String(pn).padStart(2,"0"):"VÍDEO"}</span>${isImg?"":'<span class="vtag">vídeo</span>'}</div><div class="body"><textarea data-leg="${m.id}" ${isLocked()?"readonly":""} placeholder="Legenda / descrição técnica…">${esc(m.legenda)}</textarea><input data-norma="${m.id}" ${isLocked()?"disabled":""} value="${esc(m.norma)}" placeholder="NR e item (ex.: NR-12, item 12.38)">${isLocked()?"":`<button class="btn danger small del" data-del="${m.id}">Remover</button>`}</div>`;
+    const el=document.createElement("div");el.className="ph";el.innerHTML=`<div class="frame">${isImg?`<img src="${u}" alt="">`:`<video src="${u}" controls preload="metadata"></video>`}<span class="tag">${isImg?"FOTO "+String(pn).padStart(2,"0"):"VÍDEO"}</span>${isImg?"":'<span class="vtag">vídeo</span>'}</div><div class="body"><textarea data-leg="${m.id}" ${isLocked()?"readonly":""} placeholder="Legenda / descrição técnica…">${esc(m.legenda)}</textarea><input data-norma="${m.id}" ${isLocked()?"disabled":""} value="${esc(m.norma)}" placeholder="NR e item (ex.: NR-12, item 12.38)">${isImg?`<label style="display:flex;gap:6px;align-items:center;font-size:12px;font-weight:600;color:${m.nc?"var(--danger)":"var(--muted)"}"><input type="checkbox" data-nc="${m.id}" ${m.nc?"checked":""} ${isLocked()?"disabled":""} style="width:auto">⚠ Não conformidade (fora do objeto)</label>${m.nc?`<div class="grid g2"><select data-ncg="${m.id}" ${isLocked()?"disabled":""}>${["Baixa","Média","Alta","Grave e iminente"].map(o=>`<option ${o===(m.ncGrau||"Média")?"selected":""}>${o}</option>`).join("")}</select><input data-ncr="${m.id}" ${isLocked()?"disabled":""} value="${esc(m.ncRecom||"")}" placeholder="Recomendação"></div>`:""}`:""}<div class="row-actions" style="gap:6px;margin-top:2px">${!isLocked()?`<button class="btn small" data-up="${m.id}" title="Subir">↑</button><button class="btn small" data-down="${m.id}" title="Descer">↓</button>`:""}${isLocked()?"":`<button class="btn danger small del" data-del="${m.id}">Remover</button>`}</div></div>`;
     grid.appendChild(el);}
   grid.querySelectorAll("[data-leg]").forEach(t=>t.addEventListener("input",()=>{const m=state.media.find(x=>x.id===t.dataset.leg);if(m){m.legenda=t.value;save();}}));
   grid.querySelectorAll("[data-norma]").forEach(s=>s.addEventListener("input",()=>{const m=state.media.find(x=>x.id===s.dataset.norma);if(m){m.norma=s.value;save();}}));
+  grid.querySelectorAll("[data-nc]").forEach(c=>c.addEventListener("change",()=>{const m=state.media.find(x=>x.id===c.dataset.nc);if(m){m.nc=c.checked;if(m.nc&&!m.ncGrau)m.ncGrau="Média";save();renderMedia();generateLaudo();}}));
+  grid.querySelectorAll("[data-ncg]").forEach(s=>s.addEventListener("change",()=>{const m=state.media.find(x=>x.id===s.dataset.ncg);if(m){m.ncGrau=s.value;save();}}));
+  grid.querySelectorAll("[data-ncr]").forEach(i=>i.addEventListener("input",()=>{const m=state.media.find(x=>x.id===i.dataset.ncr);if(m){m.ncRecom=i.value;save();}}));
+  const moveMedia=(id,dir)=>{const i=state.media.findIndex(x=>x.id===id);const j=i+dir;if(i<0||j<0||j>=state.media.length)return;const t=state.media[i];state.media[i]=state.media[j];state.media[j]=t;save();renderMedia();};
+  grid.querySelectorAll("[data-up]").forEach(b=>b.addEventListener("click",()=>moveMedia(b.dataset.up,-1)));
+  grid.querySelectorAll("[data-down]").forEach(b=>b.addEventListener("click",()=>moveMedia(b.dataset.down,1)));
   grid.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",async()=>{await idbDel(b.dataset.del);state.media=state.media.filter(x=>x.id!==b.dataset.del);save();renderMedia();}));}
 
 /* quesitos */
@@ -956,7 +976,7 @@ async function exportBackup(){const ids=[];state.media.forEach(m=>ids.push(m.id)
   const payload={_app:"perito-laudo",_v:5,ts:new Date().toISOString(),state:state,media:{}};
   for(const id of ids){const b=await idbGet(id);if(b==null)continue;if(typeof b==="string")payload.media[id]={t:"text",d:b};else payload.media[id]={t:"blob",m:b.type||"application/octet-stream",d:await blobToB64(b)};}
   const nome=(state.processo.numero||"pericia").replace(/[^\dA-Za-z]+/g,"_").slice(0,40);
-  await saveFile(new Blob([JSON.stringify(payload)],{type:"application/json"}),"backup_"+nome+".perito.json");}
+  await saveFile(new Blob([JSON.stringify(payload)],{type:"application/json"}),"backup_"+nome+".perito.json");try{localStorage.setItem("last_backup_ts",String(Date.now()));}catch(e){}}
 async function importBackup(file,readonly){let p;try{p=JSON.parse(await file.text());}catch(e){flash("Arquivo invalido.");return;}
   if(p&&p._all&&Array.isArray(p.records)){let n=0;for(const rec of p.records){try{if(rec.media){for(const id in rec.media){const it=rec.media[id];if(it.t==="text")await idbPut(id,it.d);else await idbPut(id,b64ToBlob(it.d,it.m));}}const st=Object.assign(blankState(),rec.state);if(!st.painelId)st.painelId=uid();localStorage.setItem(REC(st.painelId),JSON.stringify(st));const idx=readIdx().filter(r=>r.pid!==st.painelId);idx.unshift(idxEntry(st));writeIdx(idx);n++;}catch(e){}}flash(n+" processo(s) importado(s). Abra em 📁 Processos.");const idx=readIdx();if(idx.length){state=Object.assign(blankState(),JSON.parse(localStorage.getItem(REC(idx[0].pid))));localStorage.setItem(ACTIVE_KEY,state.painelId);hydrate();renderAll();generateLaudo();}return;}
   if(!p||!p.state){flash("Backup nao reconhecido.");return;}
@@ -966,19 +986,26 @@ async function importBackup(file,readonly){let p;try{p=JSON.parse(await file.tex
 async function collectMedia(st){const ids=[];(st.media||[]).forEach(m=>ids.push(m.id));(st.docs||[]).forEach(d=>{if(d.hasText)ids.push("doctext_"+d.id);});(st.aparelhos||[]).forEach(a=>ids.push(a.kind==="pdf"?"apt_"+a.id:a.id));(st.epiDocs||[]).forEach(e=>ids.push(e.kind==="pdf"?"epidoc_"+e.id:e.id));const media={};for(const id of ids){const b=await idbGet(id);if(b==null)continue;if(typeof b==="string")media[id]={t:"text",d:b};else media[id]={t:"blob",m:b.type||"application/octet-stream",d:await blobToB64(b)};}return media;}
 async function exportAll(){try{saveRecord();}catch(e){}const idx=readIdx();const records=[];for(const r of idx){try{const raw=localStorage.getItem(REC(r.pid));if(!raw)continue;const st=JSON.parse(raw);records.push({state:st,media:await collectMedia(st)});}catch(e){}}
   const payload={_app:"perito-laudo",_v:5,_all:true,ts:new Date().toISOString(),records};
-  await saveFile(new Blob([JSON.stringify(payload)],{type:"application/json"}),"backup_TODOS_"+new Date().toISOString().slice(0,10)+".perito.json");flash(records.length+" processo(s) exportado(s).");}
+  await saveFile(new Blob([JSON.stringify(payload)],{type:"application/json"}),"backup_TODOS_"+new Date().toISOString().slice(0,10)+".perito.json");try{localStorage.setItem("last_backup_ts",String(Date.now()));}catch(e){}flash(records.length+" processo(s) exportado(s).");}
 function initBackup(){const be=$("#bkExport");if(be)be.addEventListener("click",exportBackup);const ba=$("#bkExportAll");if(ba)ba.addEventListener("click",exportAll);const bi=$("#bkImport");if(bi)bi.addEventListener("click",()=>$("#bkFile").click());const bf=$("#bkFile");if(bf)bf.addEventListener("change",()=>{if(bf.files[0])importBackup(bf.files[0],$("#bkRead")&&$("#bkRead").checked);bf.value="";});}
-async function stampLogos(doc,W,M,CW){try{const d=await imgSize(LOGO_HEADER);const r=(d.w/d.h)||1.4;const hH=16,hW=hH*r;const fH=13,fW=fH*r;const N=doc.getNumberOfPages();const L=["UrbanClin · Medicina e Segurança do Trabalho","Perobal - PR · Atendimento em todo o Estado do Paraná","(47) 99167-1874 · a.marques_74@live.com"];const th=L.length*3;const fy=297-5-th-fH;for(let i=1;i<=N;i++){doc.setPage(i);doc.addImage(LOGO_HEADER,"JPEG",(W-hW)/2,6,hW,hH);doc.addImage(LOGO_FOOTER,"JPEG",(W-fW)/2,fy,fW,fH);doc.setFontSize(7.5);doc.setTextColor(90,110,90);L.forEach((ln,k)=>doc.text(ln,W/2,fy+fH+3+k*3,{align:"center"}));doc.setFontSize(7);doc.setTextColor(150);doc.text("Pag. "+i+"/"+N,W-M,296,{align:"right"});}}catch(e){}}
+async function stampLogos(doc,W,M,CW){try{const d=await imgSize(LOGO_HEADER);const r=(d.w/d.h)||1.4;const hH=16,hW=hH*r;const fH=13,fW=fH*r;const N=doc.getNumberOfPages();const L=["UrbanClin · Medicina e Segurança do Trabalho","Perobal - PR · Atendimento em todo o Estado do Paraná","(47) 99167-1874 · a.marques_74@live.com"];const th=L.length*3;const fy=297-5-th-fH;for(let i=1;i<=N;i++){doc.setPage(i);doc.addImage(LOGO_HEADER,"JPEG",(W-hW)/2,6,hW,hH);doc.addImage(LOGO_FOOTER,"JPEG",(W-fW)/2,fy,fW,fH);doc.setFontSize(7.5);doc.setTextColor(90,110,90);L.forEach((ln,k)=>doc.text(ln,W/2,fy+fH+3+k*3,{align:"center"}));doc.setFontSize(7);doc.setTextColor(150);doc.text("Pag. "+i+"/"+N,W-M,296,{align:"right"});doc.text("Rubrica: ______________    Fls. ______",M,296);}}catch(e){}}
 async function simplePdf(title,bodyText,filename){const J=window.jspdf&&window.jspdf.jsPDF;if(!J){flash("Gerador de PDF indisponivel.");return;}const doc=new J({unit:"mm",format:"a4"});const W=210,M=18,CW=W-2*M,TOP=34,BOT=256;let y=TOP;
   doc.setFont("helvetica","bold");doc.setFontSize(13);doc.setTextColor(20,20,20);doc.splitTextToSize(title,CW).forEach(l=>{doc.text(l,W/2,y,{align:"center"});y+=6;});y+=3;
   doc.setFont("helvetica","normal");doc.setFontSize(11);
   String(bodyText).split(/\n/).forEach(par=>{if(par.trim()===""){y+=3;if(y>BOT){doc.addPage();y=TOP;}return;}doc.splitTextToSize(par,CW).forEach(l=>{if(y>BOT){doc.addPage();y=TOP;}doc.text(l,M,y);y+=5.2;});});
   await stampLogos(doc,W,M,CW);await saveFile(doc.output("blob"),filename);}
-async function exportNcPdf(){if(!state.ncs.length){flash("Nenhuma nao conformidade registrada.");return;}const P=state.processo,PE=getPerito();
-  let t="Documento a parte - nao integra o laudo pericial.\nAutos no "+(P.numero||"-")+"\n\nRelacao de nao conformidades de seguranca observadas durante a diligencia, para ciencia da empresa e do juizo.\n\n";
-  state.ncs.forEach((n,i)=>{t+="NC "+String(i+1).padStart(2,"0")+" ["+n.grau+"] "+(n.norma?"("+n.norma+") ":"")+"\n"+(n.desc||"-")+"\nRecomendacao: "+(n.recom||"-")+"\n\n";});
-  t+="\n"+(PE.nome||"")+"\n"+[PE.formacao,PE.registro].filter(Boolean).join(" - ");
-  await simplePdf("RELATORIO DE NAO CONFORMIDADES",t,fname("pdf","Relatorio_NC"));}
+async function exportNcPdf(){const ncPhotos=state.media.filter(m=>m.kind==="img"&&m.nc);if(!state.ncs.length&&!ncPhotos.length){flash("Nenhuma não conformidade registrada.");return;}
+  const J=window.jspdf&&window.jspdf.jsPDF;if(!J){flash("Gerador de PDF indisponível.");return;}
+  const P=state.processo,PE=getPerito();const doc=new J({unit:"mm",format:"a4"});const W=210,M=18,CW=W-2*M,TOP=34,BOT=256;let y=TOP;
+  const body=(t)=>{doc.splitTextToSize(t,CW).forEach(ln=>{if(y>BOT){doc.addPage();y=TOP;}doc.text(ln,M,y);y+=4.6;});};
+  doc.setFont("helvetica","bold");doc.setFontSize(15);doc.setTextColor(0,90,45);doc.text("RELATÓRIO DE NÃO CONFORMIDADES",W/2,y,{align:"center"});y+=7;
+  doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(90);doc.text("Documento à parte — não integra o laudo pericial. Autos nº "+(P.numero||"—"),W/2,y,{align:"center"});y+=8;
+  doc.setTextColor(40);doc.setFontSize(9.5);body("Relação de não conformidades de segurança observadas durante a diligência, para ciência da empresa e do juízo. O laudo responde apenas ao objeto do processo.");y+=3;
+  let n=0;
+  state.ncs.forEach(nc=>{n++;if(y>BOT-14){doc.addPage();y=TOP;}doc.setFont("helvetica","bold");doc.setFontSize(10);doc.setTextColor(30);doc.text("NC "+String(n).padStart(2,"0")+" ["+(nc.grau||"—")+"]"+(nc.norma?" — "+nc.norma:""),M,y);y+=5;doc.setFont("helvetica","normal");doc.setFontSize(9.5);doc.setTextColor(40);body(nc.desc||"—");body("Recomendação: "+(nc.recom||"—"));y+=3;});
+  for(const m of ncPhotos){n++;const data=await imgDataUrl(m.id);if(!data)continue;try{const dim=await imgSize(data);const iw=Math.min(82,CW*0.46);let ih=dim.h*(iw/dim.w);if(ih>78)ih=78;const tx=M+iw+6,tw=CW-iw-6;doc.setFontSize(9.5);const legLines=doc.splitTextToSize("NC "+String(n).padStart(2,"0")+" ["+(m.ncGrau||"Média")+"] — "+(m.legenda||"[descrição]"),tw);const fund=m.norma?doc.splitTextToSize("Fundamentação: "+m.norma,tw):[];const rec=m.ncRecom?doc.splitTextToSize("Recomendação: "+m.ncRecom,tw):[];const textH=legLines.length*4.4+(fund.length+rec.length)*4.4+4;const blockH=Math.max(ih,textH)+6;if(y+blockH>BOT){doc.addPage();y=TOP;}doc.addImage(data,"JPEG",M,y,iw,ih);let ty=y+4;doc.setFont("helvetica","bold");doc.setTextColor(179,38,30);doc.text(legLines,tx,ty);ty+=legLines.length*4.4+1;doc.setFont("helvetica","normal");doc.setTextColor(40);if(fund.length){doc.setFont("helvetica","bold");doc.setTextColor(0,90,45);doc.text(fund,tx,ty);ty+=fund.length*4.4+1;doc.setFont("helvetica","normal");doc.setTextColor(40);}if(rec.length){doc.text(rec,tx,ty);}y+=blockH;}catch(e){}}
+  y+=12;if(y>BOT){doc.addPage();y=TOP;}doc.setTextColor(30);doc.setFontSize(10);doc.text(PE.nome||"",M,y);y+=5;doc.setFontSize(9);doc.setTextColor(90);doc.text([PE.formacao,PE.registro].filter(Boolean).join(" — "),M,y);
+  await stampLogos(doc,W,M,CW);await saveFile(doc.output("blob"),fname("pdf","Relatorio_NC"));flash("Relatório de NC gerado.");}
 async function aptTexts(){let out="";for(const a of state.aparelhos){if(a.kind==="pdf"&&a.hasText){const t=await idbGet("apt_"+a.id);if(t)out+=`\n[Relatório ${a.nome}]: ${t.slice(0,1500)}`;}}return out;}
 async function docTexts(){let out="";for(const d of state.docs){if(d.hasText){const t=await idbGet("doctext_"+d.id);if(t)out+=`\n[${d.tipo}]: ${t.slice(0,2000)}`;}}for(const e of state.epiDocs){if(e.kind==="pdf"&&e.hasText){const t=await idbGet("epidoc_"+e.id);if(t)out+=`\n[Ficha EPI ${e.nome}]: ${t.slice(0,1200)}`;}}return out;}
 function baseCtx(){const P=state.processo,EMP=state.empresa,VC=state.vinculo,V=state.vistoria;
@@ -1145,7 +1172,7 @@ Responda SOMENTE com JSON: {"agentes":[{"anexo":"Anexo 3","situacao":"...","anal
 {const _ig=$("#iaAgentes");if(_ig)_ig.addEventListener("click",iaAgentesFn);}
 /* ===== laudo ===== */
 async function imgDataUrl(id){const b=await idbGet(id);if(!b)return"";return await new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>res("");r.readAsDataURL(b);});}
-async function buildModel(){const imgs=state.media.filter(m=>m.kind==="img");const photos=[];for(const m of imgs)photos.push({legenda:m.legenda,norma:m.norma,data:await imgDataUrl(m.id),ts:m.ts||0});return{photos,vids:state.media.filter(m=>m.kind==="vid").length,normasOn:state.normas.filter(n=>n.on)};}
+async function buildModel(){const imgs=state.media.filter(m=>m.kind==="img"&&!m.nc);const photos=[];for(const m of imgs)photos.push({legenda:m.legenda,norma:m.norma,data:await imgDataUrl(m.id),ts:m.ts||0});return{photos,vids:state.media.filter(m=>m.kind==="vid").length,normasOn:state.normas.filter(n=>n.on)};}
 async function generateLaudo(){const doc=$("#laudoDoc");const{photos,vids,normasOn}=await buildModel();
   const S=state,P=S.processo,PA=S.partes,V=S.vistoria,VC=S.vinculo,EMP=S.empresa,PE=getPerito(),AS=getAssist(),A=S.auditoria||{};
   const em=t=>t?esc(t):`<span class="empty">[a preencher]</span>`;const para=t=>esc(t||"").split(/\n+/).filter(Boolean).map(p=>`<p>${p}</p>`).join("")||`<p class="empty">[a preencher]</p>`;
@@ -1236,7 +1263,7 @@ async function exportPdf(){const{photos}=await generateLaudo();const J=window.js
   const S=state,P=S.processo,PA=S.partes,V=S.vistoria,EMP=S.empresa,PE=getPerito(),AS=getAssist();
   const doc=new J({unit:"mm",format:"a4"});const W=210,M=18,CW=W-2*M;const TOP=34,BOT=256;let y=TOP;
   const nl=h=>{y+=h;if(y>BOT){doc.addPage();y=TOP;}};
-  const H=t=>{nl(3);if(y>BOT-8){doc.addPage();y=TOP;}doc.setFont("helvetica","bold");doc.setFontSize(11);doc.setTextColor(10,95,46);doc.text(t,M,y);y+=2;doc.setDrawColor(200,225,195);doc.line(M,y,W-M,y);nl(5);doc.setTextColor(20,20,20);};
+  const toc=[];const H=t=>{nl(3);if(y>BOT-8){doc.addPage();y=TOP;}toc.push({t:t,p:doc.getNumberOfPages()});doc.setFont("helvetica","bold");doc.setFontSize(11);doc.setTextColor(10,95,46);doc.text(t,M,y);y+=2;doc.setDrawColor(200,225,195);doc.line(M,y,W-M,y);nl(5);doc.setTextColor(20,20,20);};
   const body=(t,o={})=>{if(t==null||t==="")return;doc.setFont("helvetica",o.b?"bold":"normal");doc.setFontSize(o.s||10);doc.splitTextToSize(String(t),CW).forEach(ln=>{if(y>BOT){doc.addPage();y=TOP;}doc.text(ln,o.align==="center"?W/2:M,y,{align:o.align||"left"});y+=(o.s||10)*0.42+1.2;});nl(1);};
   doc.setFont("helvetica","bold");doc.setFontSize(16);doc.text("LAUDO PERICIAL",W/2,y,{align:"center"});nl(6);doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(90,90,90);doc.text(`Autos nº ${P.numero||"—"}  ·  ${P.vara||"—"}`,W/2,y,{align:"center"});nl(8);doc.setTextColor(20,20,20);
   H("I. IDENTIFICAÇÃO");[["Processo nº",P.numero],["Ação",P.acao],["Juízo",P.vara],["Comarca",P.comarca],["Reclamante",PA.autor],["Reclamada",(EMP.razao||PA.reu)+(EMP.cnpj?" — CNPJ "+EMP.cnpj:"")],["Perito",[PE.nome,PE.formacao,PE.registro].filter(Boolean).join(" — ")],AS.length?["Assistente(s)",AS.map(a=>a.nome).join("; ")]:null,S.art?["ART",S.art]:null].filter(Boolean).forEach(([k,v])=>{if(v)body(`${k}: ${v}`);});
@@ -1255,10 +1282,11 @@ async function exportPdf(){const{photos}=await generateLaudo();const J=window.js
   (()=>{const GP={"Grau mínimo (10%)":10,"Grau médio (20%)":20,"Grau máximo (40%)":40};let mp=0,mg="";S.agentes.forEach(a=>{const pc=GP[a.grau||""];if(pc&&pc>mp){mp=pc;mg=a.grau;}});H("ENQUADRAMENTO TÉCNICO");S.agentes.filter(a=>a.situacao==="Exposição caracterizada"||(a.grau&&a.grau!=="Não caracterizado")).forEach(a=>body("• "+a.anexo+" — "+a.nome+": "+(a.situacao||"—")+((a.grau&&a.grau!=="Não caracterizado")?" ("+a.grau+")":"")));body(mp>0?"Insalubridade caracterizada em "+mg.toLowerCase()+" — adicional de "+mp+"% (NR-15, sobre o grau mais elevado).":"Insalubridade não caracterizada (NR-15).");body((S.periculosidade&&S.periculosidade.caracterizada==="Sim")?"Periculosidade caracterizada — adicional de 30% (NR-16)"+(S.periculosidade.base?", fundamento: "+S.periculosidade.base:"")+".":"Periculosidade não caracterizada (NR-16).");})();
   H("CONCLUSÃO");body(S.conclusao||"[a preencher]");H("ENCERRAMENTO");body("Nada mais havendo a considerar, encerra-se o presente Laudo Técnico Pericial.");H("BIBLIOGRAFIA");BIBLIO.forEach(bb=>body("• "+bb));nl(6);const local=V.local?V.local.split(/[,–-]/).map(s=>s.trim()).filter(Boolean).slice(-2).join(", "):(P.comarca||"");
   body(`${local}, ${new Date().toLocaleDateString("pt-BR",{day:"2-digit",month:"long",year:"numeric"})}.`,{align:"center"});nl(10);if(y>BOT){doc.addPage();y=TOP;}doc.line(W/2-35,y,W/2+35,y);nl(4);body(PE.nome||"",{b:true,align:"center"});body([PE.formacao,PE.registro].filter(Boolean).join(" — "),{align:"center",s:9});if(S.art)body("ART nº "+S.art,{align:"center",s:9});
+  try{if(toc.length){doc.insertPage(2);doc.setPage(2);let ty=TOP;doc.setFont("helvetica","bold");doc.setFontSize(13);doc.setTextColor(10,95,46);doc.text("SUMÁRIO",M,ty);ty+=9;doc.setFontSize(9.5);doc.setFont("helvetica","normal");doc.setTextColor(40);toc.forEach(e=>{if(ty>BOT)return;const pg=e.p+(e.p>=2?1:0);doc.text(String(e.t),M,ty);doc.text(String(pg),W-M,ty,{align:"right"});ty+=5.6;});}}catch(e){}
   await stampLogos(doc,W,M,CW);
   await saveFile(doc.output("blob"),fname("pdf"));}
 
-$("#genBtn").addEventListener("click",()=>{generateLaudo();flash("Laudo atualizado.");});
+$("#genBtn").addEventListener("click",()=>{generateLaudo();flash("Laudo atualizado.");});{const _lr=$("#lerBtn");if(_lr)_lr.addEventListener("click",()=>{const d=$("#laudoDoc");if(d){d.classList.toggle("reading");_lr.classList.toggle("primary");}});}
 $("#pdfBtn").addEventListener("click",exportPdf);{const _w=$("#wordBtn");if(_w)_w.addEventListener("click",exportWord);}$("#ncWord").addEventListener("click",exportNcPdf);
 $("#copyBtn").addEventListener("click",async()=>{await generateLaudo();const txt=$("#laudoDoc").innerText.replace(/\n{3,}/g,"\n\n").trim();try{await navigator.clipboard.writeText(txt);flash("Laudo copiado — cole no Word.");}catch(e){const r=document.createRange();r.selectNodeContents($("#laudoDoc"));const s=getSelection();s.removeAllRanges();s.addRange(r);flash("Selecionado — Ctrl/Cmd+C.");}});
 
@@ -1324,21 +1352,21 @@ async function renderEpiDocs(){epiDocUrls.forEach(u=>URL.revokeObjectURL(u));epi
   wrap.querySelectorAll("[data-edd]").forEach(b=>b.addEventListener("click",async()=>{const a=state.epiDocs.find(x=>x.id===b.dataset.edd);if(a)await idbDel(a.kind==="pdf"?"epidoc_"+a.id:a.id);state.epiDocs=state.epiDocs.filter(x=>x.id!==b.dataset.edd);save();renderEpiDocs();}));}
 
 /* ===== conformidade CPC art. 473 ===== */
-function checkLaudo(){const S=state;const items=[];const add=(ok,label)=>items.push({ok:!!ok,label});
-  add(S.objeto&&S.objeto.trim(),"Objeto da perícia exposto (art. 473, I)");
-  add(S.vistoria.metodo&&S.vistoria.metodo.trim(),"Método indicado e justificado como aceito na área (art. 473, III)");
+function checkLaudo(){const S=state;const items=[];const add=(ok,label,tab)=>items.push({ok:!!ok,label,tab:tab||""});
+  add(S.objeto&&S.objeto.trim(),"Objeto da perícia exposto (art. 473, I)","processo");
+  add(S.vistoria.metodo&&S.vistoria.metodo.trim(),"Método indicado e justificado como aceito na área (art. 473, III)","vistoria");
   const semR=S.quesitos.filter(q=>!q.resposta||!q.resposta.trim()).length;
-  add(S.quesitos.length>0&&semR===0, S.quesitos.length?`Resposta conclusiva a todos os quesitos (art. 473, IV)${semR?` — ${semR} pendente(s)`:""}`:"Nenhum quesito cadastrado");
-  add(S.conclusao&&S.conclusao.trim(),"Conclusão objetiva, dentro do objeto (art. 473, §2º)");
-  const PE=getPerito();add(PE.nome&&PE.registro,"Perito identificado com registro profissional");
-  add(S.art&&S.art.trim(),"ART da perícia informada");
-  add(S.vistoria.data||S.vistoria.local,"Diligência registrada — data/local/presentes (art. 474)");
-  add(S.media.filter(m=>m.kind==="img").length>0,"Registro fotográfico / anexos (art. 473, §3º)");
-  add(S.atividades.length>0,"Atividades e habitualidade registradas (NR-15)");
-  add(!S.agentes.some(a=>a.situacao==="Exposição caracterizada"&&(!a.grau||a.grau==="Não caracterizado")),"Grau definido para todo agente caracterizado (NR-15)");
-  add(!S.medicoes.length||S.medicoes.every(m=>m.certNum&&m.certNum.trim()),"Instrumentos com certificado de calibração informado");
-  add(!S.medicoes.some(m=>m.certVal&&S.vistoria.data&&m.certVal<S.vistoria.data),"Certificados de calibração vigentes na data da vistoria");
-  const wrap=$("#cplList");if(wrap)wrap.innerHTML=items.map(i=>`<div style="display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px"><span style="color:${i.ok?'var(--ok)':'var(--danger)'};font-weight:800;flex:none">${i.ok?'✓':'✗'}</span><span>${esc(i.label)}</span></div>`).join("")+(items.some(i=>!i.ok)?`<p class="hint" style="margin-top:8px;color:var(--danger)">⚠ Há pendências — resolva antes de entregar o laudo.</p>`:`<p class="hint" style="margin-top:8px;color:var(--ok)">✓ Estrutura completa conforme o CPC.</p>`);}
+  add(S.quesitos.length>0&&semR===0, S.quesitos.length?`Resposta conclusiva a todos os quesitos (art. 473, IV)${semR?` — ${semR} pendente(s)`:""}`:"Nenhum quesito cadastrado","quesitos");
+  add(S.conclusao&&S.conclusao.trim(),"Conclusão objetiva, dentro do objeto (art. 473, §2º)","laudo");
+  const PE=getPerito();add(PE.nome&&PE.registro,"Perito identificado com registro profissional","processo");
+  add(S.art&&S.art.trim(),"ART da perícia informada","processo");
+  add(S.vistoria.data||S.vistoria.local,"Diligência registrada — data/local/presentes (art. 474)","vistoria");
+  add(S.media.filter(m=>m.kind==="img").length>0,"Registro fotográfico / anexos (art. 473, §3º)","vistoria");
+  add(S.atividades.length>0,"Atividades e habitualidade registradas (NR-15)","vistoria");
+  add(!S.agentes.some(a=>a.situacao==="Exposição caracterizada"&&(!a.grau||a.grau==="Não caracterizado")),"Grau definido para todo agente caracterizado (NR-15)","normas");
+  add(!S.medicoes.length||S.medicoes.every(m=>m.certNum&&m.certNum.trim()),"Instrumentos com certificado de calibração informado","medicoes");
+  add(!S.medicoes.some(m=>m.certVal&&S.vistoria.data&&m.certVal<S.vistoria.data),"Certificados de calibração vigentes na data da vistoria","medicoes");
+  const wrap=$("#cplList");if(wrap){wrap.innerHTML=items.map(i=>`<div ${i.tab?`data-gotab="${i.tab}"`:""} style="display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px;${!i.ok&&i.tab?"cursor:pointer":""}"><span style="color:${i.ok?'var(--ok)':'var(--danger)'};font-weight:800;flex:none">${i.ok?'✓':'✗'}</span><span>${esc(i.label)}${!i.ok&&i.tab?' <span style="color:var(--accent);text-decoration:underline">corrigir →</span>':""}</span></div>`).join("")+(items.some(i=>!i.ok)?`<p class="hint" style="margin-top:8px;color:var(--danger)">⚠ Há pendências — toque numa pendência para ir ao campo.</p>`:`<p class="hint" style="margin-top:8px;color:var(--ok)">✓ Estrutura completa conforme o CPC.</p>`);wrap.querySelectorAll("[data-gotab]").forEach(el=>el.addEventListener("click",()=>{if(typeof goTab==="function")goTab(el.dataset.gotab);}));}}
 
 /* ===== aceite / escusa ===== */
 function hojeExt(){return new Date().toLocaleDateString("pt-BR",{day:"2-digit",month:"long",year:"numeric"});}
@@ -1346,7 +1374,9 @@ function localCab(){const P=state.processo,V=state.vistoria;return V.local?V.loc
 function encCab(){const P=state.processo;return `EXCELENTÍSSIMO(A) SENHOR(A) DOUTOR(A) JUIZ(A)\n\nProcesso nº ${P.numero||"[número]"}\n${P.vara||"[vara/juízo]"} — ${P.comarca||"[comarca]"}\n${state.partes.autor||"[parte autora]"} em face de ${state.empresa.razao||state.partes.reu||"[reclamada]"}\n`;}
 function txtToDoc(txt){return txt.split(/\n{2,}/).map(p=>`<p>${esc(p).replace(/\n/g,"<br>")}</p>`).join("");}
 function genAceiteTxt(){const PE=getPerito(),E=state.encargo;
-  return `${encCab()}\n${PE.nome||"[perito]"}, ${PE.formacao||"[formação]"}${PE.registro?", "+PE.registro:""}, nomeado(a) perito(a) do juízo nos autos em epígrafe, vem, respeitosamente, perante Vossa Excelência, ACEITAR O ENCARGO, comprometendo-se a desempenhá-lo com zelo, imparcialidade e dentro do prazo fixado.\n\nNos termos do art. 465, §3º, do Código de Processo Civil, apresenta sua PROPOSTA DE HONORÁRIOS no valor de ${E.proposto||"R$ [valor]"}${E.prazo?`, estimando o prazo de ${E.prazo} dias para a entrega do laudo`:""}.\n\n${E.just||"A proposta considera a complexidade técnica da matéria, as horas técnicas de vistoria e de elaboração do laudo, eventuais avaliações instrumentais, o deslocamento até o local e o número de quesitos a responder."}\n\n${(E.ofertado&&E.proposto)?`O valor de ${E.ofertado}, eventualmente sugerido, mostra-se insuficiente à adequada realização dos trabalhos pelas razões acima expostas, razão pela qual se requer o arbitramento no valor ora proposto, com amparo no art. 465, §3º, e no art. 95 do CPC, observados os parâmetros da Resolução CNJ nº 232/2016 e, na Justiça do Trabalho, da respectiva Resolução CSJT de honorários periciais (respeitada a vigência).`:`Requer-se o arbitramento dos honorários no valor proposto, com amparo no art. 465, §3º, do CPC.`}\n\nRequer, ainda, a definição da forma e do prazo de pagamento${E.banco?`, indicando, desde já, para depósito: ${E.banco}`:""}.\n\nColoca-se à inteira disposição do juízo. Termos em que pede deferimento.\n\n${localCab()}, ${hojeExt()}.\n\n____________________________________\n${PE.nome||""}\n${[PE.formacao,PE.registro].filter(Boolean).join(" — ")}`;}
+  const kmIda=parseFloat(String(E.km||"").replace(",","."))||0;const rodado=kmIda>50?kmIda*2:0;const desloc=rodado*1;
+  const memo=`\n\nMEMÓRIA DE CÁLCULO (estimativa, a confirmar):\n- Honorários técnicos propostos: ${E.proposto||"R$ [valor]"}\n${kmIda>50?`- Deslocamento: ${kmIda} km (ida) × 2 (ida e volta) = ${rodado} km × R$ 1,00/km = R$ ${desloc.toFixed(2)}`:"- Deslocamento: até 50 km — sem cobrança de deslocamento"}${(kmIda>100)?"\n- Hospedagem/refeição: estimar conforme a distância (acima de 100 km)":""}\n- Prazo estimado: ${E.prazo||"[prazo]"} dias · Quesitos a responder: ${state.quesitos.length} · Avaliações instrumentais: ${state.medicoes.length}`;
+  return `${encCab()}\n${PE.nome||"[perito]"}, ${PE.formacao||"[formação]"}${PE.registro?", "+PE.registro:""}, nomeado(a) perito(a) do juízo nos autos em epígrafe, vem, respeitosamente, perante Vossa Excelência, ACEITAR O ENCARGO, comprometendo-se a desempenhá-lo com zelo, imparcialidade e dentro do prazo fixado.\n\nNos termos do art. 465, §3º, do Código de Processo Civil, apresenta sua PROPOSTA DE HONORÁRIOS no valor de ${E.proposto||"R$ [valor]"}${E.prazo?`, estimando o prazo de ${E.prazo} dias para a entrega do laudo`:""}.\n\n${E.just||"A proposta considera a complexidade técnica da matéria, as horas técnicas de vistoria e de elaboração do laudo, eventuais avaliações instrumentais, o deslocamento até o local e o número de quesitos a responder."}\n\n${(E.ofertado&&E.proposto)?`O valor de ${E.ofertado}, eventualmente sugerido, mostra-se insuficiente à adequada realização dos trabalhos pelas razões acima expostas, razão pela qual se requer o arbitramento no valor ora proposto, com amparo no art. 465, §3º, e no art. 95 do CPC, observados os parâmetros da Resolução CNJ nº 232/2016 e, na Justiça do Trabalho, da respectiva Resolução CSJT de honorários periciais (respeitada a vigência).`:`Requer-se o arbitramento dos honorários no valor proposto, com amparo no art. 465, §3º, do CPC.`}${memo}\n\nRequer, ainda, a definição da forma e do prazo de pagamento${E.banco?`, indicando, desde já, para depósito: ${E.banco}`:""}.\n\nColoca-se à inteira disposição do juízo. Termos em que pede deferimento.\n\n${localCab()}, ${hojeExt()}.\n\n____________________________________\n${PE.nome||""}\n${[PE.formacao,PE.registro].filter(Boolean).join(" — ")}`;}
 function genDeclTxt(){const PE=getPerito(),E=state.encargo;const imp=/impedimento|suspei/i.test(E.motivo);
   return `${encCab()}\n${PE.nome||"[perito]"}, ${PE.formacao||"[formação]"}${PE.registro?", "+PE.registro:""}, nomeado(a) perito(a) do juízo nos autos em epígrafe, vem, respeitosamente, perante Vossa Excelência, no prazo legal, apresentar ESCUSA e DECLINAR do encargo pericial, com fundamento no art. 467${imp?" c/c art. 148":""} do Código de Processo Civil, pelo(s) seguinte(s) motivo(s):\n\n${E.motivo}${E.motcompl?` — ${E.motcompl}`:""}.\n\nDiante do exposto, requer a dispensa do encargo e a nomeação de outro profissional para a realização da perícia, colocando-se à disposição para os esclarecimentos que se fizerem necessários.\n\nTermos em que pede deferimento.\n\n${localCab()}, ${hojeExt()}.\n\n____________________________________\n${PE.nome||""}\n${[PE.formacao,PE.registro].filter(Boolean).join(" — ")}`;}
 async function iaHonorariosFn(){const st=$("#iaHonStatus");const s=await getSample();if(!s){st.style.color="var(--warn)";st.textContent="IA indisponível aqui.";return;}
@@ -1379,8 +1409,10 @@ function renderVistMed(){const w=$("#vistMedResumo");if(!w)return;let h="";
   w.innerHTML=h;}
 function renderAll(){renderProf();renderEquipe();renderDocs();renderEpi();renderEpiDocs();renderMed();renderApt();renderQuesitos();renderNormas();renderAtividades();renderAgentes();renderPeriodos();renderRoteiro();renderMedia();renderNc();renderAudit();applyLock();checkLaudo();updateTabDots();updateProcChip();}
 hydrate();bindInputs();renderAll();
+(function(){try{const idx=readIdx();const last=idx.slice().sort((a,b)=>(b.updated||0)-(a.updated||0))[0];const hl=$("#homeLast");if(hl&&last){hl.innerHTML=`Continuar: <b>${esc(last.numero||"processo sem número")}</b> · <span style="color:var(--accent);text-decoration:underline;cursor:pointer" id="homeCont">abrir ↗</span>`;const hc=$("#homeCont");if(hc)hc.addEventListener("click",()=>{const gp=$("#goPericia");if(gp)gp.click();});}
+  const lb=parseInt(localStorage.getItem("last_backup_ts")||"0",10);if(idx.length&&(!lb||Date.now()-lb>7*864e5)){setTimeout(()=>flash("Lembrete: faça um backup dos processos (aba IA/Config → Exportar)."),1800);}}catch(e){}})();
 if(!$("#v_metodo").value)$("#v_metodo").value=state.vistoria.metodo;
-$("#saveTxt").textContent="Salva automaticamente";
+$("#saveTxt").textContent="✓ salvo";
 try{const _mm=localStorage.getItem("gemini_model");if(_mm&&/2\.0-flash|1\.5|1\.0|3\.8-flash|^gemini-pro$/.test(_mm))localStorage.setItem("gemini_model","gemini-flash-latest");}catch(e){}getSample();initConfig();initBackup();registerSW();
 </script>
 
