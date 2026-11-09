@@ -1,0 +1,42 @@
+name: Build Windows EXE (PC)
+
+# Gera o executável de PC (Windows) com o servidor de sincronização embutido.
+# Rode em Actions -> "Build Windows EXE (PC)" -> Run workflow.
+# O .exe (portátil) fica em "Artifacts" ao final.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - "index.html"
+      - "assistencia.html"
+      - "painel.html"
+      - "admin.html"
+      - "campo.html"
+      - "server/**"
+      - "electron/**"
+      - "vendor/**"
+      - "package.json"
+      - ".github/workflows/windows-exe.yml"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Instalar dependências
+        run: npm install
+      - name: Compilar executável portátil (Windows)
+        run: npx electron-builder --win portable --publish never
+        env:
+          GH_TOKEN: ""
+      - name: Publicar o .exe como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: urbanclin-perito-pc-windows
+          path: dist/*.exe
+          if-no-files-found: error

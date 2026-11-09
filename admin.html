@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin · Sincronização — UrbanClin</title>
+<style>
+:root{--paper:#f6f8f1;--card:#fff;--ink:#1d2a1a;--muted:#5d6a59;--line:#dbe3d1;--accent:#007a36;--accent-ink:#fff;--accent-soft:#eaf4d6;--laranja:#f59c00;--warn:#a35300;--ok:#1f7a3a;--danger:#b3261e;--danger-soft:#f8e1df;
+ --display:"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif;--body:"Segoe UI",Roboto,Arial,sans-serif;--mono:ui-monospace,Consolas,monospace}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+.top{background:var(--card);padding:14px 20px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 12px -4px rgba(16,40,24,.18);position:sticky;top:0;z-index:5}
+.top::after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:linear-gradient(90deg,var(--laranja) 0 50%,#95c11f 50% 72%,var(--accent) 100%)}
+h1{font-family:var(--display);font-size:22px;margin:0}
+.sub{color:var(--muted);font-size:13px}
+main{max-width:980px;margin:0 auto;padding:20px 16px 60px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px;box-shadow:0 1px 2px rgba(16,40,24,.05)}
+.conn{background:var(--accent-soft);border:1px solid var(--line)}
+.conn b{font-family:var(--mono)}
+.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:9px;cursor:pointer;font-size:13.5px;font-weight:600;padding:9px 14px;display:inline-flex;align-items:center;gap:7px}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn.primary:hover{color:#fff;filter:brightness(1.05)}
+.btn.small{padding:6px 10px;font-size:12.5px}
+.btn.danger{color:var(--danger);border-color:var(--danger-soft)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.row{border:1px solid var(--line);border-left-width:5px;border-radius:10px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.row.pc{border-left-color:var(--accent)} .row.device{border-left-color:var(--laranja)}
+.row .num{font-family:var(--mono);font-weight:600}
+.badge{font-size:11px;font-weight:700;text-transform:uppercase;padding:2px 9px;border-radius:999px}
+.badge.pc{background:var(--accent-soft);color:var(--accent)} .badge.device{background:#fff1d9;color:var(--warn)}
+.sp{flex:1}
+.empty{color:var(--muted);text-align:center;padding:24px}
+input{padding:9px 11px;border:1px solid #c2cdb4;border-radius:9px;font-size:14px}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:.2s;z-index:50}
+.toast.show{opacity:1}
+.note{font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="top">
+  <div><h1>🗂️ Admin · Sincronização</h1><div class="sub">UrbanClin — estação do PC (servidor da rede)</div></div>
+  <div class="sp"></div>
+  <a class="btn" href="/">🖥️ Abrir estação de trabalho</a>
+</div>
+<main>
+  <div class="card conn">
+    <b>Como o celular conecta:</b> na mesma rede WiFi, no app do celular, informe o endereço
+    <div id="connAddr" style="margin-top:6px;font-size:16px"></div>
+    <div class="note" style="margin-top:6px">Mantenha este programa aberto no PC enquanto o celular estiver sincronizando.</div>
+  </div>
+
+  <div class="card">
+    <div class="toolbar">
+      <button class="btn primary" id="btnRefresh">↻ Atualizar</button>
+      <button class="btn" id="btnImport">⬆ Importar backup para o PC</button>
+      <input type="file" id="impFile" accept=".json,.perito.json,application/json" hidden>
+      <span class="sp"></span>
+      <span class="note" id="count"></span>
+    </div>
+    <div id="list"></div>
+    <div class="empty" id="empty" hidden>Nenhum processo no PC ainda. Importe um backup do app para começar.</div>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+const $=s=>document.querySelector(s);
+function flash(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(flash._t);flash._t=setTimeout(()=>t.classList.remove("show"),2600);}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+async function api(path,opts){const r=await fetch(path,opts);if(!r.ok){let e="";try{e=(await r.json()).error;}catch(x){}throw new Error(e||("HTTP "+r.status));}return r.json();}
+
+async function loadConn(){try{const p=await api("/api/ping");const ips=p.ips||[];$("#connAddr").innerHTML=ips.length?ips.map(ip=>`<b>http://${ip}:${p.port}</b>`).join(" &nbsp;ou&nbsp; "):`<b>http://(IP do PC):${p.port}</b> — descubra o IP do PC na rede WiFi`;}catch(e){$("#connAddr").textContent="servidor não respondeu";}}
+
+function when(ts){try{return new Date(ts).toLocaleString("pt-BR");}catch(e){return"";}}
+async function render(){
+  let recs=[];try{recs=(await api("/api/list")).records||[];}catch(e){flash("Falha ao listar: "+e.message);}
+  recs.sort((a,b)=>(b.updated||0)-(a.updated||0));
+  $("#empty").hidden=recs.length>0;$("#count").textContent=recs.length+" processo(s)";
+  $("#list").innerHTML=recs.map(r=>{
+    const dev=r.location==="device";
+    return `<div class="row ${dev?"device":"pc"}">
+      <span class="num">${esc(r.numero)||"(sem número)"}</span>
+      <span class="badge ${dev?"device":"pc"}">${dev?("EM CAMPO — "+esc(r.device||"celular")+" · bloqueado"):"NO PC"}</span>
+      <span class="note">${esc(r.parte)||"—"} · ${esc(r.modulo||"")} · ${when(r.updated)}</span>
+      <span class="sp"></span>
+      ${dev
+        ? `<button class="btn danger small" data-cancel="${esc(r.pid)}">Cancelar liberação</button>`
+        : `<button class="btn primary small" data-release="${esc(r.pid)}">📲 Liberar para o celular</button><button class="btn small" data-export="${esc(r.pid)}">⬇ Exportar</button>`}
+    </div>`;
+  }).join("");
+  $("#list").querySelectorAll("[data-release]").forEach(b=>b.addEventListener("click",async()=>{
+    const dev=prompt("Nome do celular/tablet que vai receber (ex.: Celular do Adroaldo):","Celular");
+    if(dev===null)return;
+    try{await api("/api/release",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pid:b.dataset.release,device:dev||"celular"})});flash("Liberado para "+(dev||"celular")+". Bloqueado no PC até a devolução.");render();}catch(e){flash("Erro: "+e.message);}
+  }));
+  $("#list").querySelectorAll("[data-cancel]").forEach(b=>b.addEventListener("click",async()=>{
+    if(!confirm("Cancelar a liberação? Só faça isso se o celular NÃO estiver trabalhando neste processo (pode perder o trabalho de campo)."))return;
+    try{await api("/api/cancel",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pid:b.dataset.cancel})});flash("Liberação cancelada.");render();}catch(e){flash("Erro: "+e.message);}
+  }));
+  $("#list").querySelectorAll("[data-export]").forEach(b=>b.addEventListener("click",async()=>{
+    try{const rec=await api("/api/pull?pid="+encodeURIComponent(b.dataset.export));const blob=new Blob([JSON.stringify({_app:"perito-laudo",_v:5,ts:new Date().toISOString(),state:rec.state,media:rec.media||{}})],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="processo_"+((rec.state.processo&&rec.state.processo.numero)||"sem_numero").replace(/[^\dA-Za-z]+/g,"_")+".perito.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);flash("Exportado — importe no app para editar.");}catch(e){flash("Erro: "+e.message);}
+  }));
+}
+function importBackup(file){const r=new FileReader();r.onload=async()=>{try{const p=JSON.parse(r.result);const recs=p._all&&Array.isArray(p.records)?p.records:(p.state?[{state:p.state,media:p.media||{}}]:[]);if(!recs.length){flash("Backup não reconhecido.");return;}let n=0;for(const rec of recs){await api("/api/seed",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(rec)});n++;}flash(n+" processo(s) importado(s) para o PC.");render();}catch(e){flash("Erro: "+e.message);}};r.readAsText(file);}
+
+$("#btnRefresh").addEventListener("click",render);
+$("#btnImport").addEventListener("click",()=>$("#impFile").click());
+$("#impFile").addEventListener("change",e=>{if(e.target.files[0])importBackup(e.target.files[0]);e.target.value="";});
+loadConn();render();setInterval(render,8000);
+</script>
+</body>
+</html>
