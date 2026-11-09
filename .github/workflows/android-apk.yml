@@ -9,6 +9,7 @@ on:
   push:
     branches: [ main, "claude/zen-fermi-t4vuel" ]
     paths:
+      - "campo.html"
       - "index.html"
       - "assistencia.html"
       - "painel.html"
@@ -34,17 +35,23 @@ jobs:
           distribution: "temurin"
           java-version: "17"
 
-      - name: Montar a pasta web (www)
+      - name: Montar a pasta web (www) — APK = app de CAMPO (enxuto)
         run: |
           mkdir -p www
-          cp index.html assistencia.html painel.html manifest.webmanifest sw.js icon-192.png icon-512.png www/
-          cp -r vendor www/
+          cp campo.html www/index.html
+          cp manifest.webmanifest sw.js icon-192.png icon-512.png www/
 
       - name: Instalar Capacitor
         run: npm install --no-save @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
 
       - name: Adicionar plataforma Android
         run: npx cap add android
+
+      - name: Liberar HTTP local (cleartext) no Android
+        run: |
+          M=android/app/src/main/AndroidManifest.xml
+          sed -i 's/<application/<application android:usesCleartextTraffic="true"/' "$M"
+          grep -q usesCleartextTraffic "$M" && echo "cleartext habilitado"
 
       - name: Apontar o SDK e aceitar licenças
         run: |
