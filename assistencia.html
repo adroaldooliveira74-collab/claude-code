@@ -1186,7 +1186,7 @@ function renderVistMed(){const w=$("#vistMedResumo");if(!w)return;let h="";
 function renderAll(){renderProf();renderEquipe();renderDocs();renderEpi();renderEpiDocs();renderMed();renderApt();renderQuesitos();renderNormas();renderMedia();renderNc();renderAudit();applyLock();checkLaudo();updateTabDots();updateProcChip();}
 hydrate();bindInputs();renderAll();
 if(!$("#v_metodo").value)$("#v_metodo").value=state.vistoria.metodo;
-$("#saveTxt").textContent="Salva automaticamente";
+$("#saveTxt").textContent="✓ salvo";
 try{const _mm=localStorage.getItem("gemini_model");if(_mm&&/2\.0-flash|1\.5|1\.0|3\.8-flash|^gemini-pro$/.test(_mm))localStorage.setItem("gemini_model","gemini-flash-latest");}catch(e){}getSample();initConfig();initBackup();registerSW();
 </script>
 
