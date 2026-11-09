@@ -59,6 +59,9 @@ a{color:var(--accent)}button{font-family:inherit}
 .procchip{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--accent);background:var(--accent-soft);border:1px solid var(--line);border-radius:999px;padding:3px 10px;max-width:42vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .navprev{display:flex;gap:10px;justify-content:space-between;margin-top:14px}
 .navprev button{flex:1;max-width:48%}
+.doc.reading{font-size:16px;line-height:1.7}
+.doc.reading .photo-doc .cap{font-size:14px}
+.doc.reading h2{font-size:18px}
 main{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 72px;max-width:1000px;margin:0 auto}
 .panel{display:none}.panel[data-active="true"]{display:block;animation:fade .18s ease}
 @keyframes fade{from{opacity:.5}to{opacity:1}}
@@ -428,6 +431,7 @@ table.data .del{color:var(--danger);border:1px solid var(--line);background:var(
         <textarea id="concl" rows="5" placeholder="Diante das fragilidades apontadas, conclui o assistente técnico que o laudo pericial deve ser impugnado/reconsiderado, requerendo esclarecimentos ou nova perícia…"></textarea></label></div>
     <div class="doc-toolbar">
       <button class="btn primary" id="genBtn">↻ Montar / atualizar relatório</button>
+      <button class="btn" id="lerBtn">🔎 Leitura</button>
       <button class="btn" id="pdfBtn">⬇ Baixar PDF</button>
       <button class="btn" id="wordBtn">⬇ Word</button>
       <button class="btn" id="copyBtn">⧉ Copiar texto</button>
@@ -774,10 +778,13 @@ const objUrls=[];
 async function renderMedia(){objUrls.forEach(u=>URL.revokeObjectURL(u));objUrls.length=0;const grid=$("#mediaGrid");grid.innerHTML="";$("#mediaEmpty").hidden=state.media.length>0;$("#mediaCount").textContent=state.media.length+(state.media.length===1?" mídia":" mídias");
   const opts=`<option value="">— norma —</option>`+state.normas.map(n=>`<option value="${esc(n.code)}">${esc(n.code)}</option>`).join("");let pn=0;
   for(const m of state.media){const b=await idbGet(m.id);const u=b?URL.createObjectURL(b):"";if(u)objUrls.push(u);const isImg=m.kind==="img";if(isImg)pn++;
-    const el=document.createElement("div");el.className="ph";el.innerHTML=`<div class="frame">${isImg?`<img src="${u}" alt="">`:`<video src="${u}" controls preload="metadata"></video>`}<span class="tag">${isImg?"FOTO "+String(pn).padStart(2,"0"):"VÍDEO"}</span>${isImg?"":'<span class="vtag">vídeo</span>'}</div><div class="body"><textarea data-leg="${m.id}" ${isLocked()?"readonly":""} placeholder="Legenda / descrição técnica…">${esc(m.legenda)}</textarea><input data-norma="${m.id}" ${isLocked()?"disabled":""} value="${esc(m.norma)}" placeholder="NR e item (ex.: NR-12, item 12.38)">${isLocked()?"":`<button class="btn danger small del" data-del="${m.id}">Remover</button>`}</div>`;
+    const el=document.createElement("div");el.className="ph";el.innerHTML=`<div class="frame">${isImg?`<img src="${u}" alt="">`:`<video src="${u}" controls preload="metadata"></video>`}<span class="tag">${isImg?"FOTO "+String(pn).padStart(2,"0"):"VÍDEO"}</span>${isImg?"":'<span class="vtag">vídeo</span>'}</div><div class="body"><textarea data-leg="${m.id}" ${isLocked()?"readonly":""} placeholder="Legenda / descrição técnica…">${esc(m.legenda)}</textarea><input data-norma="${m.id}" ${isLocked()?"disabled":""} value="${esc(m.norma)}" placeholder="NR e item (ex.: NR-12, item 12.38)"><div class="row-actions" style="gap:6px;margin-top:2px">${!isLocked()?`<button class="btn small" data-up="${m.id}" title="Subir">↑</button><button class="btn small" data-down="${m.id}" title="Descer">↓</button>`:""}${isLocked()?"":`<button class="btn danger small del" data-del="${m.id}">Remover</button>`}</div></div>`;
     grid.appendChild(el);}
   grid.querySelectorAll("[data-leg]").forEach(t=>t.addEventListener("input",()=>{const m=state.media.find(x=>x.id===t.dataset.leg);if(m){m.legenda=t.value;save();}}));
   grid.querySelectorAll("[data-norma]").forEach(s=>s.addEventListener("input",()=>{const m=state.media.find(x=>x.id===s.dataset.norma);if(m){m.norma=s.value;save();}}));
+  const moveMedia=(id,dir)=>{const i=state.media.findIndex(x=>x.id===id);const j=i+dir;if(i<0||j<0||j>=state.media.length)return;const t=state.media[i];state.media[i]=state.media[j];state.media[j]=t;save();renderMedia();};
+  grid.querySelectorAll("[data-up]").forEach(b=>b.addEventListener("click",()=>moveMedia(b.dataset.up,-1)));
+  grid.querySelectorAll("[data-down]").forEach(b=>b.addEventListener("click",()=>moveMedia(b.dataset.down,1)));
   grid.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",async()=>{await idbDel(b.dataset.del);state.media=state.media.filter(x=>x.id!==b.dataset.del);save();renderMedia();}));}
 
 /* quesitos */
@@ -1050,7 +1057,7 @@ async function exportPdf(){const{photos}=await generateLaudo();const J=window.js
   const S=state,P=S.processo,PA=S.partes,V=S.vistoria,EMP=S.empresa,PE=getPerito(),AS=getAssist();
   const doc=new J({unit:"mm",format:"a4"});const W=210,M=18,CW=W-2*M;const TOP=34,BOT=256;let y=TOP;
   const nl=h=>{y+=h;if(y>BOT){doc.addPage();y=TOP;}};
-  const H=t=>{nl(3);if(y>BOT-8){doc.addPage();y=TOP;}doc.setFont("helvetica","bold");doc.setFontSize(11);doc.setTextColor(10,95,46);doc.text(t,M,y);y+=2;doc.setDrawColor(200,225,195);doc.line(M,y,W-M,y);nl(5);doc.setTextColor(20,20,20);};
+  const toc=[];const H=t=>{nl(3);if(y>BOT-8){doc.addPage();y=TOP;}toc.push({t:t,p:doc.getNumberOfPages()});doc.setFont("helvetica","bold");doc.setFontSize(11);doc.setTextColor(10,95,46);doc.text(t,M,y);y+=2;doc.setDrawColor(200,225,195);doc.line(M,y,W-M,y);nl(5);doc.setTextColor(20,20,20);};
   const body=(t,o={})=>{if(t==null||t==="")return;doc.setFont("helvetica",o.b?"bold":"normal");doc.setFontSize(o.s||10);doc.splitTextToSize(String(t),CW).forEach(ln=>{if(y>BOT){doc.addPage();y=TOP;}doc.text(ln,o.align==="center"?W/2:M,y,{align:o.align||"left"});y+=(o.s||10)*0.42+1.2;});nl(1);};
   doc.setFont("helvetica","bold");doc.setFontSize(16);doc.text("RELATORIO DE ACOMPANHAMENTO PERICIAL",W/2,y,{align:"center"});nl(6);doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(90,90,90);doc.text(`Autos nº ${P.numero||"—"}  ·  ${P.vara||"—"}`,W/2,y,{align:"center"});nl(8);doc.setTextColor(20,20,20);
   H("I. IDENTIFICAÇÃO");[["Processo nº",P.numero],["Ação",P.acao],["Juízo",P.vara],["Comarca",P.comarca],["Reclamante",PA.autor],["Reclamada",(EMP.razao||PA.reu)+(EMP.cnpj?" — CNPJ "+EMP.cnpj:"")],["Perito",[PE.nome,PE.formacao,PE.registro].filter(Boolean).join(" — ")],AS.length?["Assistente(s)",AS.map(a=>a.nome).join("; ")]:null,S.art?["ART",S.art]:null].filter(Boolean).forEach(([k,v])=>{if(v)body(`${k}: ${v}`);});
@@ -1066,10 +1073,11 @@ async function exportPdf(){const{photos}=await generateLaudo();const J=window.js
   H("ANÁLISE DO LAUDO / QUESITOS");[["Laudo","ANÁLISE CRÍTICA DO LAUDO"],["Juiz","QUESITOS DO JUÍZO"],["Reclamada","QUESITOS DA RECLAMADA"],["Autora","QUESITOS DA PARTE AUTORA"],["MP","QUESITOS DO MINISTÉRIO PÚBLICO"]].forEach(([org,t])=>{const l=S.quesitos.filter(q=>q.origem===org);if(!l.length)return;body(t,{b:true,s:10.5});l.forEach((q,i)=>{body(`Quesito ${String(i+1).padStart(2,"0")}: ${q.pergunta||"[—]"}`,{b:true,s:9.5});body(`Resposta: ${q.resposta||"[pendente]"}`,{s:9.5});});});
   H("CONCLUSÃO");body(S.conclusao||"[a preencher]");nl(6);const local=V.local?V.local.split(/[,–-]/).slice(-2).join(", ").trim():(P.comarca||"");
   body(`${local}, ${new Date().toLocaleDateString("pt-BR",{day:"2-digit",month:"long",year:"numeric"})}.`,{align:"center"});nl(10);if(y>BOT){doc.addPage();y=TOP;}doc.line(W/2-35,y,W/2+35,y);nl(4);body(PE.nome||"",{b:true,align:"center"});body([PE.formacao,PE.registro].filter(Boolean).join(" — "),{align:"center",s:9});if(S.art)body("ART nº "+S.art,{align:"center",s:9});
+  try{if(toc.length){doc.insertPage(2);doc.setPage(2);let ty=TOP;doc.setFont("helvetica","bold");doc.setFontSize(13);doc.setTextColor(10,95,46);doc.text("SUMÁRIO",M,ty);ty+=9;doc.setFontSize(9.5);doc.setFont("helvetica","normal");doc.setTextColor(40);toc.forEach(e=>{if(ty>BOT)return;const pg=e.p+(e.p>=2?1:0);doc.text(String(e.t),M,ty);doc.text(String(pg),W-M,ty,{align:"right"});ty+=5.6;});}}catch(e){}
   await stampLogos(doc,W,M,CW);
   await saveFile(doc.output("blob"),fname("pdf"));}
 
-$("#genBtn").addEventListener("click",()=>{generateLaudo();flash("Laudo atualizado.");});
+$("#genBtn").addEventListener("click",()=>{generateLaudo();flash("Laudo atualizado.");});{const _lr=$("#lerBtn");if(_lr)_lr.addEventListener("click",()=>{const d=$("#laudoDoc");if(d){d.classList.toggle("reading");_lr.classList.toggle("primary");}});}
 $("#pdfBtn").addEventListener("click",exportPdf);{const _w=$("#wordBtn");if(_w)_w.addEventListener("click",exportWord);}$("#ncWord").addEventListener("click",exportNcPdf);
 $("#copyBtn").addEventListener("click",async()=>{await generateLaudo();const txt=$("#laudoDoc").innerText.replace(/\n{3,}/g,"\n\n").trim();try{await navigator.clipboard.writeText(txt);flash("Laudo copiado — cole no Word.");}catch(e){const r=document.createRange();r.selectNodeContents($("#laudoDoc"));const s=getSelection();s.removeAllRanges();s.addRange(r);flash("Selecionado — Ctrl/Cmd+C.");}});
 
@@ -1135,17 +1143,17 @@ async function renderEpiDocs(){epiDocUrls.forEach(u=>URL.revokeObjectURL(u));epi
   wrap.querySelectorAll("[data-edd]").forEach(b=>b.addEventListener("click",async()=>{const a=state.epiDocs.find(x=>x.id===b.dataset.edd);if(a)await idbDel(a.kind==="pdf"?"epidoc_"+a.id:a.id);state.epiDocs=state.epiDocs.filter(x=>x.id!==b.dataset.edd);save();renderEpiDocs();}));}
 
 /* ===== conformidade CPC art. 473 ===== */
-function checkLaudo(){const S=state;const items=[];const add=(ok,label)=>items.push({ok:!!ok,label});
-  add(S.objeto&&S.objeto.trim(),"Objeto da perícia exposto (art. 473, I)");
-  add(S.vistoria.metodo&&S.vistoria.metodo.trim(),"Método indicado e justificado como aceito na área (art. 473, III)");
+function checkLaudo(){const S=state;const items=[];const add=(ok,label,tab)=>items.push({ok:!!ok,label,tab:tab||""});
+  add(S.objeto&&S.objeto.trim(),"Objeto da perícia exposto (art. 473, I)","processo");
+  add(S.vistoria.metodo&&S.vistoria.metodo.trim(),"Método indicado e justificado como aceito na área (art. 473, III)","vistoria");
   const semR=S.quesitos.filter(q=>!q.resposta||!q.resposta.trim()).length;
-  add(S.quesitos.length>0&&semR===0, S.quesitos.length?`Resposta conclusiva a todos os quesitos (art. 473, IV)${semR?` — ${semR} pendente(s)`:""}`:"Nenhum quesito cadastrado");
-  add(S.conclusao&&S.conclusao.trim(),"Conclusão objetiva, dentro do objeto (art. 473, §2º)");
-  const PE=getPerito();add(PE.nome&&PE.registro,"Perito identificado com registro profissional");
-  add(S.art&&S.art.trim(),"ART da perícia informada");
-  add(S.vistoria.data||S.vistoria.local,"Diligência registrada — data/local/presentes (art. 474)");
-  add(S.media.filter(m=>m.kind==="img").length>0,"Registro fotográfico / anexos (art. 473, §3º)");
-  const wrap=$("#cplList");if(wrap)wrap.innerHTML=items.map(i=>`<div style="display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px"><span style="color:${i.ok?'var(--ok)':'var(--danger)'};font-weight:800;flex:none">${i.ok?'✓':'✗'}</span><span>${esc(i.label)}</span></div>`).join("")+(items.some(i=>!i.ok)?`<p class="hint" style="margin-top:8px;color:var(--danger)">⚠ Há pendências — resolva antes de entregar o laudo.</p>`:`<p class="hint" style="margin-top:8px;color:var(--ok)">✓ Estrutura completa conforme o CPC.</p>`);}
+  add(S.quesitos.length>0&&semR===0, S.quesitos.length?`Resposta conclusiva a todos os quesitos (art. 473, IV)${semR?` — ${semR} pendente(s)`:""}`:"Nenhum quesito cadastrado","quesitos");
+  add(S.conclusao&&S.conclusao.trim(),"Conclusão objetiva, dentro do objeto (art. 473, §2º)","laudo");
+  const PE=getPerito();add(PE.nome&&PE.registro,"Perito identificado com registro profissional","processo");
+  add(S.art&&S.art.trim(),"ART da perícia informada","processo");
+  add(S.vistoria.data||S.vistoria.local,"Diligência registrada — data/local/presentes (art. 474)","vistoria");
+  add(S.media.filter(m=>m.kind==="img").length>0,"Registro fotográfico / anexos (art. 473, §3º)","vistoria");
+  const wrap=$("#cplList");if(wrap){wrap.innerHTML=items.map(i=>`<div ${i.tab?`data-gotab="${i.tab}"`:""} style="display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px;${!i.ok&&i.tab?"cursor:pointer":""}"><span style="color:${i.ok?'var(--ok)':'var(--danger)'};font-weight:800;flex:none">${i.ok?'✓':'✗'}</span><span>${esc(i.label)}${!i.ok&&i.tab?' <span style="color:var(--accent);text-decoration:underline">corrigir →</span>':""}</span></div>`).join("")+(items.some(i=>!i.ok)?`<p class="hint" style="margin-top:8px;color:var(--danger)">⚠ Há pendências — toque numa pendência para ir ao campo.</p>`:`<p class="hint" style="margin-top:8px;color:var(--ok)">✓ Estrutura completa conforme o CPC.</p>`);wrap.querySelectorAll("[data-gotab]").forEach(el=>el.addEventListener("click",()=>{if(typeof goTab==="function")goTab(el.dataset.gotab);}));}}
 
 /* ===== aceite / escusa ===== */
 function hojeExt(){return new Date().toLocaleDateString("pt-BR",{day:"2-digit",month:"long",year:"numeric"});}
