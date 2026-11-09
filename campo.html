@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>UrbanClin · Modo Campo</title>
+<style>
+:root{--paper:#f6f8f1;--card:#fff;--ink:#1d2a1a;--muted:#5d6a59;--line:#dbe3d1;--line2:#c2cdb4;--accent:#007a36;--accent-ink:#fff;--accent-soft:#eaf4d6;--laranja:#f59c00;--warn:#a35300;--ok:#1f7a3a;--danger:#b3261e;--danger-soft:#f8e1df;
+ --display:"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif;--body:"Segoe UI",Roboto,Arial,sans-serif;--mono:ui-monospace,Consolas,monospace;color-scheme:light}
+@media (prefers-color-scheme: dark){:root{--paper:#11160f;--card:#1a2117;--ink:#e7eee2;--muted:#a0ad9a;--line:#2d3829;--line2:#3c4a35;--accent:#8fcb3f;--accent-ink:#0f1a07;--accent-soft:#243317;--ok:#6fd08b;--danger:#ff8a80;--danger-soft:#3b1b19;color-scheme:dark}}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;-webkit-text-size-adjust:100%}
+.top{background:var(--card);padding:12px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:5;box-shadow:0 2px 12px -4px rgba(16,40,24,.18)}
+.top::after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:linear-gradient(90deg,var(--laranja) 0 50%,#95c11f 50% 72%,var(--accent) 100%)}
+h1{font-family:var(--display);font-size:20px;margin:0}.sub{color:var(--muted);font-size:12.5px}
+main{max-width:720px;margin:0 auto;padding:16px 14px 90px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:10px 0 3px}
+input,textarea,select{width:100%;padding:12px;border:1px solid var(--line2);border-radius:10px;background:var(--card);color:var(--ink);font-size:16px}
+.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:11px;cursor:pointer;font-size:15px;font-weight:600;padding:13px 16px;min-height:48px;display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.laranja{background:var(--laranja);color:#231a00;border-color:var(--laranja)}
+.btn.sm{width:auto;min-height:40px;padding:9px 13px;font-size:13.5px}
+.btn.danger{color:var(--danger);border-color:var(--danger-soft)}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1}
+.proc{border:1px solid var(--line);border-left-width:5px;border-left-color:var(--laranja);border-radius:10px;padding:12px;margin-bottom:10px}
+.proc .num{font-family:var(--mono);font-weight:600}
+.badge{font-size:11px;font-weight:700;background:var(--accent-soft);color:var(--accent);padding:2px 8px;border-radius:999px}
+.muted{color:var(--muted);font-size:13px}
+.ph{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:8px}
+.ph img{width:84px;height:84px;object-fit:cover;border-radius:8px;flex:none}
+.ph .b{flex:1}.ph textarea{min-height:40px;font-size:14px}
+.empty{color:var(--muted);text-align:center;padding:22px}
+.toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:11px 16px;border-radius:10px;font-size:14px;opacity:0;transition:.2s;z-index:50;max-width:92vw;text-align:center}
+.toast.show{opacity:1}
+.pill{display:inline-block;font-size:11px;font-weight:700;color:var(--ok)}
+hr{border:none;border-top:1px solid var(--line);margin:14px 0}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 14px;display:flex;gap:8px;z-index:6}
+.bar .btn{width:auto;flex:1}
+</style>
+</head>
+<body>
+<div class="top">
+  <div><h1>🧭 UrbanClin · Campo</h1><div class="sub" id="devSub"></div></div>
+  <div style="flex:1"></div>
+  <button class="btn sm" id="btnCfg">⚙</button>
+</div>
+<main>
+  <!-- CONFIG -->
+  <div class="card" id="cfgCard" hidden>
+    <h2 style="font-family:var(--display)">Conexão com o PC</h2>
+    <p class="muted">Na mesma rede WiFi do PC. Abra o programa no PC (console Admin) e veja ali o endereço.</p>
+    <label>Endereço do PC</label>
+    <input id="pcUrl" placeholder="http://192.168.0.10:8787" inputmode="url">
+    <label>Nome deste aparelho</label>
+    <input id="devName" placeholder="Ex.: Celular do Adroaldo">
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="btnPing">Testar conexão</button>
+      <button class="btn primary" id="btnSaveCfg">Salvar</button>
+    </div>
+    <div class="muted" id="pingOut" style="margin-top:8px"></div>
+  </div>
+
+  <!-- LISTA -->
+  <div id="listView">
+    <div class="card">
+      <div class="row" style="align-items:center">
+        <h2 style="font-family:var(--display);flex:2">Processos liberados para você</h2>
+        <button class="btn sm" id="btnSync" style="flex:1">↻ Buscar</button>
+      </div>
+      <div id="procList"></div>
+      <div class="empty" id="procEmpty" hidden>Nenhum processo liberado. Peça ao PC (Admin) para liberar um processo para este aparelho e toque em Buscar.</div>
+    </div>
+  </div>
+
+  <!-- CAMPO -->
+  <div id="fieldView" hidden>
+    <div class="card">
+      <span class="badge">EM CAMPO</span>
+      <h2 style="font-family:var(--display);margin:6px 0 2px" id="fNum"></h2>
+      <div class="muted" id="fParte"></div>
+    </div>
+    <div class="card">
+      <h2 style="font-family:var(--display)">Vistoria</h2>
+      <div class="row"><div><label>Data</label><input type="date" id="v_data"></div><div><label>Hora</label><input id="v_hora" placeholder="09:30"></div></div>
+      <label>Local / endereço vistoriado</label><input id="v_local" placeholder="Empresa, setor, cidade">
+      <label>Presentes</label><input id="v_pres" placeholder="Perito, preposto, reclamante…">
+      <label>Caracterização / o que foi observado</label><textarea id="v_desc" rows="4"></textarea>
+      <button class="btn sm" id="btnGps" style="margin-top:10px">📍 Capturar GPS</button> <span class="muted" id="gpsOut"></span>
+    </div>
+    <div class="card">
+      <h2 style="font-family:var(--display)">📷 Fotos</h2>
+      <div class="row">
+        <button class="btn" id="btnFoto">📷 Tirar foto</button>
+        <button class="btn" id="btnGaleria">🖼️ Da galeria</button>
+      </div>
+      <input type="file" id="camFoto" accept="image/*" capture="environment" hidden>
+      <input type="file" id="galFoto" accept="image/*" multiple hidden>
+      <div id="fotoList" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <h2 style="font-family:var(--display)">📈 Medições (opcional)</h2>
+      <div id="medList"></div>
+      <button class="btn sm" id="btnAddMed" style="margin-top:8px">+ Medição</button>
+    </div>
+    <div class="card">
+      <h2 style="font-family:var(--display)">🧾 Observações livres</h2>
+      <textarea id="f_obs" rows="3" placeholder="Anotações que o perito/assistente vai usar no PC"></textarea>
+    </div>
+  </div>
+</main>
+<div class="bar" id="fieldBar" hidden>
+  <button class="btn" id="btnSalvar">💾 Salvar</button>
+  <button class="btn laranja" id="btnDevolver">⬆ Finalizar e devolver ao PC</button>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const $=s=>document.querySelector(s);
+function flash(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(flash._t);flash._t=setTimeout(()=>t.classList.remove("show"),2800);}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+// --- IndexedDB (mídia de campo) ---
+let _db;function db(){return _db?Promise.resolve(_db):new Promise((res,rej)=>{const r=indexedDB.open("urbanclin_campo",1);r.onupgradeneeded=()=>r.result.createObjectStore("m");r.onsuccess=()=>{_db=r.result;res(_db);};r.onerror=()=>rej(r.error);});}
+async function idbPut(id,b){const d=await db();return new Promise((res)=>{const t=d.transaction("m","readwrite");t.objectStore("m").put(b,id);t.oncomplete=res;t.onerror=res;});}
+async function idbGet(id){const d=await db();return new Promise((res)=>{const t=d.transaction("m","readonly").objectStore("m").get(id);t.onsuccess=()=>res(t.result);t.onerror=()=>res(null);});}
+async function idbDel(id){const d=await db();return new Promise((res)=>{const t=d.transaction("m","readwrite");t.objectStore("m").delete(id);t.oncomplete=res;t.onerror=res;});}
+function b2b64(b){return new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(String(fr.result).split(",")[1]||"");fr.readAsDataURL(b);});}
+function b64toBlob(d,m){const bin=atob(d);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new Blob([u],{type:m||"application/octet-stream"});}
+async function downscale(file,max){max=max||1600;try{const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=URL.createObjectURL(file);});let{width:w,height:h}=img;const r=Math.min(1,max/Math.max(w,h));const cv=document.createElement("canvas");cv.width=Math.round(w*r);cv.height=Math.round(h*r);cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height);URL.revokeObjectURL(img.src);return await new Promise(res=>cv.toBlob(res,"image/jpeg",.82));}catch(e){return file;}}
+// --- config ---
+const LKEY="campo_pc_url",LDEV="campo_dev_name",LACT="campo_active";
+const pcUrl=()=>{try{return(localStorage.getItem(LKEY)||"").replace(/\/+$/,"");}catch(e){return"";}};
+const devName=()=>{try{return localStorage.getItem(LDEV)||"";}catch(e){return"";}};
+async function api(path,opts){const u=pcUrl();if(!u)throw new Error("Configure o endereço do PC (⚙).");const r=await fetch(u+path,opts);if(!r.ok){let e="";try{e=(await r.json()).error;}catch(x){}throw new Error(e||("HTTP "+r.status));}return r.json();}
+// --- estado do processo ativo ---
+let active=null;// {pid, state}
+function loadActive(){try{active=JSON.parse(localStorage.getItem(LACT)||"null");}catch(e){active=null;}}
+function saveActive(){try{localStorage.setItem(LACT,JSON.stringify(active));}catch(e){}flashSaved();}
+let _st;function flashSaved(){clearTimeout(_st);_st=setTimeout(()=>{},10);}
+
+function showCfg(on){$("#cfgCard").hidden=!on;}
+function updDevSub(){$("#devSub").textContent=(devName()||"aparelho sem nome")+(pcUrl()?" · "+pcUrl():" · sem PC");}
+
+// --- lista de liberados ---
+async function sync(){const el=$("#procList");try{const d=await api("/api/outbox?device="+encodeURIComponent(devName()));const recs=d.records||[];$("#procEmpty").hidden=recs.length>0;
+  el.innerHTML=recs.map(r=>`<div class="proc"><div class="num">${esc(r.numero)||"(sem número)"}</div><div class="muted">${esc(r.parte)||"—"} · ${esc(r.modulo||"")}</div><button class="btn primary sm" data-get="${esc(r.pid)}" style="margin-top:8px;width:100%">⬇ Baixar para trabalhar</button></div>`).join("");
+  el.querySelectorAll("[data-get]").forEach(b=>b.addEventListener("click",()=>baixar(b.dataset.get)));
+  flash(recs.length?recs.length+" processo(s) liberado(s).":"Nenhum processo liberado para você.");
+}catch(e){flash("Erro: "+e.message);}}
+
+async function baixar(pid){
+  if(active&&active.pid){if(!confirm("Você já tem um processo em campo. Baixar outro vai substituí-lo (o atual não foi devolvido). Continuar?"))return;}
+  try{flash("Baixando…");const rec=await api("/api/pull?pid="+encodeURIComponent(pid));
+    // grava mídia que vier (normalmente vazia) no IDB
+    if(rec.media){for(const id in rec.media){const it=rec.media[id];await idbPut(id, it.t==="text"?it.d:b64toBlob(it.d,it.m));}}
+    active={pid:pid,state:rec.state||{}};if(!active.state.media)active.state.media=[];if(!active.state.medicoes)active.state.medicoes=[];if(!active.state.vistoria)active.state.vistoria={};
+    saveActive();openField();flash("Baixado. Trabalhe offline; depois devolva ao PC.");
+  }catch(e){flash("Erro ao baixar: "+e.message);}
+}
+
+// --- tela de campo ---
+function openField(){
+  $("#listView").hidden=true;$("#cfgCard").hidden=true;$("#fieldView").hidden=false;$("#fieldBar").hidden=false;
+  const s=active.state,v=s.vistoria||{};
+  $("#fNum").textContent=(s.processo&&s.processo.numero)||"(sem número)";
+  $("#fParte").textContent=(s.partes&&(s.partes.autor||s.partes.reu))||"";
+  $("#v_data").value=v.data||"";$("#v_hora").value=v.hora||"";$("#v_local").value=v.local||"";$("#v_pres").value=v.presentes||"";$("#v_desc").value=v.desc||"";$("#f_obs").value=s.campoObs||"";
+  renderFotos();renderMed();
+}
+function closeField(){$("#fieldView").hidden=true;$("#fieldBar").hidden=true;$("#listView").hidden=false;}
+function bindField(){
+  const set=(id,fn)=>{const e=$(id);if(e)e.addEventListener("input",()=>{fn(e.value);active&&saveActive();});};
+  set("#v_data",v=>active.state.vistoria.data=v);set("#v_hora",v=>active.state.vistoria.hora=v);set("#v_local",v=>active.state.vistoria.local=v);set("#v_pres",v=>active.state.vistoria.presentes=v);set("#v_desc",v=>active.state.vistoria.desc=v);set("#f_obs",v=>active.state.campoObs=v);
+}
+async function renderFotos(){const w=$("#fotoList");const imgs=(active.state.media||[]).filter(m=>m.kind==="img");if(!imgs.length){w.innerHTML='<div class="empty">Sem fotos ainda.</div>';return;}
+  w.innerHTML="";for(const m of imgs){const b=await idbGet(m.id);const u=b?URL.createObjectURL(b):"";const el=document.createElement("div");el.className="ph";
+    el.innerHTML=`<img src="${u}"><div class="b"><textarea data-leg="${m.id}" placeholder="Legenda / o que mostra">${esc(m.legenda||"")}</textarea><input data-nor="${m.id}" value="${esc(m.norma||"")}" placeholder="NR (opcional)" style="margin-top:6px"><button class="btn danger sm" data-del="${m.id}" style="margin-top:6px">Remover</button></div>`;
+    w.appendChild(el);}
+  w.querySelectorAll("[data-leg]").forEach(t=>t.addEventListener("input",()=>{const m=active.state.media.find(x=>x.id===t.dataset.leg);if(m){m.legenda=t.value;saveActive();}}));
+  w.querySelectorAll("[data-nor]").forEach(t=>t.addEventListener("input",()=>{const m=active.state.media.find(x=>x.id===t.dataset.nor);if(m){m.norma=t.value;saveActive();}}));
+  w.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",async()=>{await idbDel(b.dataset.del);active.state.media=active.state.media.filter(x=>x.id!==b.dataset.del);saveActive();renderFotos();}));
+}
+async function addFotos(files){for(const f of files){if(!f.type.startsWith("image/"))continue;const b=await downscale(f);const id=uid();await idbPut(id,b);active.state.media.push({id,kind:"img",legenda:"",norma:"",ts:Date.now()});}saveActive();renderFotos();flash("Foto adicionada.");}
+function renderMed(){const w=$("#medList");const ms=active.state.medicoes||[];w.innerHTML=ms.map(m=>`<div class="row" style="margin-bottom:6px"><input data-ma="${m.id}" value="${esc(m.agente||"")}" placeholder="Agente"><input data-mv="${m.id}" value="${esc(m.valor||"")}" placeholder="Valor" style="max-width:90px"><input data-mu="${m.id}" value="${esc(m.unidade||"")}" placeholder="Un." style="max-width:70px"><button class="btn danger sm" data-mx="${m.id}" style="max-width:44px">×</button></div>`).join("")||'<div class="empty">Sem medições.</div>';
+  const b=(sel,f)=>w.querySelectorAll(sel).forEach(i=>i.addEventListener("input",()=>{const m=active.state.medicoes.find(x=>x.id===i.dataset[Object.keys(i.dataset)[0]]);if(m){m[f]=i.value;saveActive();}}));
+  w.querySelectorAll("[data-ma]").forEach(i=>i.addEventListener("input",()=>{const m=active.state.medicoes.find(x=>x.id===i.dataset.ma);if(m){m.agente=i.value;saveActive();}}));
+  w.querySelectorAll("[data-mv]").forEach(i=>i.addEventListener("input",()=>{const m=active.state.medicoes.find(x=>x.id===i.dataset.mv);if(m){m.valor=i.value;saveActive();}}));
+  w.querySelectorAll("[data-mu]").forEach(i=>i.addEventListener("input",()=>{const m=active.state.medicoes.find(x=>x.id===i.dataset.mu);if(m){m.unidade=i.value;saveActive();}}));
+  w.querySelectorAll("[data-mx]").forEach(b=>b.addEventListener("click",()=>{active.state.medicoes=active.state.medicoes.filter(x=>x.id!==b.dataset.mx);saveActive();renderMed();}));
+}
+async function devolver(){
+  if(!active){return;}
+  if(!confirm("Finalizar e devolver ao PC? O processo sai deste aparelho e volta para o PC."))return;
+  try{flash("Enviando ao PC…");
+    const media={};for(const m of (active.state.media||[])){const b=await idbGet(m.id);if(b==null)continue;media[m.id]={t:"blob",m:b.type||"image/jpeg",d:await b2b64(b)};}
+    await api("/api/checkin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pid:active.pid,payload:{state:active.state,media:media}})});
+    // limpa local
+    for(const m of (active.state.media||[]))await idbDel(m.id);
+    active=null;try{localStorage.removeItem(LACT);}catch(e){}
+    closeField();flash("Devolvido ao PC. Processo liberado do aparelho.");sync();
+  }catch(e){flash("Falha ao devolver (verifique a rede/PC): "+e.message);}
+}
+
+// --- wiring ---
+$("#btnCfg").addEventListener("click",()=>{const on=$("#cfgCard").hidden;if(on){$("#pcUrl").value=pcUrl();$("#devName").value=devName();}showCfg(on);});
+$("#btnSaveCfg").addEventListener("click",()=>{try{localStorage.setItem(LKEY,$("#pcUrl").value.trim());localStorage.setItem(LDEV,$("#devName").value.trim());}catch(e){}updDevSub();showCfg(false);flash("Configuração salva.");});
+$("#btnPing").addEventListener("click",async()=>{const o=$("#pingOut");o.textContent="testando…";try{const u=$("#pcUrl").value.trim().replace(/\/+$/,"");const r=await fetch(u+"/api/ping");const j=await r.json();o.textContent="Conectado ✓ (porta "+j.port+")";}catch(e){o.textContent="Não conectou. Confira o endereço e a rede WiFi.";}});
+$("#btnSync").addEventListener("click",sync);
+$("#btnGps").addEventListener("click",()=>{const o=$("#gpsOut");o.textContent="obtendo…";if(!navigator.geolocation){o.textContent="GPS indisponível";return;}navigator.geolocation.getCurrentPosition(p=>{const c=p.coords;const s=c.latitude.toFixed(5)+", "+c.longitude.toFixed(5)+" (±"+Math.round(c.accuracy)+"m)";active.state.gps=s;active.state.vistoria.presentes=(active.state.vistoria.presentes||"");saveActive();o.textContent="GPS: "+s;},()=>{o.textContent="Não foi possível obter o GPS.";},{enableHighAccuracy:true,timeout:10000});});
+$("#btnFoto").addEventListener("click",()=>$("#camFoto").click());
+$("#btnGaleria").addEventListener("click",()=>$("#galFoto").click());
+$("#camFoto").addEventListener("change",e=>{if(e.target.files.length)addFotos(e.target.files);e.target.value="";});
+$("#galFoto").addEventListener("change",e=>{if(e.target.files.length)addFotos(e.target.files);e.target.value="";});
+$("#btnAddMed").addEventListener("click",()=>{active.state.medicoes.push({id:uid(),agente:"",valor:"",unidade:""});saveActive();renderMed();});
+$("#btnSalvar").addEventListener("click",()=>{saveActive();flash("Salvo neste aparelho.");});
+$("#btnDevolver").addEventListener("click",devolver);
+bindField();updDevSub();loadActive();
+if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(()=>{});}
+if(active&&active.pid){openField();} else {if(!pcUrl())showCfg(true);}
+</script>
+</body>
+</html>
