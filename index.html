@@ -219,6 +219,7 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
   <button class="tab" role="tab" data-tab="laudo" aria-selected="false"><span class="n">7</span>Laudo</button>
   <button class="tab" role="tab" data-tab="nc" aria-selected="false"><span class="n">+</span>Não Conf.</button>
   <button class="tab" role="tab" data-tab="aceite" aria-selected="false"><span class="n">⚖</span>Aceite</button>
+  <button class="tab" role="tab" data-tab="desempenho" aria-selected="false"><span class="n">📊</span>Desempenho</button>
   <button class="tab" role="tab" data-tab="config" aria-selected="false"><span class="n">⚙</span>IA/Config</button>
 </nav>
 
@@ -593,6 +594,18 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
     </div>
   </section>
   <!-- CONFIG -->
+  <section class="panel" data-tab="desempenho">
+    <div class="card">
+      <h2>📊 Desempenho — acerto da perícia <span class="seal ia">USO INTERNO — NÃO ENTRA NO LAUDO</span></h2>
+      <p class="sub">Importe a <b>sentença</b> do juiz. A IA cruza petição + laudo + sentença e estima a <b>% do laudo acatada pelo juízo</b>, com os pontos-chave da decisão. Confidencial.</p>
+      <div class="drop" id="dropSent"><span class="ic">⚖️</span><b>Toque para escolher o PDF da sentença</b><span>ou arraste aqui. PDF digitalizado é lido por IA (OCR).</span></div>
+      <input type="file" id="sentInput" accept="application/pdf" hidden>
+      <div class="hint" id="sentResult"></div>
+      <div class="row-actions" style="margin-top:12px"><button class="btn ia" id="iaDesemp">✨ Analisar desempenho (IA)</button><span class="hint" id="desStatus"></span></div>
+      <div id="desempOut" style="margin-top:14px"></div>
+      <div class="row-actions" style="margin-top:10px"><button class="btn small" id="dlDesemp">⬇ Baixar análise (PDF)</button><button class="btn small" id="cpDesemp">⧉ Copiar</button></div>
+    </div>
+  </section>
   <section class="panel" data-tab="config">
     <div class="card">
       <h2>⚙️ IA (Gemini) <span class="seal ia">GEMINI</span></h2>
@@ -663,7 +676,7 @@ function blankState(){const adr=uid();return{
   medicoes:[],medMetodo:{ghe:"",pontos:"",leituras:"",incerteza:"",obs:""},aparelhos:[],epiDocs:[],
   docs:DOC_BASE.map(t=>({id:uid(),tipo:t,apresentado:"",validade:"",obs:"",hasText:false})),
   epi:[],quesitos:[],normas:NORMAS_BASE.map(n=>({code:n[0],desc:n[1],on:n[2]})),
-  media:[],ncs:[],conclusao:"",analise:"",
+  media:[],ncs:[],conclusao:"",analise:"",sentencaHas:false,desempenho:{pct:"",resumo:"",pontos:[]},
   encargo:{ofertado:"",proposto:"",prazo:"",banco:"",just:"",motivo:"Impossibilidade de agenda / acúmulo de trabalho",motcompl:"",km:"",cidade:""},
   auditoria:{abertura:null,fechamento:null,locked:false}
 };}
@@ -729,7 +742,7 @@ function hydrate(){BIND.forEach(([sel,get])=>{const el=$(sel);if(el)el.value=get
 function bindInputs(){BIND.forEach(([sel,,set])=>{const el=$(sel);if(el)el.addEventListener("input",()=>{set(state,el.value);save();if(sel==="#vc_admissao"||sel==="#vc_saida")renderEpiGap();});});}
 
 $$(".tab").forEach(t=>t.addEventListener("click",()=>{const id=t.dataset.tab;$$(".tab").forEach(x=>x.setAttribute("aria-selected",x===t));$$(".panel").forEach(p=>p.dataset.active=(p.dataset.tab===id));window.scrollTo({top:0,behavior:"smooth"});try{t.scrollIntoView({inline:"center",block:"nearest"});}catch(e){}if(id==="laudo")generateLaudo();}));
-const TAB_ORDER=["processo","docs","vistoria","medicoes","quesitos","normas","laudo","nc","aceite","config"];
+const TAB_ORDER=["processo","docs","vistoria","medicoes","quesitos","normas","laudo","nc","aceite","desempenho","config"];
 function curTab(){const t=document.querySelector('.tab[aria-selected="true"]');return t?t.dataset.tab:"processo";}
 function goTab(id){const t=document.querySelector('.tab[data-tab="'+id+'"]');if(t)t.click();}
 {const pv=$("#navPrevBtn"),nx=$("#navNextBtn");if(pv)pv.addEventListener("click",()=>{const i=TAB_ORDER.indexOf(curTab());if(i>0)goTab(TAB_ORDER[i-1]);});if(nx)nx.addEventListener("click",()=>{const i=TAB_ORDER.indexOf(curTab());if(i<TAB_ORDER.length-1)goTab(TAB_ORDER[i+1]);});}
@@ -1143,6 +1156,19 @@ Responda em tópicos curtos (uso interno do perito).`;
   try{const r=await s(prompt,{modelTier:"complex"});const t=((r&&r.text)||"").trim();const out=$("#matrizOut");if(out)out.textContent=t||"Sem incoerências relevantes apontadas.";if(st){st.style.color="var(--ok)";st.textContent="Análise concluída (uso interno).";}}
   catch(e){if(st){st.style.color="var(--warn)";st.textContent=iaErr(e);}}finally{if(b)b.disabled=false;}}
 {const _im=$("#iaMatriz");if(_im)_im.addEventListener("click",iaMatrizFn);}
+async function handleSentenca(file){const r=$("#sentResult");if(r){r.style.color="var(--muted)";r.innerHTML='<span class="spin"></span> Lendo sentença…';}try{const t=await pdfToText(file);if(!t.trim())throw 0;await idbPut("sentencatext_"+state.painelId,t);state.sentencaHas=true;save();if(r){r.style.color="var(--ok)";r.textContent="Sentença lida ("+t.length+" caracteres). Clique em Analisar.";}flash("Sentença carregada.");}catch(e){if(getKey()){try{if(r){r.style.color="var(--muted)";r.innerHTML='<span class="spin"></span> PDF digitalizado — lendo com IA (OCR)…';}const t2=await ocrPdf(file);if(t2&&t2.trim()){await idbPut("sentencatext_"+state.painelId,t2);state.sentencaHas=true;save();if(r){r.style.color="var(--ok)";r.textContent="Sentença lida por IA/OCR ("+t2.length+" caracteres).";}flash("Sentença lida (OCR).");return;}}catch(e2){}}if(r){r.style.color="var(--warn)";r.textContent="Não consegui ler. Configure o Gemini para OCR, ou tente outro arquivo.";}}}
+function renderDesempenho(){const w=$("#desempOut");if(!w)return;const d=state.desempenho||{};if(!d.pct&&!d.resumo){w.innerHTML='<p class="empty">Ainda sem análise. Importe a sentença e clique em Analisar desempenho.</p>';return;}const pct=parseInt(d.pct,10);const cor=isNaN(pct)?"var(--muted)":(pct>=70?"var(--ok)":pct>=40?"var(--warn)":"var(--danger)");w.innerHTML=`<div style="text-align:center;margin:6px 0 12px"><div style="font-family:var(--display);font-size:48px;font-weight:700;color:${cor};line-height:1">${isNaN(pct)?"—":pct+"%"}</div><div class="sub">do laudo acatado pelo juízo (estimativa da IA)</div></div>${d.resumo?`<p>${esc(d.resumo)}</p>`:""}${(d.pontos&&d.pontos.length)?`<h3 style="font-size:14px;margin-top:10px">Pontos-chave da sentença</h3><ul>${d.pontos.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:""}`;}
+function desempText(){const d=state.desempenho||{};const pct=parseInt(d.pct,10);return "ANÁLISE DE DESEMPENHO (uso interno — não integra o laudo)\nAutos nº "+(state.processo.numero||"—")+"\n\n% do laudo pericial acatado pelo juízo (estimativa): "+(isNaN(pct)?"—":pct+"%")+"\n\nResumo: "+(d.resumo||"—")+"\n\nPontos-chave da sentença:\n"+((d.pontos&&d.pontos.length)?d.pontos.map((x,i)=>(i+1)+") "+x).join("\n"):"—");}
+async function iaDesempenhoFn(){const st=$("#desStatus");const s=await getSample();if(!s){if(st){st.style.color="var(--warn)";st.textContent="Configure o Gemini (aba IA/Config).";}return;}const sent=await idbGet("sentencatext_"+state.painelId)||"";if(!sent.trim()){if(st){st.style.color="var(--warn)";st.textContent="Importe a sentença primeiro.";}return;}const btn=$("#iaDesemp");if(btn)btn.disabled=true;if(st){st.style.color="var(--muted)";st.innerHTML='<span class="spin"></span> Analisando a sentença…';}
+  await generateLaudo();const laudo=(($("#laudoDoc")||{}).innerText||"").slice(0,8000);
+  const prompt=`${IA_RULE}
+Você avalia o DESEMPENHO do PERITO. Com base na petição inicial, no laudo pericial e na SENTENÇA do juiz, estime quanto das CONCLUSÕES do laudo pericial foi ACATADO pelo juízo (0 a 100%). Dê a porcentagem de acerto do perito (quanto do laudo prevaleceu na decisão), um resumo objetivo e os pontos-chave da sentença (o que acolheu ou rejeitou do laudo). Baseie-se apenas nos textos; se faltar base, seja conservador.
+Petição (trecho): ${(state.peticao||"").slice(0,4000)}
+Laudo pericial (trecho): ${laudo}
+Sentença (trecho): ${sent.slice(0,8000)}
+Responda SOMENTE com JSON: {"pct":número inteiro de 0 a 100,"resumo":"2 a 5 linhas","pontos":["ponto-chave 1","ponto-chave 2"]}`;
+  try{const d=await s.json(prompt,{modelTier:"complex"});state.desempenho={pct:String(d.pct!=null?d.pct:""),resumo:String(d.resumo||""),pontos:Array.isArray(d.pontos)?d.pontos.map(String):[]};save();renderDesempenho();if(st){st.style.color="var(--ok)";st.textContent="Análise concluída (uso interno).";}flash("Desempenho analisado pela IA.");}catch(e){if(st){st.style.color="var(--warn)";st.textContent=iaErr(e);}}finally{if(btn)btn.disabled=false;}}
+{const _dd=$("#dropSent");if(_dd)wireDrop("#dropSent","#sentInput",f=>handleSentenca(f));const _id=$("#iaDesemp");if(_id)_id.addEventListener("click",iaDesempenhoFn);const _dl=$("#dlDesemp");if(_dl)_dl.addEventListener("click",()=>simplePdf("ANALISE DE DESEMPENHO",desempText(),fname("pdf","Desempenho")));const _cp=$("#cpDesemp");if(_cp)_cp.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(desempText());flash("Copiado.");}catch(e){flash("Não foi possível copiar.");}});}
 function renderAgentes(){const w=$("#agList");if(!w)return;w.innerHTML="";const opts=["Não constatada exposição significativa","Exposição caracterizada","Não aplicável"];const GRAUS=["Não caracterizado","Grau mínimo (10%)","Grau médio (20%)","Grau máximo (40%)"];state.agentes.forEach((a,i)=>{const el=document.createElement("div");el.className="doc-row";el.innerHTML=`<div class="top"><span class="tname">${esc(a.anexo)} — ${esc(a.nome)}</span><select data-ags="${i}" style="width:auto;min-width:240px">${opts.map(o=>`<option ${o===a.situacao?"selected":""}>${o}</option>`).join("")}</select><select data-agg="${i}" style="width:auto;min-width:160px;margin-left:6px" title="Enquadramento">${GRAUS.map(g=>`<option ${g===(a.grau||"Não caracterizado")?"selected":""}>${g}</option>`).join("")}</select></div><textarea data-aga="${i}" placeholder="Análise (opcional)" style="margin-top:8px;min-height:48px">${esc(a.analise)}</textarea>`;w.appendChild(el);});
   w.querySelectorAll("[data-ags]").forEach(sx=>sx.addEventListener("change",()=>{const a=state.agentes[+sx.dataset.ags];if(a){a.situacao=sx.value;save();}}));
   w.querySelectorAll("[data-aga]").forEach(t=>t.addEventListener("input",()=>{const a=state.agentes[+t.dataset.aga];if(a){a.analise=t.value;save();}}));
@@ -1407,7 +1433,7 @@ function renderVistMed(){const w=$("#vistMedResumo");if(!w)return;let h="";
   if(state.medicoes.length)h+=`<div class="tbl-wrap"><table class="data" style="min-width:auto"><thead><tr><th>Agente</th><th>Valor</th><th>Unid.</th><th>Limite</th><th>Resultado</th></tr></thead><tbody>`+state.medicoes.map(m=>`<tr><td>${esc(m.agente)||"—"}</td><td>${esc(m.valor)||"—"}</td><td>${esc(m.unidade)||"—"}</td><td>${esc(m.limite)||"—"}</td><td>${esc(m.resultado)||"—"}</td></tr>`).join("")+`</tbody></table></div>`;
   if(!h)h=`<div class="hint">Nenhum relatório/medição ainda. Anexe e analise na aba Medições.</div>`;
   w.innerHTML=h;}
-function renderAll(){renderProf();renderEquipe();renderDocs();renderEpi();renderEpiDocs();renderMed();renderApt();renderQuesitos();renderNormas();renderAtividades();renderAgentes();renderPeriodos();renderRoteiro();renderMedia();renderNc();renderAudit();applyLock();checkLaudo();updateTabDots();updateProcChip();}
+function renderAll(){renderProf();renderEquipe();renderDocs();renderEpi();renderEpiDocs();renderMed();renderApt();renderQuesitos();renderNormas();renderAtividades();renderAgentes();renderPeriodos();renderRoteiro();renderMedia();renderNc();renderAudit();renderDesempenho();applyLock();checkLaudo();updateTabDots();updateProcChip();}
 hydrate();bindInputs();renderAll();
 (function(){try{const idx=readIdx();const last=idx.slice().sort((a,b)=>(b.updated||0)-(a.updated||0))[0];const hl=$("#homeLast");if(hl&&last){hl.innerHTML=`Continuar: <b>${esc(last.numero||"processo sem número")}</b> · <span style="color:var(--accent);text-decoration:underline;cursor:pointer" id="homeCont">abrir ↗</span>`;const hc=$("#homeCont");if(hc)hc.addEventListener("click",()=>{const gp=$("#goPericia");if(gp)gp.click();});}
   const lb=parseInt(localStorage.getItem("last_backup_ts")||"0",10);if(idx.length&&(!lb||Date.now()-lb>7*864e5)){setTimeout(()=>flash("Lembrete: faça um backup dos processos (aba IA/Config → Exportar)."),1800);}}catch(e){}})();

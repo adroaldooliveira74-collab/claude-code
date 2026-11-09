@@ -198,6 +198,7 @@ table.data .del{color:var(--danger);border:1px solid var(--line);background:var(
   <button class="tab" role="tab" data-tab="normas" aria-selected="false"><span class="n">5</span>Referências</button>
   <button class="tab" role="tab" data-tab="laudo" aria-selected="false"><span class="n">6</span>Relatório</button>
   <button class="tab" role="tab" data-tab="aceite" aria-selected="false"><span class="n">7</span>Proposta</button>
+  <button class="tab" role="tab" data-tab="desempenho" aria-selected="false"><span class="n">📊</span>Desempenho</button>
   <button class="tab" role="tab" data-tab="config" aria-selected="false"><span class="n">⚙</span>IA/Config</button>
 </nav>
 
@@ -488,6 +489,18 @@ table.data .del{color:var(--danger);border:1px solid var(--line);background:var(
     </div>
   </section>
   <!-- CONFIG -->
+  <section class="panel" data-tab="desempenho">
+    <div class="card">
+      <h2>📊 Desempenho — impugnação do laudo <span class="seal ia">USO INTERNO — NÃO ENTRA NO RELATÓRIO</span></h2>
+      <p class="sub">Importe a <b>sentença</b> do juiz. A IA cruza petição + laudo pericial + o seu parecer + sentença e estima <b>quanto da perícia foi afastada/derrubada</b> em favor da reclamada, com os pontos-chave. Confidencial.</p>
+      <div class="drop" id="dropSent"><span class="ic">⚖️</span><b>Toque para escolher o PDF da sentença</b><span>ou arraste aqui. PDF digitalizado é lido por IA (OCR).</span></div>
+      <input type="file" id="sentInput" accept="application/pdf" hidden>
+      <div class="hint" id="sentResult"></div>
+      <div class="row-actions" style="margin-top:12px"><button class="btn ia" id="iaDesemp">✨ Analisar desempenho (IA)</button><span class="hint" id="desStatus"></span></div>
+      <div id="desempOut" style="margin-top:14px"></div>
+      <div class="row-actions" style="margin-top:10px"><button class="btn small" id="dlDesemp">⬇ Baixar análise (PDF)</button><button class="btn small" id="cpDesemp">⧉ Copiar</button></div>
+    </div>
+  </section>
   <section class="panel" data-tab="config">
     <div class="card">
       <h2>⚙️ IA (Gemini) <span class="seal ia">GEMINI</span></h2>
@@ -553,7 +566,7 @@ function blankState(){const adr=uid();return{
   medicoes:[],aparelhos:[],epiDocs:[],
   docs:DOC_BASE.map(t=>({id:uid(),tipo:t,apresentado:"",validade:"",obs:"",hasText:false})),
   epi:[],quesitos:[],normas:NORMAS_BASE.map(n=>({code:n[0],desc:n[1],on:n[2]})),
-  media:[],ncs:[],conclusao:"",analise:"",
+  media:[],ncs:[],conclusao:"",analise:"",sentencaHas:false,desempenho:{pct:"",resumo:"",pontos:[]},
   encargo:{ofertado:"",proposto:"",prazo:"",banco:"",just:"",motivo:"Impossibilidade de agenda / acúmulo de trabalho",motcompl:"",km:"",cidade:""},
   auditoria:{abertura:null,fechamento:null,locked:false}
 };}
@@ -617,7 +630,7 @@ function hydrate(){BIND.forEach(([sel,get])=>{const el=$(sel);if(el)el.value=get
 function bindInputs(){BIND.forEach(([sel,,set])=>{const el=$(sel);if(el)el.addEventListener("input",()=>{set(state,el.value);save();if(sel==="#vc_admissao"||sel==="#vc_saida")renderEpiGap();});});}
 
 $$(".tab").forEach(t=>t.addEventListener("click",()=>{const id=t.dataset.tab;$$(".tab").forEach(x=>x.setAttribute("aria-selected",x===t));$$(".panel").forEach(p=>p.dataset.active=(p.dataset.tab===id));window.scrollTo({top:0,behavior:"smooth"});try{t.scrollIntoView({inline:"center",block:"nearest"});}catch(e){}if(id==="laudo")generateLaudo();}));
-const TAB_ORDER=["processo","vistoria","medicoes","quesitos","normas","laudo","aceite","config"];
+const TAB_ORDER=["processo","vistoria","medicoes","quesitos","normas","laudo","aceite","desempenho","config"];
 function curTab(){const t=document.querySelector('.tab[aria-selected="true"]');return t?t.dataset.tab:"processo";}
 function goTab(id){const t=document.querySelector('.tab[data-tab="'+id+'"]');if(t)t.click();}
 {const pv=$("#navPrevBtn"),nx=$("#navNextBtn");if(pv)pv.addEventListener("click",()=>{const i=TAB_ORDER.indexOf(curTab());if(i>0)goTab(TAB_ORDER[i-1]);});if(nx)nx.addEventListener("click",()=>{const i=TAB_ORDER.indexOf(curTab());if(i<TAB_ORDER.length-1)goTab(TAB_ORDER[i+1]);});}
@@ -996,6 +1009,20 @@ Responda SOMENTE com JSON: {"sintese":"síntese objetiva do que o laudo pericial
   try{const d=await s.json(prompt,{modelTier:"complex"});const par=((d&&d.parecer)||"").trim();const sin=((d&&d.sintese)||"").trim();let any=false;if(sin){state.sintese=sin;any=true;}if(par){state.conclusao=par;const c=$("#concl");if(c)c.value=par;any=true;}if(any){save();generateLaudo();}st.style.color="var(--ok)";st.textContent="Parecer gerado — revise.";flash("Parecer de impugnação pronto.");}
   catch(e){st.style.color="var(--warn)";st.textContent=iaErr(e);}finally{if(b)b.disabled=false;}}
 {const _ip=$("#iaParecer");if(_ip)_ip.addEventListener("click",iaParecer);}
+async function handleSentenca(file){const r=$("#sentResult");if(r){r.style.color="var(--muted)";r.innerHTML='<span class="spin"></span> Lendo sentença…';}try{const t=await pdfToText(file);if(!t.trim())throw 0;await idbPut("sentencatext_"+state.painelId,t);state.sentencaHas=true;save();if(r){r.style.color="var(--ok)";r.textContent="Sentença lida ("+t.length+" caracteres). Clique em Analisar.";}flash("Sentença carregada.");}catch(e){if(getKey()){try{if(r){r.style.color="var(--muted)";r.innerHTML='<span class="spin"></span> PDF digitalizado — lendo com IA (OCR)…';}const t2=await ocrPdf(file);if(t2&&t2.trim()){await idbPut("sentencatext_"+state.painelId,t2);state.sentencaHas=true;save();if(r){r.style.color="var(--ok)";r.textContent="Sentença lida por IA/OCR ("+t2.length+" caracteres).";}flash("Sentença lida (OCR).");return;}}catch(e2){}}if(r){r.style.color="var(--warn)";r.textContent="Não consegui ler. Configure o Gemini para OCR, ou tente outro arquivo.";}}}
+function renderDesempenho(){const w=$("#desempOut");if(!w)return;const d=state.desempenho||{};if(!d.pct&&!d.resumo){w.innerHTML='<p class="empty">Ainda sem análise. Importe a sentença e clique em Analisar desempenho.</p>';return;}const pct=parseInt(d.pct,10);const cor=isNaN(pct)?"var(--muted)":(pct>=70?"var(--ok)":pct>=40?"var(--warn)":"var(--danger)");w.innerHTML=`<div style="text-align:center;margin:6px 0 12px"><div style="font-family:var(--display);font-size:48px;font-weight:700;color:${cor};line-height:1">${isNaN(pct)?"—":pct+"%"}</div><div class="sub">da perícia afastada em favor da reclamada (estimativa da IA)</div></div>${d.resumo?`<p>${esc(d.resumo)}</p>`:""}${(d.pontos&&d.pontos.length)?`<h3 style="font-size:14px;margin-top:10px">Pontos-chave da sentença</h3><ul>${d.pontos.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:""}`;}
+function desempText(){const d=state.desempenho||{};const pct=parseInt(d.pct,10);return "ANÁLISE DE DESEMPENHO (uso interno — não integra o relatório)\nAutos nº "+(state.processo.numero||"—")+"\n\n% da perícia afastada/derrubada em favor da reclamada (estimativa): "+(isNaN(pct)?"—":pct+"%")+"\n\nResumo: "+(d.resumo||"—")+"\n\nPontos-chave da sentença:\n"+((d.pontos&&d.pontos.length)?d.pontos.map((x,i)=>(i+1)+") "+x).join("\n"):"—");}
+async function iaDesempenhoFn(){const st=$("#desStatus");const s=await getSample();if(!s){if(st){st.style.color="var(--warn)";st.textContent="Configure o Gemini (aba IA/Config).";}return;}const sent=await idbGet("sentencatext_"+state.painelId)||"";if(!sent.trim()){if(st){st.style.color="var(--warn)";st.textContent="Importe a sentença primeiro.";}return;}const btn=$("#iaDesemp");if(btn)btn.disabled=true;if(st){st.style.color="var(--muted)";st.innerHTML='<span class="spin"></span> Analisando a sentença…';}
+  const laudo=(await idbGet("laudotext")||"").slice(0,7000);const parecer=(state.conclusao||"").slice(0,5000);
+  const prompt=`${IA_RULE}
+Você avalia o DESEMPENHO do ASSISTENTE TÉCNICO da reclamada. Com base na petição inicial, no laudo pericial, no PARECER TÉCNICO do assistente (impugnação) e na SENTENÇA do juiz, estime quanto das conclusões do LAUDO PERICIAL foi AFASTADO/DERRUBADO pela sentença em favor da reclamada (0 a 100%) — ou seja, o êxito da impugnação. Dê a porcentagem, um resumo objetivo e os pontos-chave da sentença (o que acolheu da impugnação e o que manteve do laudo). Baseie-se apenas nos textos; se faltar base, seja conservador.
+Petição (trecho): ${(state.peticao||"").slice(0,3000)}
+Laudo pericial (trecho): ${laudo}
+Parecer do assistente (trecho): ${parecer}
+Sentença (trecho): ${sent.slice(0,7000)}
+Responda SOMENTE com JSON: {"pct":número inteiro de 0 a 100,"resumo":"2 a 5 linhas","pontos":["ponto-chave 1","ponto-chave 2"]}`;
+  try{const d=await s.json(prompt,{modelTier:"complex"});state.desempenho={pct:String(d.pct!=null?d.pct:""),resumo:String(d.resumo||""),pontos:Array.isArray(d.pontos)?d.pontos.map(String):[]};save();renderDesempenho();if(st){st.style.color="var(--ok)";st.textContent="Análise concluída (uso interno).";}flash("Desempenho analisado pela IA.");}catch(e){if(st){st.style.color="var(--warn)";st.textContent=iaErr(e);}}finally{if(btn)btn.disabled=false;}}
+{const _dd=$("#dropSent");if(_dd)wireDrop("#dropSent","#sentInput",f=>handleSentenca(f));const _id=$("#iaDesemp");if(_id)_id.addEventListener("click",iaDesempenhoFn);const _dl=$("#dlDesemp");if(_dl)_dl.addEventListener("click",()=>simplePdf("ANALISE DE DESEMPENHO",desempText(),fname("pdf","Desempenho")));const _cp=$("#cpDesemp");if(_cp)_cp.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(desempText());flash("Copiado.");}catch(e){flash("Não foi possível copiar.");}});}
 function genPropostaTxt(){const PE=getPerito(),E=state.encargo,P=state.processo;const cliente=state.partes.reu||state.empresa.razao||"[reclamada]";
   return `PROPOSTA DE ASSISTÊNCIA TÉCNICA\n\nProcesso nº ${P.numero||"[número]"} — ${P.vara||"[vara]"}\nContratante (reclamada): ${cliente}\nPerito do processo: ${state.peritoProc.nome||"[perito]"}${state.peritoProc.crea?" ("+state.peritoProc.crea+")":""}\n\nPrezados, apresento proposta para atuação como ASSISTENTE TÉCNICO da reclamada, compreendendo: análise do laudo pericial, cruzamento com a petição inicial e documentos, vistoria/acompanhamento quando necessário e elaboração de PARECER TÉCNICO com vistas à impugnação do laudo.\n\nHonorários propostos: ${E.proposto||"R$ [valor]"}${E.prazo?`\nPrazo estimado: ${E.prazo} dias`:""}\n\n${E.just||"Valores: deslocamento a R$ 1,00/km rodado (ida e volta, de Perobal-PR), uma refeição e, acima de 100 km, diária de hotel; além das horas técnicas — estimativas a confirmar."}\n\nForma de pagamento${E.banco?": "+E.banco:" a combinar"}.\n\nColoco-me à disposição.\n\n${localCab()}, ${hojeExt()}.\n\n____________________________________\n${PE.nome||""}\n${[PE.formacao,PE.registro].filter(Boolean).join(" - ")}\nAssistente Técnico`;}
 
@@ -1197,7 +1224,7 @@ function renderVistMed(){const w=$("#vistMedResumo");if(!w)return;let h="";
   if(state.medicoes.length)h+=`<div class="tbl-wrap"><table class="data" style="min-width:auto"><thead><tr><th>Agente</th><th>Valor</th><th>Unid.</th><th>Limite</th><th>Resultado</th></tr></thead><tbody>`+state.medicoes.map(m=>`<tr><td>${esc(m.agente)||"—"}</td><td>${esc(m.valor)||"—"}</td><td>${esc(m.unidade)||"—"}</td><td>${esc(m.limite)||"—"}</td><td>${esc(m.resultado)||"—"}</td></tr>`).join("")+`</tbody></table></div>`;
   if(!h)h=`<div class="hint">Nenhum relatório/medição ainda. Anexe e analise na aba Medições.</div>`;
   w.innerHTML=h;}
-function renderAll(){renderProf();renderEquipe();renderDocs();renderEpi();renderEpiDocs();renderMed();renderApt();renderQuesitos();renderNormas();renderMedia();renderNc();renderAudit();applyLock();checkLaudo();updateTabDots();updateProcChip();}
+function renderAll(){renderProf();renderEquipe();renderDocs();renderEpi();renderEpiDocs();renderMed();renderApt();renderQuesitos();renderNormas();renderMedia();renderNc();renderAudit();renderDesempenho();applyLock();checkLaudo();updateTabDots();updateProcChip();}
 hydrate();bindInputs();renderAll();
 if(!$("#v_metodo").value)$("#v_metodo").value=state.vistoria.metodo;
 $("#saveTxt").textContent="✓ salvo";
