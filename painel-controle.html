@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel de Controle — UrbanClin</title>
+<script>window.VP_SKIP_LOCK=true;</script>
+<script src="vendor/tweetnacl.min.js"></script>
+<script src="licenca-config.js"></script>
+<script src="comercial.js"></script>
+<style>
+:root{--paper:#f6f8f1;--card:#fff;--ink:#1d2a1a;--muted:#5d6a59;--line:#dbe3d1;--accent:#007a36;--laranja:#f59c00;--danger:#b3261e;--ok:#1f7a3a;
+ --display:"Barlow Semi Condensed",Arial,sans-serif;--body:"Segoe UI",Roboto,Arial,sans-serif}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+.top{background:var(--card);padding:14px 20px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 12px -4px rgba(16,40,24,.18);position:sticky;top:0;z-index:5}
+.top::after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:linear-gradient(90deg,var(--laranja) 0 50%,#95c11f 50% 72%,var(--accent) 100%)}
+h1{font-family:var(--display);font-size:22px;margin:0}.sub{color:var(--muted);font-size:13px}
+main{max-width:920px;margin:0 auto;padding:20px 16px 70px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px;box-shadow:0 1px 2px rgba(16,40,24,.05)}
+.card h2{font-family:var(--display);font-size:18px;margin:0 0 12px;color:var(--accent);display:flex;align-items:center;gap:8px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:620px){.grid{grid-template-columns:1fr}}
+label.field{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted);font-weight:600}
+label.field input,label.field textarea{padding:9px 11px;border:1px solid #c2cdb4;border-radius:9px;font-size:14px;color:var(--ink);font-family:var(--body)}
+.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:9px;cursor:pointer;font-size:14px;font-weight:700;padding:10px 16px;display:inline-flex;align-items:center;gap:7px}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}.btn.primary:hover{color:#fff;filter:brightness(1.06)}
+.btn.warn{color:var(--danger);border-color:#f3d7d4}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.badge{font-size:12px;font-weight:800;text-transform:uppercase;padding:3px 10px;border-radius:999px}
+.badge.ok{background:#e4f3df;color:var(--ok)}.badge.bad{background:#f8e1df;color:var(--danger)}
+.logo-prev{width:150px;height:84px;border:1px dashed #c2cdb4;border-radius:9px;object-fit:contain;background:#fff;padding:6px}
+.color{display:flex;align-items:center;gap:8px}.color input[type=color]{width:46px;height:36px;border:1px solid #c2cdb4;border-radius:8px;padding:2px;background:#fff}
+.note{font-size:12.5px;color:var(--muted)}
+.prev{border:1px solid var(--line);border-radius:10px;padding:16px;text-align:center}
+.prev .ph{font-weight:800;font-size:16px}.prev .pf{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:11px 18px;border-radius:10px;font-size:13.5px;font-weight:600;opacity:0;transition:.2s;z-index:50}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="top">
+  <div><h1>⚙️ Painel de Controle</h1><div class="sub">Marca, dados, cores dos documentos e licença</div></div>
+  <div style="flex:1"></div>
+  <a class="btn" href="index.html">↗ Abrir programa</a>
+</div>
+<main>
+
+  <div class="card" id="licCard">
+    <h2>🔑 Licença de uso</h2>
+    <div class="row"><span>Situação:</span> <span id="licBadge" class="badge">—</span> <span class="note" id="licInfo"></span></div>
+    <div class="row">
+      <input id="licInput" placeholder="Cole aqui o código de liberação (12 meses)" style="flex:1;min-width:260px;padding:10px 12px;border:1px solid #c2cdb4;border-radius:9px;font-size:13px;font-family:ui-monospace,monospace">
+      <button class="btn primary" id="licAtivar">Ativar / Renovar</button>
+    </div>
+    <div class="note" style="margin-top:8px">Sem licença válida, o programa funciona em <b>modo consulta</b> (somente leitura): abre e consulta os processos, mas não edita nem gera documentos. A renovação é anual (12 meses).</div>
+  </div>
+
+  <div class="card">
+    <h2>🏷️ Marca (logotipo)</h2>
+    <div class="row" style="align-items:flex-start">
+      <img id="logoPrev" class="logo-prev" alt="logo">
+      <div>
+        <input type="file" id="logoFile" accept="image/*" hidden>
+        <button class="btn" id="logoBtn">Escolher logotipo…</button>
+        <button class="btn warn" id="logoClr">Remover</button>
+        <div class="note" style="margin-top:6px;max-width:320px">Aparece no cabeçalho do sistema e no topo dos documentos (laudo, relatório, PDFs). PNG ou JPG; ideal com fundo branco.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>🏢 Dados da empresa / profissional</h2>
+    <div class="grid">
+      <label class="field">Nome da empresa / marca<input id="e_nome"></label>
+      <label class="field">Abrangência (ex.: Atendimento em todo o Paraná)<input id="e_abr"></label>
+      <label class="field">Cidade<input id="e_cidade"></label>
+      <label class="field">UF<input id="e_uf"></label>
+      <label class="field">Telefone<input id="e_tel"></label>
+      <label class="field">E-mail<input id="e_email"></label>
+      <label class="field">Profissional (nome)<input id="p_nome"></label>
+      <label class="field">Formação<input id="p_form"></label>
+      <label class="field">Registro (CREA/CAU)<input id="p_reg"></label>
+    </div>
+    <div class="note" style="margin-top:8px">O nome, a cidade, o telefone e o e-mail formam o <b>timbre</b> (rodapé) de todos os documentos.</div>
+  </div>
+
+  <div class="card">
+    <h2>🎨 Cores dos documentos</h2>
+    <div class="grid">
+      <label class="field">Cor principal (títulos, cabeçalhos)<span class="color"><input type="color" id="c_prim"><input id="c_prim_t" style="flex:1"></span></label>
+      <label class="field">Cor secundária (detalhes)<span class="color"><input type="color" id="c_sec"><input id="c_sec_t" style="flex:1"></span></label>
+    </div>
+    <div class="prev" style="margin-top:14px" id="prev">
+      <img id="prevLogo" class="logo-prev" style="height:60px" alt="">
+      <div class="ph" id="prevH">LAUDO PERICIAL</div>
+      <div class="pf" id="prevF"></div>
+    </div>
+  </div>
+
+  <div class="row" style="position:sticky;bottom:0;background:var(--paper);padding:12px 0">
+    <button class="btn primary" id="salvar">💾 Salvar tudo</button>
+    <button class="btn warn" id="restaurar">Restaurar padrão UrbanClin</button>
+    <span class="note">As mudanças valem para este computador (todos os módulos).</span>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+const $=s=>document.querySelector(s);
+function flash(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(flash._t);flash._t=setTimeout(()=>t.classList.remove("show"),2400);}
+const DEF={empresa:{nome:"UrbanClin — Medicina e Segurança do Trabalho",cidade:"Perobal",uf:"PR",abrangencia:"Atendimento em todo o Estado do Paraná",tel:"(47) 99167-1874",email:"a.marques_74@live.com"},profissional:{nome:"",formacao:"Engenheiro de Segurança do Trabalho",registro:""},cores:{principal:"#007a36",secundaria:"#f59c00"},logo:"",logoFooter:""};
+function load(){let b={};try{b=JSON.parse(localStorage.getItem("vp_brand")||"{}");}catch(e){}
+  return {empresa:Object.assign({},DEF.empresa,b.empresa||{}),profissional:Object.assign({},DEF.profissional,b.profissional||{}),cores:Object.assign({},DEF.cores,b.cores||{}),logo:b.logo||"",logoFooter:b.logoFooter||""};}
+let B=load();
+function fill(){
+  $("#e_nome").value=B.empresa.nome;$("#e_abr").value=B.empresa.abrangencia;$("#e_cidade").value=B.empresa.cidade;$("#e_uf").value=B.empresa.uf;$("#e_tel").value=B.empresa.tel;$("#e_email").value=B.empresa.email;
+  $("#p_nome").value=B.profissional.nome;$("#p_form").value=B.profissional.formacao;$("#p_reg").value=B.profissional.registro;
+  $("#c_prim").value=B.cores.principal;$("#c_prim_t").value=B.cores.principal;$("#c_sec").value=B.cores.secundaria;$("#c_sec_t").value=B.cores.secundaria;
+  const lg=B.logo||defaultLogo();$("#logoPrev").src=lg;$("#prevLogo").src=lg;
+  preview();
+}
+function defaultLogo(){try{return (window.BRAND&&!B.logo)?document.querySelector("#brandLogo")?.src||"":"";}catch(e){return"";}}
+function collect(){
+  return {empresa:{nome:$("#e_nome").value.trim(),cidade:$("#e_cidade").value.trim(),uf:$("#e_uf").value.trim(),abrangencia:$("#e_abr").value.trim(),tel:$("#e_tel").value.trim(),email:$("#e_email").value.trim()},
+    profissional:{nome:$("#p_nome").value.trim(),formacao:$("#p_form").value.trim(),registro:$("#p_reg").value.trim()},
+    cores:{principal:$("#c_prim_t").value.trim()||"#007a36",secundaria:$("#c_sec_t").value.trim()||"#f59c00"},
+    logo:B.logo||"",logoFooter:B.logo||""};
+}
+function preview(){
+  const b=collect();
+  $("#prevH").style.color=b.cores.principal;
+  document.documentElement.style.setProperty("--accent",b.cores.principal);
+  document.documentElement.style.setProperty("--laranja",b.cores.secundaria);
+  const rod=[b.empresa.nome,(b.empresa.cidade?b.empresa.cidade+(b.empresa.uf?" - "+b.empresa.uf:""):"")+(b.empresa.abrangencia?" · "+b.empresa.abrangencia:""),[b.empresa.tel,b.empresa.email].filter(Boolean).join(" · ")].filter(x=>x&&x.trim());
+  $("#prevF").innerHTML=rod.join("<br>");
+}
+["e_nome","e_abr","e_cidade","e_uf","e_tel","e_email","c_prim_t","c_sec_t"].forEach(id=>$("#"+id).addEventListener("input",preview));
+$("#c_prim").addEventListener("input",e=>{$("#c_prim_t").value=e.target.value;preview();});
+$("#c_sec").addEventListener("input",e=>{$("#c_sec_t").value=e.target.value;preview();});
+$("#c_prim_t").addEventListener("input",e=>{if(/^#[0-9a-f]{6}$/i.test(e.target.value))$("#c_prim").value=e.target.value;});
+$("#c_sec_t").addEventListener("input",e=>{if(/^#[0-9a-f]{6}$/i.test(e.target.value))$("#c_sec").value=e.target.value;});
+$("#logoBtn").addEventListener("click",()=>$("#logoFile").click());
+$("#logoFile").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{B.logo=r.result;$("#logoPrev").src=r.result;$("#prevLogo").src=r.result;flash("Logo carregada — clique em Salvar.");};r.readAsDataURL(f);e.target.value="";});
+$("#logoClr").addEventListener("click",()=>{B.logo="";fill();flash("Logo removida — clique em Salvar.");});
+$("#salvar").addEventListener("click",()=>{const b=collect();localStorage.setItem("vp_brand",JSON.stringify(b));B=load();flash("✅ Configuração salva. Vale para todos os módulos.");});
+$("#restaurar").addEventListener("click",()=>{if(!confirm("Restaurar a marca padrão UrbanClin? Isso apaga a personalização."))return;localStorage.removeItem("vp_brand");B=load();B.logo="";fill();flash("Padrão restaurado.");});
+
+// ---- licença ----
+function dataBR(iso){return iso?iso.split("-").reverse().join("/"):"";}
+function refreshLic(){
+  const L=(window.VP&&window.VP.license)||{state:"sem"};
+  const bd=$("#licBadge"),inf=$("#licInfo");
+  if(L.state==="ativa"){bd.className="badge ok";bd.textContent="Ativa";inf.textContent=(L.pl?("Licenciado para "+(L.pl.n||"—")+" · válida até "+dataBR(L.pl.exp)):"");}
+  else if(L.state==="expirada"){bd.className="badge bad";bd.textContent="Expirada";inf.textContent=(L.pl?("Venceu em "+dataBR(L.pl.exp)+" — modo consulta"):"modo consulta");}
+  else if(L.state==="invalida"){bd.className="badge bad";bd.textContent="Inválida";inf.textContent="código não reconhecido — modo consulta";}
+  else{bd.className="badge bad";bd.textContent="Sem licença";inf.textContent="modo consulta (somente leitura)";}
+}
+$("#licAtivar").addEventListener("click",()=>{
+  const k=$("#licInput").value.trim();if(!k){flash("Cole o código primeiro.");return;}
+  const v=window.VP.verify(k);
+  if(!v.ok){flash("Código inválido.");return;}
+  const hoje=new Date().toISOString().slice(0,10);
+  if(hoje>v.pl.exp){flash("Código vencido ("+dataBR(v.pl.exp)+").");return;}
+  localStorage.setItem("vp_lic",k);
+  flash("✅ Licença ativada até "+dataBR(v.pl.exp));
+  setTimeout(()=>location.reload(),900);
+});
+fill();refreshLic();
+</script>
+</body>
+</html>
