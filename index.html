@@ -715,6 +715,7 @@ function $(s){return document.querySelector(s);}function $$(s){return[...documen
 function flash(m){const f=$("#flash");f.innerHTML=m;f.classList.add("show");clearTimeout(f._t);f._t=setTimeout(()=>f.classList.remove("show"),2300);}
 const esc=s=>(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const clean=s=>s.replace(/\s+/g," ").trim().replace(/[.,;]$/,"");
+const titleCase=s=>clean(s||"").toLowerCase().replace(/\b([a-zà-ú])([a-zà-ú'’]*)/g,(m,a,b)=>a.toUpperCase()+b).replace(/\b(Da|De|Do|Das|Dos|E)\b/g,m=>m.toLowerCase());
 function fmtDate(d){if(!d)return"";const p=d.split("-");return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:d;}
 function getPerito(){return state.equipe.find(p=>p.id===state.peritoId)||state.equipe[0]||{nome:"",formacao:"",registro:"",email:"",tel:""};}
 function getAssist(){return state.assistentes.map(id=>state.equipe.find(p=>p.id===id)).filter(Boolean);}
@@ -764,13 +765,14 @@ function updateTabDots(){$$(".tab").forEach(t=>{t.classList.toggle("done",tabDon
 
 function parsePeticao(txt){const found=[];const put=(sel,setter,val,label)=>{if(val){setter(state,val);const el=$(sel);if(el)el.value=val;found.push(label);}};
   const cnj=txt.match(/\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/);if(cnj)put("#p_numero",(s,v)=>s.processo.numero=v,cnj[0],"processo");
-  const vara=txt.match(/\d{0,2}\s*[ªaº°]?\s*Vara(?:\s+do\s+Trabalho)?[^\n.,;]{0,40}/i);if(vara)put("#p_vara",(s,v)=>s.processo.vara=v,clean(vara[0]),"vara");
-  const com=txt.match(/Comarca\s+(?:de\s+)?[^\n.,;]{2,45}/i);if(com)put("#p_comarca",(s,v)=>s.processo.comarca=v,clean(com[0]),"comarca");
+  const vm=txt.match(/(?:(\d{1,2})\s*[ªaº°]\s*)?Vara\s+do\s+Trabalho(?:\s+(?:de|d[ao]\s+comarca\s+de)\s+([A-ZÀ-Úa-zà-ú][^\n.,;\-]{1,34}))?/i);
+  if(vm){let v=(vm[1]?vm[1]+"ª ":"")+"Vara do Trabalho";const cid=clean(vm[2]||"");if(cid)v+=" de "+titleCase(cid);put("#p_vara",(s,x)=>s.processo.vara=x,v,"vara");}
+  const com=txt.match(/Comarca\s+de\s+([A-ZÀ-Úa-zà-ú][^\n.,;\-]{1,34})/i);if(com)put("#p_comarca",(s,v)=>s.processo.comarca=v,titleCase(com[1]),"comarca");
   const val=txt.match(/R\$\s?[\d.]+,\d{2}/);if(val)put("#p_valor",(s,v)=>s.processo.valor=v,val[0],"valor");
   const cnpj=txt.match(/\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/);if(cnpj)put("#e_cnpj",(s,v)=>s.empresa.cnpj=v,cnpj[0],"CNPJ");
   const a=matchParte(txt,/(?:reclamante|autor(?:a)?|requerente|exequente)s?\s*[:\-–]\s*/i);if(a)put("#pt_autor",(s,v)=>s.partes.autor=v,a,"reclamante");
   const r=matchParte(txt,/(?:reclamad[oa]|r[ée]u|requerid[oa]|executad[oa])s?\s*[:\-–]\s*/i);if(r){put("#pt_reu",(s,v)=>s.partes.reu=v,r,"reclamada");if(!state.empresa.razao){state.empresa.razao=r;$("#e_razao").value=r;}}
-  state.peticao=txt;save();const el=$("#petResult");el.style.color=found.length?"var(--ok)":"var(--warn)";
+  state.peticao=txt;{const pt=$("#peticao");if(pt)pt.value=txt;}save();const el=$("#petResult");el.style.color=found.length?"var(--ok)":"var(--warn)";
   el.textContent=found.length?("Extraído: "+found.join(", ")+". Revise."):"Nada reconhecido — preencha manualmente.";flash(found.length?"Cadastro preenchido — revise.":"Nada reconhecido no PDF.");iaObjetoFn(true);}
 function matchParte(txt,re){const m=txt.match(re);if(!m)return"";const a=txt.slice(m.index+m[0].length,m.index+m[0].length+90);return clean(a.split(/[,;\n]|\bbrasileir|\binscrit|\bportador|\bCPF|\bCNPJ|\bCTPS/i)[0]).slice(0,70);}
 
