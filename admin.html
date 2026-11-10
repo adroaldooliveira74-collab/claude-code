@@ -37,6 +37,7 @@ input{padding:9px 11px;border:1px solid #c2cdb4;border-radius:9px;font-size:14px
 </style>
 </head>
 <body>
+<script>window.__PIN__="%%PIN%%";</script>
 <div class="top">
   <div><h1>🗂️ Admin · Sincronização</h1><div class="sub">UrbanClin — estação do PC (servidor da rede)</div></div>
   <div class="sp"></div>
@@ -44,9 +45,11 @@ input{padding:9px 11px;border:1px solid #c2cdb4;border-radius:9px;font-size:14px
 </div>
 <main>
   <div class="card conn">
-    <b>Como o celular conecta:</b> na mesma rede WiFi, no app do celular, informe o endereço
+    <b>Como o celular conecta:</b> na mesma rede WiFi, no app do celular, informe o endereço e o PIN:
     <div id="connAddr" style="margin-top:6px;font-size:16px"></div>
-    <div class="note" style="margin-top:6px">Mantenha este programa aberto no PC enquanto o celular estiver sincronizando.</div>
+    <div style="margin-top:8px;font-size:16px">PIN de pareamento: <b id="pinBox" style="font-size:22px;letter-spacing:3px">----</b></div>
+    <div class="note" style="margin-top:6px">Mantenha este programa aberto no PC durante a sincronização. <span id="dataDir"></span></div>
+    <div class="row-actions" style="margin-top:10px"><button class="btn small" id="btnBackupAll">💾 Baixar backup de TODOS</button></div>
   </div>
 
   <div class="card">
@@ -66,9 +69,11 @@ input{padding:9px 11px;border:1px solid #c2cdb4;border-radius:9px;font-size:14px
 const $=s=>document.querySelector(s);
 function flash(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(flash._t);flash._t=setTimeout(()=>t.classList.remove("show"),2600);}
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
-async function api(path,opts){const r=await fetch(path,opts);if(!r.ok){let e="";try{e=(await r.json()).error;}catch(x){}throw new Error(e||("HTTP "+r.status));}return r.json();}
+const PIN=(window.__PIN__&&window.__PIN__.indexOf("__")!==0)?window.__PIN__:"";
+async function api(path,opts){opts=opts||{};opts.headers=Object.assign({"x-pin":PIN},opts.headers||{});const r=await fetch(path,opts);if(!r.ok){let e="";try{e=(await r.json()).error;}catch(x){}throw new Error(e||("HTTP "+r.status));}return r.json();}
 
-async function loadConn(){try{const p=await api("/api/ping");const ips=p.ips||[];$("#connAddr").innerHTML=ips.length?ips.map(ip=>`<b>http://${ip}:${p.port}</b>`).join(" &nbsp;ou&nbsp; "):`<b>http://(IP do PC):${p.port}</b> — descubra o IP do PC na rede WiFi`;}catch(e){$("#connAddr").textContent="servidor não respondeu";}}
+async function loadConn(){try{const p=await (await fetch("/api/ping")).json();const ips=p.ips||[];$("#connAddr").innerHTML=ips.length?ips.map(ip=>`<b>http://${ip}:${p.port}</b>`).join(" &nbsp;ou&nbsp; "):`<b>http://(IP do PC):${p.port}</b> — descubra o IP do PC na rede WiFi`;$("#pinBox").textContent=PIN||"(sem PIN)";}catch(e){$("#connAddr").textContent="servidor não respondeu";}
+  try{const dd=await api("/api/datadir");$("#dataDir").textContent="Dados do PC: "+dd.dir;}catch(e){}}
 
 function when(ts){try{return new Date(ts).toLocaleString("pt-BR");}catch(e){return"";}}
 async function render(){
@@ -76,14 +81,17 @@ async function render(){
   recs.sort((a,b)=>(b.updated||0)-(a.updated||0));
   $("#empty").hidden=recs.length>0;$("#count").textContent=recs.length+" processo(s)";
   $("#list").innerHTML=recs.map(r=>{
-    const dev=r.location==="device";
+    const dev=r.location==="device";const baixado=dev&&r.downloaded;
+    const badge=dev?(baixado?("EM CAMPO — "+esc(r.device||"celular")+" · baixado/bloqueado"):("AGUARDANDO "+esc(r.device||"celular")+" baixar")):"NO PC";
     return `<div class="row ${dev?"device":"pc"}">
       <span class="num">${esc(r.numero)||"(sem número)"}</span>
-      <span class="badge ${dev?"device":"pc"}">${dev?("EM CAMPO — "+esc(r.device||"celular")+" · bloqueado"):"NO PC"}</span>
+      <span class="badge ${dev?"device":"pc"}">${badge}</span>
       <span class="note">${esc(r.parte)||"—"} · ${esc(r.modulo||"")} · ${when(r.updated)}</span>
       <span class="sp"></span>
       ${dev
-        ? `<button class="btn danger small" data-cancel="${esc(r.pid)}">Cancelar liberação</button>`
+        ? (baixado
+            ? `<button class="btn danger small" data-rec="${esc(r.pid)}">Recuperar (aparelho sumiu)</button>`
+            : `<button class="btn small" data-cancel="${esc(r.pid)}">Cancelar liberação</button>`)
         : `<button class="btn primary small" data-release="${esc(r.pid)}">📲 Liberar para o celular</button><button class="btn small" data-export="${esc(r.pid)}">⬇ Exportar</button>`}
     </div>`;
   }).join("");
@@ -93,8 +101,12 @@ async function render(){
     try{await api("/api/release",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pid:b.dataset.release,device:dev||"celular"})});flash("Liberado para "+(dev||"celular")+". Bloqueado no PC até a devolução.");render();}catch(e){flash("Erro: "+e.message);}
   }));
   $("#list").querySelectorAll("[data-cancel]").forEach(b=>b.addEventListener("click",async()=>{
-    if(!confirm("Cancelar a liberação? Só faça isso se o celular NÃO estiver trabalhando neste processo (pode perder o trabalho de campo)."))return;
+    if(!confirm("Cancelar a liberação? Só faça isso se o celular ainda NÃO baixou este processo."))return;
     try{await api("/api/cancel",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pid:b.dataset.cancel})});flash("Liberação cancelada.");render();}catch(e){flash("Erro: "+e.message);}
+  }));
+  $("#list").querySelectorAll("[data-rec]").forEach(b=>b.addEventListener("click",async()=>{
+    if(!confirm("RECUPERAR sem o celular? Use só se o aparelho sumiu/quebrou. ATENÇÃO: o trabalho de campo que não foi devolvido será PERDIDO."))return;
+    try{await api("/api/cancel",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pid:b.dataset.rec})});flash("Processo recuperado para o PC.");render();}catch(e){flash("Erro: "+e.message);}
   }));
   $("#list").querySelectorAll("[data-export]").forEach(b=>b.addEventListener("click",async()=>{
     try{const rec=await api("/api/pull?pid="+encodeURIComponent(b.dataset.export));const blob=new Blob([JSON.stringify({_app:"perito-laudo",_v:5,ts:new Date().toISOString(),state:rec.state,media:rec.media||{}})],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="processo_"+((rec.state.processo&&rec.state.processo.numero)||"sem_numero").replace(/[^\dA-Za-z]+/g,"_")+".perito.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);flash("Exportado — importe no app para editar.");}catch(e){flash("Erro: "+e.message);}
@@ -102,6 +114,7 @@ async function render(){
 }
 function importBackup(file){const r=new FileReader();r.onload=async()=>{try{const p=JSON.parse(r.result);const recs=p._all&&Array.isArray(p.records)?p.records:(p.state?[{state:p.state,media:p.media||{}}]:[]);if(!recs.length){flash("Backup não reconhecido.");return;}let n=0;for(const rec of recs){await api("/api/seed",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(rec)});n++;}flash(n+" processo(s) importado(s) para o PC.");render();}catch(e){flash("Erro: "+e.message);}};r.readAsText(file);}
 
+$("#btnBackupAll").addEventListener("click",async()=>{try{const recs=(await api("/api/list")).records||[];const out=[];for(const r of recs){const rec=await api("/api/pull?pid="+encodeURIComponent(r.pid));out.push({state:rec.state,media:rec.media||{}});}const blob=new Blob([JSON.stringify({_app:"perito-laudo",_v:5,_all:true,ts:new Date().toISOString(),records:out})],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="backup_servidor_TODOS.perito.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);flash(out.length+" processo(s) exportado(s).");}catch(e){flash("Erro: "+e.message);}});
 $("#btnRefresh").addEventListener("click",render);
 $("#btnImport").addEventListener("click",()=>$("#impFile").click());
 $("#impFile").addEventListener("change",e=>{if(e.target.files[0])importBackup(e.target.files[0]);e.target.value="";});
