@@ -77,9 +77,9 @@ def expandir_caminho(p):
     p = p.strip()
     marcador = "AREA_DE_TRABALHO"
     if p.upper().startswith(marcador):
-        resto = p[len(marcador):].lstrip("\\/")
+        resto = p[len(marcador):].lstrip("\\/").replace("\\", os.sep).replace("/", os.sep)
         return os.path.join(pasta_area_de_trabalho(), resto) if resto else pasta_area_de_trabalho()
-    p = os.path.expanduser(p)
+    p = os.path.expanduser(p).replace("\\", os.sep)
     if not os.path.isabs(p):
         p = os.path.join(AQUI, p)
     return p
