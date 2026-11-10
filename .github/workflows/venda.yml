@@ -43,15 +43,23 @@ jobs:
         shell: pwsh
       - name: Instalar dependências
         run: npm install
+      - name: Preparar assinatura (só se houver certificado nos Secrets)
+        shell: pwsh
+        env:
+          CERT: ${{ secrets.WINDOWS_CERT_BASE64 }}
+          PW: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        run: |
+          if ($env:CERT -and $env:CERT.Length -gt 0) {
+            Add-Content -Path $env:GITHUB_ENV -Value "CSC_LINK=$env:CERT"
+            Add-Content -Path $env:GITHUB_ENV -Value "CSC_KEY_PASSWORD=$env:PW"
+            Write-Host "Certificado encontrado — o .exe sera ASSINADO."
+          } else {
+            Write-Host "Sem certificado nos Secrets — build normal (sem assinatura)."
+          }
       - name: Compilar executável portátil
         run: npx electron-builder --win portable --publish never
         env:
           GH_TOKEN: ""
-          # Assinatura de código (opcional): se você adicionar o certificado
-          # nos Secrets do repositório, o .exe sai ASSINADO automaticamente e
-          # some o aviso do Windows. Sem os secrets, compila normal (sem assinar).
-          CSC_LINK: ${{ secrets.WINDOWS_CERT_BASE64 }}
-          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
       - name: Renomear EXE
         run: Copy-Item (Get-ChildItem dist/*.exe | Select-Object -First 1).FullName -Destination "Perito-Laudo-PC.exe"
         shell: pwsh
