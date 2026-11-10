@@ -1,5 +1,5 @@
 {
-  "_comentario": "Edite este arquivo. Todas as posicoes (x,y) voce descobre rodando: python claude_muse_bot.py --calibrar",
+  "_comentario": "Edite este arquivo. O robo le o arquivo do Vistoria, o Claude gera os relatorios e eles sao salvos na pasta de saida.",
 
   "vistoria": {
     "_comentario": "O app Vistoria gera um arquivo todo dia as 16:00. O bot le esse arquivo e entrega ao Claude.",
@@ -14,35 +14,14 @@
     "comando": "claude",
     "modelo": "",
     "continuar_conversa": true,
-    "prompt_inicial": "Com base no TEXTO DO APP VISTORIA que vou colar abaixo, voce vai me comandar as atualizacoes do dia para eu publicar no muse.ai, UMA DE CADA VEZ. Responda SEMPRE exatamente neste formato, sem mais nada:\nACAO: upload\nTITULO: nome-curto-sem-espacos\nCONTEUDO:\n<o texto completo da atualizacao, pronto para publicar>\n\nQuando nao houver mais nada a fazer hoje, responda apenas:\nACAO: nada\n\nComece agora pela primeira atualizacao a partir do texto do Vistoria.",
-    "prompt_proximo": "Publiquei a atualizacao anterior com sucesso no muse.ai. Qual a proxima? Mesmo formato exato (ACAO/TITULO/CONTEUDO). Se ja zeramos tudo que foi pedido hoje, responda apenas: ACAO: nada",
+    "prompt_inicial": "Com base no TEXTO DO APP VISTORIA que vou colar abaixo, voce vai me comandar os relatorios do dia, UM DE CADA VEZ, para eu salvar em arquivo. Responda SEMPRE exatamente neste formato, sem mais nada:\nACAO: salvar\nTITULO: nome-curto-sem-espacos\nCONTEUDO:\n<o texto completo do relatorio, pronto>\n\nQuando nao houver mais nada a fazer hoje, responda apenas:\nACAO: nada\n\nComece agora pelo primeiro relatorio a partir do texto do Vistoria.",
+    "prompt_proximo": "Salvei o relatorio anterior. Qual o proximo? Mesmo formato exato (ACAO/TITULO/CONTEUDO). Se ja zeramos tudo que foi pedido hoje, responda apenas: ACAO: nada",
     "timeout_segundos": 300,
     "diretorio_de_trabalho": ""
   },
 
-  "muse_api": {
-    "_comentario": "JEITO FACIL: cole sua chave do muse.ai no campo 'chave' abaixo, entre as aspas. (Alternativa avancada: deixar 'chave' vazio e usar a variavel de ambiente MUSE_API_KEY.)",
-    "ativo": true,
-    "chave": "",
-    "url_upload": "https://muse.ai/api/files/upload",
-    "variavel_ambiente_chave": "MUSE_API_KEY",
-    "collection_id": "",
-    "timeout_segundos": 300
-  },
-
-  "muse": {
-    "_comentario": "Usado APENAS no loop de duvidas (colar a resposta no navegador). Descubra as coordenadas com --calibrar.",
-    "campo_entrada_xy": [800, 900],
-    "area_resposta_xy": [800, 500],
-    "botao_enviar_xy": null,
-    "usar_enter_para_enviar": true,
-    "segundos_espera_resposta": 20,
-    "tratar_duvidas": true
-  },
-
   "loop": {
     "max_iteracoes": 10,
-    "texto_que_indica_fim": ["concluido", "finalizado", "sem duvidas", "ok, obrigado", "zerado"],
     "segundos_entre_acoes": 2.0
   },
 
@@ -51,7 +30,7 @@
   },
 
   "arquivos": {
-    "pasta_relatorios": "AREA_DE_TRABALHO\\VistoriaMuse\\enviados_muse",
+    "pasta_relatorios": "AREA_DE_TRABALHO\\VistoriaMuse\\relatorios",
     "extensao_relatorio": "txt",
     "arquivo_log": "execucao.log"
   }

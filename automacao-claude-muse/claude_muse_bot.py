@@ -5,9 +5,13 @@ claude_muse_bot.py
 Robo que, todo dia as 16:00:
   1. Le o arquivo que o app Vistoria gera (a fonte do dia).
   2. Entrega esse texto ao Claude Code (modo automatico `claude -p`), que comanda
-     as atualizacoes do dia UMA DE CADA VEZ (protocolo ACAO/TITULO/CONTEUDO).
-  3. Para cada atualizacao, salva um arquivo e publica no muse.ai pela API.
-  4. Volta ao Claude (mantendo a memoria do dia) e pede a proxima, ate 'ACAO: nada'.
+     os relatorios do dia UMA DE CADA VEZ (protocolo ACAO/TITULO/CONTEUDO).
+  3. Para cada um, salva um arquivo de texto pronto na pasta de saida.
+  4. Volta ao Claude (mantendo a memoria do dia) e pede o proximo, ate 'ACAO: nada'.
+
+OBS: NAO ha mais envio ao muse.ai (o muse.ai nao tem API utilizavel). O robo
+apenas gera e SALVA os relatorios em arquivos; o envio ao muse voce faz do jeito
+que preferir.
 
 IMPORTANTE - leia o README.md antes de usar. Roda NA SUA MAQUINA WINDOWS.
 
@@ -15,11 +19,8 @@ Uso (comandos):
   python claude_muse_bot.py --verificar        -> confere se esta tudo pronto para rodar
   python claude_muse_bot.py --testar-vistoria  -> mostra o texto lido do app Vistoria
   python claude_muse_bot.py --testar-claude    -> testa se o Claude Code responde
-  python claude_muse_bot.py --testar-muse      -> confere a chave da API do muse.ai
-  python claude_muse_bot.py --simular          -> roda o dia inteiro SEM enviar ao muse (teste seguro)
-  python claude_muse_bot.py --agora            -> roda o fluxo completo UMA vez, de verdade
+  python claude_muse_bot.py --agora            -> roda o fluxo completo UMA vez, agora
   python claude_muse_bot.py --daemon           -> fica rodando e dispara sozinho no horario
-  python claude_muse_bot.py --calibrar         -> (so para o modo navegador) descobre posicoes da tela
 """
 
 import argparse
@@ -29,20 +30,6 @@ import os
 import subprocess
 import sys
 import time
-
-# ----------------------------------------------------------------------------
-# Dependencias externas (instale com: pip install pyautogui pyperclip)
-# Importadas de forma tolerante para que --testar-claude funcione sem elas.
-# ----------------------------------------------------------------------------
-try:
-    import pyautogui
-    import pyperclip
-    pyautogui.FAILSAFE = True  # jogue o mouse no canto superior esquerdo para abortar
-    _GUI_OK = True
-except Exception:  # pragma: no cover
-    _GUI_OK = False
-
-import muse_api  # modulo local: fala com o muse.ai pela API (sem clicar na tela)
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PADRAO = os.path.join(AQUI, "config.json")
@@ -86,7 +73,7 @@ def expandir_caminho(p):
 
 
 def garantir_pastas(cfg):
-    """Cria as pastas de entrada (Vistoria) e saida (enviados ao muse), se faltarem.
+    """Cria as pastas de entrada (Vistoria) e saida (relatorios), se faltarem.
     Devolve (pasta_entrada, pasta_saida)."""
     entrada = ""
     v = cfg.get("vistoria", {})
@@ -120,28 +107,20 @@ def log(cfg, mensagem):
         pass
 
 
-def exigir_gui():
-    if not _GUI_OK:
-        print(
-            "ERRO: as bibliotecas pyautogui/pyperclip nao estao instaladas.\n"
-            "Rode:  pip install pyautogui pyperclip",
-            file=sys.stderr,
-        )
-        sys.exit(2)
-
-
 # ============================================================================
 # Claude Code (modo automatico, sem olhar a tela)
 # ============================================================================
+def prompt_escape(texto):
+    """Escapa aspas duplas para a linha de comando do Windows."""
+    return texto.replace('"', '""')
+
+
 def perguntar_ao_claude(cfg, prompt, continuar=False):
     """Chama `claude -p "<prompt>"` e devolve a resposta em texto.
 
-    Esse e o jeito confiavel de falar com o Claude Code: nada de ler o terminal
-    pela tela. O Claude Code precisa estar instalado e ja logado nesta maquina.
-
     continuar=True adiciona `--continue`, para o Claude LEMBRAR o que ja foi feito
-    hoje (mantem a mesma conversa). Assim ele vai comandando uma atualizacao de
-    cada vez ate zerar o que foi pedido.
+    hoje (mantem a mesma conversa). Assim ele vai comandando um relatorio de cada
+    vez ate zerar o que foi pedido.
     """
     c = cfg["claude"]
     flags = []
@@ -191,10 +170,10 @@ def perguntar_ao_claude(cfg, prompt, continuar=False):
 # ----------------------------------------------------------------------------
 # Protocolo: o Claude comanda, o bot executa.
 # O Claude responde SEMPRE neste formato:
-#     ACAO: upload        (ou 'nada' quando nao ha mais nada hoje)
+#     ACAO: salvar        (ou 'nada' quando nao ha mais nada hoje)
 #     TITULO: nome-curto
 #     CONTEUDO:
-#     <texto da atualizacao>
+#     <texto do relatorio>
 # ----------------------------------------------------------------------------
 def parsear_resposta_claude(texto):
     """Le a resposta do Claude no protocolo e devolve {acao, titulo, conteudo}."""
@@ -215,8 +194,10 @@ def parsear_resposta_claude(texto):
         elif coletando:
             conteudo_linhas.append(linha)
     conteudo = "\n".join(conteudo_linhas).strip()
-    # Normaliza a acao: qualquer coisa que nao seja upload com conteudo = parar.
-    if acao != "upload" or not conteudo:
+    # Normaliza: aceita 'salvar' (ou 'upload', por compatibilidade). Sem conteudo = parar.
+    if acao in ("salvar", "upload") and conteudo:
+        acao = "salvar"
+    else:
         acao = "nada"
     return {"acao": acao, "titulo": titulo, "conteudo": conteudo}
 
@@ -224,7 +205,7 @@ def parsear_resposta_claude(texto):
 def _limpar_nome(titulo):
     """Transforma um titulo em nome de arquivo seguro."""
     seguro = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in titulo).strip("-")
-    return seguro or "atualizacao"
+    return seguro or "relatorio"
 
 
 # ============================================================================
@@ -274,7 +255,6 @@ def ler_texto_vistoria(cfg):
         leitor = PdfReader(caminho)
         texto = "\n".join((pg.extract_text() or "") for pg in leitor.pages).strip()
     else:
-        # txt/csv/md e afins: tenta utf-8, cai para latin-1.
         try:
             with open(caminho, "r", encoding="utf-8") as f:
                 texto = f.read().strip()
@@ -287,93 +267,34 @@ def ler_texto_vistoria(cfg):
     return texto
 
 
-def prompt_escape(texto):
-    """Escapa aspas duplas para a linha de comando do Windows."""
-    return texto.replace('"', '""')
+# ============================================================================
+# Saida: salva cada relatorio num arquivo pronto
+# ============================================================================
+def salvar_relatorio(cfg, texto, titulo=""):
+    """Salva o relatorio num arquivo e devolve o caminho completo."""
+    pasta = expandir_caminho(cfg["arquivos"]["pasta_relatorios"])
+    os.makedirs(pasta, exist_ok=True)
+    ext = cfg["arquivos"].get("extensao_relatorio", "txt").lstrip(".")
+    prefixo = _limpar_nome(titulo) if titulo else "relatorio"
+    nome = dt.datetime.now().strftime(f"{prefixo}_%Y-%m-%d_%H%M%S.{ext}")
+    caminho = os.path.join(pasta, nome)
+    with open(caminho, "w", encoding="utf-8") as f:
+        f.write(texto)
+    return caminho
 
 
 # ============================================================================
-# Interacao com o muse.ai (via teclado/mouse + area de transferencia)
+# Fluxo principal de um dia: o Claude comanda, o bot salva, ate zerar.
 # ============================================================================
-def colar_texto(cfg, xy_campo, texto):
-    """Clica no campo informado e cola o texto via Ctrl+V."""
-    exigir_gui()
-    pyperclip.copy(texto)
-    time.sleep(0.3)
-    pyautogui.click(xy_campo[0], xy_campo[1])
-    time.sleep(0.4)
-    # Limpa o campo antes de colar (Ctrl+A, Delete)
-    pyautogui.hotkey("ctrl", "a")
-    time.sleep(0.1)
-    pyautogui.press("delete")
-    time.sleep(0.1)
-    pyautogui.hotkey("ctrl", "v")
-    time.sleep(0.4)
-
-
-def enviar_no_muse(cfg):
-    m = cfg["muse"]
-    if m.get("botao_enviar_xy"):
-        pyautogui.click(m["botao_enviar_xy"][0], m["botao_enviar_xy"][1])
-    elif m.get("usar_enter_para_enviar", True):
-        pyautogui.press("enter")
-    time.sleep(0.5)
-
-
-def ler_resposta_do_muse(cfg):
-    """Seleciona a area de resposta do muse e copia o texto para a area de transferencia.
-
-    Usa Ctrl+A/Ctrl+C na area clicada em vez de OCR -> bem mais confiavel.
-    Retorna o texto lido (pode vir vazio se o site nao permitir selecionar).
-    """
-    exigir_gui()
-    m = cfg["muse"]
-    pyperclip.copy("")  # zera para detectar se algo foi copiado
-    time.sleep(0.2)
-    pyautogui.click(m["area_resposta_xy"][0], m["area_resposta_xy"][1])
-    time.sleep(0.3)
-    pyautogui.hotkey("ctrl", "a")
-    time.sleep(0.2)
-    pyautogui.hotkey("ctrl", "c")
-    time.sleep(0.3)
-    try:
-        return pyperclip.paste().strip()
-    except Exception:
-        return ""
-
-
-# ============================================================================
-# Fluxo principal de um dia: o Claude comanda, o bot executa, ate zerar.
-# ============================================================================
-def publicar_no_muse(cfg, caminho, simular=False):
-    """Publica o arquivo no muse.ai. API se ativa (confiavel); senao, pelo navegador.
-    Em modo simular, nao envia nada: apenas registra que o arquivo ficou pronto."""
-    if simular:
-        log(cfg, f"[SIMULACAO] NAO enviei ao muse. Arquivo pronto em: {caminho}")
-        return
-    if cfg.get("muse_api", {}).get("ativo", False):
-        log(cfg, f"Enviando '{os.path.basename(caminho)}' ao muse.ai via API...")
-        resultado = muse_api.enviar_arquivo(cfg, caminho)
-        log(cfg, f"Upload concluido. Resposta do muse.ai: {resultado}")
-    else:
-        with open(caminho, "r", encoding="utf-8") as f:
-            texto = f.read()
-        log(cfg, "Colando no muse.ai pelo navegador...")
-        colar_texto(cfg, cfg["muse"]["campo_entrada_xy"], texto)
-        enviar_no_muse(cfg)
-
-
-def rodar_uma_vez(cfg, simular=False):
-    """O Claude vai mandando as atualizacoes uma a uma; o bot publica cada uma
-    no muse.ai e volta ao Claude, ate ele responder que nao ha mais nada (zerou).
-    simular=True faz tudo menos enviar ao muse (teste seguro)."""
-    modo = " [SIMULACAO]" if simular else ""
-    log(cfg, f"=== Iniciando execucao do dia (Claude comanda, bot executa){modo} ===")
-    garantir_pastas(cfg)
+def rodar_uma_vez(cfg):
+    """O Claude vai mandando os relatorios um a um; o bot salva cada um em arquivo
+    e volta ao Claude, ate ele responder que nao ha mais nada (zerou)."""
+    log(cfg, "=== Iniciando execucao do dia (Claude comanda, bot salva) ===")
+    _, saida = garantir_pastas(cfg)
     c = cfg["claude"]
     max_it = cfg["loop"]["max_iteracoes"]
 
-    # Primeira mensagem = protocolo + pedido da 1a atualizacao.
+    # Primeira mensagem = protocolo + pedido do 1o relatorio.
     prompt = c.get("prompt_inicial") or c.get("prompt_relatorio")
 
     # Anexa o texto do app Vistoria (fonte do dia), se configurado.
@@ -390,11 +311,10 @@ def rodar_uma_vez(cfg, simular=False):
             + texto_vistoria
         )
 
-    publicadas = 0
-
+    salvos = 0
     for i in range(1, max_it + 1):
         continuar = i > 1  # da 2a chamada em diante, mantem a memoria da conversa
-        log(cfg, f"Pedindo a atualizacao #{i} ao Claude...")
+        log(cfg, f"Pedindo o relatorio #{i} ao Claude...")
         try:
             resposta = perguntar_ao_claude(cfg, prompt, continuar=continuar)
         except RuntimeError as e:
@@ -404,47 +324,25 @@ def rodar_uma_vez(cfg, simular=False):
         ordem = parsear_resposta_claude(resposta)
         if ordem["acao"] == "nada":
             log(cfg, f"Claude indicou que nao ha mais nada hoje. Zerado. "
-                     f"Total publicado: {publicadas}.")
+                     f"Total salvo: {salvos}.")
             break
 
         caminho = salvar_relatorio(cfg, ordem["conteudo"], titulo=ordem["titulo"])
-        log(cfg, f"Atualizacao '{ordem['titulo'] or '(sem titulo)'}' "
-                 f"gerada ({len(ordem['conteudo'])} chars) -> {caminho}")
+        salvos += 1
+        log(cfg, f"Relatorio '{ordem['titulo'] or '(sem titulo)'}' salvo "
+                 f"({len(ordem['conteudo'])} chars) -> {caminho}")
 
-        # Executa a publicacao. Se falhar, avisa o Claude e deixa ele decidir.
-        try:
-            publicar_no_muse(cfg, caminho, simular=simular)
-            publicadas += 1
-            prompt = c.get("prompt_proximo") or (
-                "Publiquei com sucesso. Qual a proxima atualizacao? Responda no mesmo "
-                "formato (ACAO/TITULO/CONTEUDO), ou 'ACAO: nada' se zeramos tudo hoje."
-            )
-        except RuntimeError as e:
-            log(cfg, f"ERRO ao publicar no muse.ai: {e}")
-            prompt = (
-                "Falha ao publicar a atualizacao anterior no muse.ai. Mensagem do "
-                "servidor:\n" + str(e) + "\n\nDecida: reenvie corrigido no mesmo "
-                "formato (ACAO/TITULO/CONTEUDO) ou responda 'ACAO: nada' para parar."
-            )
-
+        prompt = c.get("prompt_proximo") or (
+            "Salvei o relatorio anterior. Qual o proximo? Responda no mesmo formato "
+            "(ACAO/TITULO/CONTEUDO), ou 'ACAO: nada' se zeramos tudo hoje."
+        )
         time.sleep(cfg["loop"].get("segundos_entre_acoes", 2.0))
     else:
         log(cfg, "Limite de iteracoes atingido. Encerrando por seguranca.")
 
+    if salvos:
+        log(cfg, f"Relatorios do dia salvos em: {saida}")
     log(cfg, "=== Execucao do dia finalizada ===")
-
-
-def salvar_relatorio(cfg, texto, titulo=""):
-    """Salva a atualizacao num arquivo e devolve o caminho completo."""
-    pasta = expandir_caminho(cfg["arquivos"]["pasta_relatorios"])
-    os.makedirs(pasta, exist_ok=True)
-    ext = cfg["arquivos"].get("extensao_relatorio", "txt").lstrip(".")
-    prefixo = _limpar_nome(titulo) if titulo else "relatorio"
-    nome = dt.datetime.now().strftime(f"{prefixo}_%Y-%m-%d_%H%M%S.{ext}")
-    caminho = os.path.join(pasta, nome)
-    with open(caminho, "w", encoding="utf-8") as f:
-        f.write(texto)
-    return caminho
 
 
 # ============================================================================
@@ -465,30 +363,6 @@ def rodar_daemon(cfg):
             except Exception as e:
                 log(cfg, f"ERRO inesperado na execucao: {e}")
         time.sleep(20)
-
-
-# ============================================================================
-# Calibrador: ajuda a descobrir as coordenadas (x,y) da tela
-# ============================================================================
-def calibrar():
-    exigir_gui()
-    print(
-        "CALIBRADOR\n"
-        "----------\n"
-        "Mova o mouse ate o ponto desejado e leia a posicao (x, y) abaixo.\n"
-        "Anote os valores e coloque no config.json:\n"
-        "  - campo_entrada_xy  = onde voce digita no muse.ai\n"
-        "  - area_resposta_xy  = onde o muse mostra a resposta/duvida\n"
-        "  - botao_enviar_xy   = (opcional) o botao de enviar\n\n"
-        "Pressione Ctrl+C para sair.\n"
-    )
-    try:
-        while True:
-            x, y = pyautogui.position()
-            print(f"  posicao atual -> x={x:5d}  y={y:5d}", end="\r", flush=True)
-            time.sleep(0.1)
-    except KeyboardInterrupt:
-        print("\nCalibrador encerrado.")
 
 
 # ============================================================================
@@ -517,7 +391,7 @@ def _claude_responde(cfg):
 
 def verificar(cfg):
     """Checa cada pre-requisito e imprime um relatorio simples do que falta."""
-    print("\n=== VERIFICACAO DO ROBO VISTORIA -> muse.ai ===\n")
+    print("\n=== VERIFICACAO DO ROBO VISTORIA -> relatorios ===\n")
     problemas = 0
 
     def linha(ok, titulo, dica=""):
@@ -533,23 +407,7 @@ def verificar(cfg):
     linha(sys.version_info >= (3, 7), f"Python {sys.version.split()[0]}",
           "Instale o Python 3 em python.org (marque 'Add to PATH').")
 
-    # 2) Biblioteca requests (API do muse)
-    usa_api = cfg.get("muse_api", {}).get("ativo", False)
-    try:
-        import requests  # noqa: F401
-        tem_requests = True
-    except Exception:
-        tem_requests = False
-    if usa_api:
-        linha(tem_requests, "Biblioteca 'requests' (envio ao muse.ai)",
-              "Rode:  pip install requests")
-
-    # 3) pyautogui/pyperclip (so no modo navegador)
-    if not usa_api:
-        linha(_GUI_OK, "Bibliotecas pyautogui/pyperclip (modo navegador)",
-              "Rode:  pip install pyautogui pyperclip")
-
-    # 4) pypdf (so se o Vistoria for PDF)
+    # 2) pypdf (so se o Vistoria for PDF)
     padrao = cfg.get("vistoria", {}).get("padrao_arquivo", "*.txt").lower()
     if cfg.get("vistoria", {}).get("modo") == "caminho_fixo":
         padrao = cfg["vistoria"].get("caminho_fixo", "").lower()
@@ -562,37 +420,28 @@ def verificar(cfg):
         linha(tem_pypdf, "Biblioteca 'pypdf' (ler PDF do Vistoria)",
               "Rode:  pip install pypdf")
 
-    # 5) Claude Code
+    # 3) Claude Code
     ok_claude, det_claude = _claude_responde(cfg)
     linha(ok_claude, f"Claude Code responde ({det_claude[:60] if ok_claude else 'nao'})",
           "Instale e faca login no Claude Code. Teste:  claude --version")
 
-    # 6) Pastas (cria se faltar)
+    # 4) Pastas (cria se faltar)
     entrada, saida = garantir_pastas(cfg)
     if entrada:
         linha(os.path.isdir(entrada), f"Pasta de entrada do Vistoria: {entrada}")
     if saida:
-        linha(os.path.isdir(saida), f"Pasta de saida (enviados ao muse): {saida}")
+        linha(os.path.isdir(saida), f"Pasta de saida (relatorios): {saida}")
 
-    # 7) Arquivo do Vistoria encontrado e legivel
+    # 5) Arquivo do Vistoria encontrado e legivel
     try:
         texto = ler_texto_vistoria(cfg)
         linha(True, f"Arquivo do Vistoria encontrado ({len(texto)} caracteres)")
     except Exception as e:
-        linha(False, "Arquivo do Vistoria encontrado",
-              f"{e}")
-
-    # 8) Chave da API do muse
-    if usa_api:
-        try:
-            muse_api.testar_conexao(cfg)
-            linha(True, "Chave da API do muse.ai configurada")
-        except Exception as e:
-            linha(False, "Chave da API do muse.ai configurada", f"{e}")
+        linha(False, "Arquivo do Vistoria encontrado", f"{e}")
 
     print()
     if problemas == 0:
-        print(">>> TUDO PRONTO! Agora rode um teste seguro:  python claude_muse_bot.py --simular")
+        print(">>> TUDO PRONTO! Agora rode:  python claude_muse_bot.py --agora")
     else:
         print(f">>> Faltam {problemas} item(ns) acima. Resolva e rode --verificar de novo.")
     print()
@@ -603,21 +452,14 @@ def verificar(cfg):
 # main
 # ============================================================================
 def main():
-    ap = argparse.ArgumentParser(description="Robo Claude Code <-> muse.ai")
+    ap = argparse.ArgumentParser(description="Robo Vistoria -> Claude -> relatorios")
     ap.add_argument("--config", default=CONFIG_PADRAO, help="caminho do config.json")
     ap.add_argument("--verificar", action="store_true", help="confere se esta tudo pronto para rodar")
-    ap.add_argument("--calibrar", action="store_true", help="descobrir coordenadas da tela (modo navegador)")
     ap.add_argument("--testar-claude", action="store_true", help="so testa o Claude Code")
-    ap.add_argument("--testar-muse", action="store_true", help="confere a chave da API do muse.ai")
     ap.add_argument("--testar-vistoria", action="store_true", help="mostra o texto lido do app Vistoria")
-    ap.add_argument("--simular", action="store_true", help="roda o dia inteiro SEM enviar ao muse")
-    ap.add_argument("--agora", action="store_true", help="roda o fluxo completo uma vez, de verdade")
+    ap.add_argument("--agora", action="store_true", help="roda o fluxo completo uma vez")
     ap.add_argument("--daemon", action="store_true", help="fica rodando e dispara no horario")
     args = ap.parse_args()
-
-    if args.calibrar:
-        calibrar()
-        return
 
     cfg = carregar_config(args.config)
 
@@ -631,18 +473,10 @@ def main():
         print("Resposta do Claude:\n", r)
         return
 
-    if args.testar_muse:
-        print(muse_api.testar_conexao(cfg))
-        return
-
     if args.testar_vistoria:
         texto = ler_texto_vistoria(cfg)
         print(f"--- Texto do Vistoria ({len(texto)} caracteres) ---\n")
         print(texto[:2000] + ("\n\n[...truncado...]" if len(texto) > 2000 else ""))
-        return
-
-    if args.simular:
-        rodar_uma_vez(cfg, simular=True)
         return
 
     if args.agora:

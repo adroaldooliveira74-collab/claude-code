@@ -1,22 +1,24 @@
-# Robô Claude Code → muse.ai
+# Robô Vistoria → Claude → Relatórios
 
-Automação para Windows em que **o Claude comanda e o bot executa**, todo dia às 16:00:
+Automação para Windows em que **o Claude comanda e o bot salva**, todo dia às 16:00:
 
-1. O bot **lê o arquivo que o app Vistoria gera às 16:00** (a fonte do dia) e entrega o texto ao Claude;
-2. O bot pergunta ao **Claude Code** qual a próxima atualização (modo `claude -p`, sem olhar a tela);
-3. O Claude responde no formato do protocolo (abaixo); o bot **salva como arquivo** e **publica no muse.ai pela API** (cabeçalho `Key`);
-4. O bot volta ao Claude (`--continue`, mantendo a memória do dia) e pede a **próxima**;
+1. O bot **lê o arquivo que o app Vistoria gera** (a fonte do dia) e entrega o texto ao Claude;
+2. O bot pergunta ao **Claude Code** qual o próximo relatório (modo `claude -p`, sem olhar a tela);
+3. O Claude responde no formato do protocolo (abaixo); o bot **salva como arquivo** numa pasta;
+4. O bot volta ao Claude (`--continue`, mantendo a memória do dia) e pede o **próximo**;
 5. Isso se repete **até o Claude responder `ACAO: nada`** (zerou o que foi pedido) ou atingir o limite de segurança.
+
+> ℹ️ **Sobre o muse.ai:** o envio automático ao muse.ai foi **removido**, porque o muse.ai não oferece uma API utilizável para isso. O robô agora apenas **gera e salva** os relatórios em arquivos prontos — o envio ao muse (se você quiser) é feito manualmente, do jeito que preferir.
 
 ### O protocolo (como o Claude comanda)
 
 O Claude responde sempre assim:
 
 ```
-ACAO: upload
+ACAO: salvar
 TITULO: nome-curto-sem-espacos
 CONTEUDO:
-<o texto completo da atualização>
+<o texto completo do relatório>
 ```
 
 E, quando não há mais nada no dia:
@@ -25,29 +27,23 @@ E, quando não há mais nada no dia:
 ACAO: nada
 ```
 
-Se um upload falhar, o bot **avisa o Claude com a mensagem de erro** e deixa ele decidir (reenviar corrigido ou parar). Assim, o dia inteiro é conduzido pelo Claude, sem você precisar mexer.
-
-> ℹ️ Como o envio ao muse.ai é pela **API**, o robô **não precisa** mexer no seu mouse/teclado nem ter o navegador aberto. (O controle de tela só é usado se você desligar a API e escolher o modo navegador.)
-
 ---
 
 ## ⭐ Jeito mais fácil (clicar nos `.bat`)
 
-Depois de baixar a pasta no seu PC, você pode fazer quase tudo clicando duas vezes:
+Depois de baixar a pasta no seu PC, você faz quase tudo clicando duas vezes:
 
 | Arquivo | O que faz |
 |---|---|
-| `instalar.bat` | Instala as bibliotecas (uma vez só) |
+| `instalar.bat` | Instala a leitura de PDF (só precisa se o Vistoria for PDF) |
 | `verificar.bat` | **Confere se está tudo pronto** e diz o que falta |
-| `simular.bat` | Roda o dia inteiro **sem enviar ao muse** (teste seguro) |
 | `rodar.bat` | Roda de verdade (é o que o Agendador usa às 16:00) |
 
-**Ordem recomendada:** `instalar.bat` → `verificar.bat` → (resolver o que faltar) → `simular.bat` → `rodar.bat`.
+**Ordem recomendada:** `verificar.bat` → (resolver o que faltar) → `rodar.bat`.
 
 Os mesmos passos pela linha de comando:
 ```bash
 python claude_muse_bot.py --verificar
-python claude_muse_bot.py --simular
 python claude_muse_bot.py --agora
 ```
 
@@ -66,115 +62,73 @@ python claude_muse_bot.py --agora
    python --version
    ```
 
-3. As bibliotecas:
+3. **Só se o Vistoria exportar PDF**, instale a leitura de PDF:
    ```bash
-   pip install requests pyautogui pyperclip
+   pip install pypdf
    ```
-   (`requests` = API do muse.ai; `pyautogui`/`pyperclip` = só o loop de dúvidas no navegador.)
-
-4. **A chave da API do muse.ai.** Pegue a chave na sua conta do muse.ai e cole no `config.json`, no campo `muse_api.chave`, entre as aspas:
-   ```json
-   "muse_api": {
-     "chave": "cole_sua_chave_aqui",
-     ...
-   }
-   ```
-   (Alternativa avançada: deixar `chave` vazio e usar a variável de ambiente `MUSE_API_KEY` via `setx`.) Confira com:
-   ```bash
-   python claude_muse_bot.py --testar-muse
-   ```
+   (Se o Vistoria salva `.txt`, não precisa instalar nada.)
 
 ---
 
-## 2. Testar se o Claude responde
+## 2. Onde ficam as pastas (já configurado)
 
-```bash
-python claude_muse_bot.py --testar-claude
-```
-Deve aparecer algo como *"OK, estou funcionando."*. Se der erro aqui, o problema é o Claude Code (instalação/login) — resolva antes de seguir.
+- **Entra** (arquivo do Vistoria): `Área de Trabalho\VistoriaMuse`
+- **Sai** (relatórios gerados): `Área de Trabalho\VistoriaMuse\relatorios`
 
----
-
-## 3. Descobrir as posições da tela (calibrar) — só para o loop de dúvidas
-
-Se você **não** vai usar o loop de dúvidas (`muse.tratar_duvidas: false` no config), **pule este passo** — a API não precisa de coordenadas.
-
-O loop de dúvidas precisa saber **onde clicar** no navegador. Abra a janela na tela e rode:
-
-```bash
-python claude_muse_bot.py --calibrar
-```
-
-Passe o mouse por cima de cada ponto e anote o `x` e `y` que aparecem:
-
-- **campo_entrada_xy** → onde você digita no muse (a caixa de texto);
-- **area_resposta_xy** → onde o muse mostra a resposta/dúvida;
-- **botao_enviar_xy** → (opcional) o botão de enviar. Se o muse enviar com Enter, deixe `null`.
-
-Pressione `Ctrl+C` para sair do calibrador.
+São pastas separadas de propósito: o bot nunca confunde o próprio arquivo de saída com o arquivo de entrada do Vistoria. O código encontra a Área de Trabalho sozinho (mesmo com OneDrive).
 
 ---
 
-## 4. Ajustar o `config.json`
-
-Abra o `config.json` e preencha:
+## 3. Ajustar o `config.json`
 
 - Em `vistoria`: **onde o app Vistoria salva o arquivo do dia.**
-  - Já vem apontando para a pasta **`VistoriaMuse` na Área de Trabalho** (o código acha a Área de Trabalho sozinho, mesmo com OneDrive). O atalho `AREA_DE_TRABALHO` nos caminhos significa isso.
   - `modo: "arquivo_mais_recente"` + `pasta` + `padrao_arquivo` (ex.: `*.txt`, `*.pdf`) → pega o arquivo mais novo da pasta; **ou**
-  - `modo: "caminho_fixo"` + `caminho_fixo` → sempre o mesmo arquivo (se o app sobrescreve diariamente).
-  - Se o Vistoria exporta **PDF**, mude o padrão para `*.pdf` e instale: `pip install pypdf`.
+  - `modo: "caminho_fixo"` + `caminho_fixo` → sempre o mesmo arquivo.
   - Teste a leitura: `python claude_muse_bot.py --testar-vistoria`
-
-> 📁 **Organização das pastas (já configurada):**
-> - **Entra** (arquivo do Vistoria): `Área de Trabalho\VistoriaMuse`
-> - **Sai** (o que o bot envia ao muse): `Área de Trabalho\VistoriaMuse\enviados_muse`
->
-> São pastas separadas de propósito: assim o bot nunca confunde o próprio arquivo de saída com o arquivo de entrada do Vistoria.
-- Em `claude.prompt_inicial`: a instrução que abre o dia (já traz o protocolo). Ajuste para dizer **o que são as atualizações do dia** e de onde o Claude tira o que precisa fazer. **Quanto mais específico, melhor.**
-- Em `claude.prompt_proximo`: a mensagem que pede a próxima atualização (normalmente não precisa mexer).
-- Em `claude.continuar_conversa`: `true` para o Claude lembrar o que já foi feito no dia (usa `claude --continue`).
-- Em `muse_api.ativo`: `true` para subir pela API (recomendado). `collection_id` é opcional (ID da coleção do muse onde o arquivo deve entrar).
-- Em `arquivos.extensao_relatorio`: `txt` ou `md`. (Obs.: o muse.ai é feito para **vídeo** — veja "Limites honestos" abaixo.)
-- Em `muse.tratar_duvidas`: `true` só se você vai usar o loop de dúvidas no navegador. Aí preencha também as coordenadas (`campo_entrada_xy`, `area_resposta_xy`) e `usar_enter_para_enviar`.
-- Em `loop.texto_que_indica_fim`: palavras que, se aparecerem no navegador, significam "acabou" (ex.: `concluido`, `zerado`).
+- Em `claude.prompt_inicial`: a instrução que abre o dia (já traz o protocolo). Ajuste para dizer **o que são os relatórios do dia**.
+- Em `arquivos.extensao_relatorio`: `txt` ou `md`.
 
 ---
 
-## 5. Rodar uma vez para testar
+## 4. Conferir tudo e rodar
 
-Abra o muse.ai, posicione a janela, e rode:
-
+```bash
+python claude_muse_bot.py --verificar
+```
+Resolva o que aparecer como `[FALTA]`. Quando der **TUDO PRONTO**, rode:
 ```bash
 python claude_muse_bot.py --agora
 ```
-
-Acompanhe o `execucao.log` e a pasta `relatorios/` (cada relatório é salvo lá também).
+Os relatórios aparecem em `Área de Trabalho\VistoriaMuse\relatorios`. O `execucao.log` (na pasta do projeto) mostra o que aconteceu.
 
 ---
 
-## 6. Fazer rodar sozinho todo dia às 16:00
+## 5. Fazer rodar sozinho todo dia às 16:00
 
 ### Opção A — Agendador de Tarefas do Windows (recomendado)
-
-1. Abra o **Agendador de Tarefas** (Task Scheduler).
-2. *Criar Tarefa Básica* → nome: `Relatorio Claude Muse`.
+1. Abra o **Agendador de Tarefas**.
+2. *Criar Tarefa Básica* → nome: `Relatorio Vistoria`.
 3. Disparador: **Diariamente**, às **16:00**.
-4. Ação: **Iniciar um programa** → Programa: o `rodar.bat` desta pasta.
-5. Marque "Executar somente quando o usuário estiver conectado" (precisa da tela ativa, pois usa mouse/teclado).
+4. Ação: **Iniciar um programa** → o `rodar.bat` desta pasta.
 
 ### Opção B — deixar o script vigiando o horário
-
 ```bash
 python claude_muse_bot.py --daemon
 ```
-Deixe essa janela aberta; ele dispara sozinho quando der 16:00. (Fecha a janela = para.)
+Deixe a janela aberta; ele dispara sozinho às 16:00.
 
 ---
 
-## Limites honestos
+## Comandos do robô
 
-- **O muse.ai é uma plataforma de vídeo.** O endpoint `/api/files/upload` é feito para vídeos. Se ele recusar um `.txt`/`.md`, o script mostra a mensagem exata do servidor. Nesse caso as opções são: transformar o relatório num vídeo (narração/slide) antes de subir, ou pôr o texto como **descrição de um vídeo**. Me avise a mensagem de erro que eu ajusto.
-- **Loop de dúvidas** continua por teclado/mouse (é no navegador): depende de coordenadas; se a janela mudar de lugar/tamanho, **recalibre**. Se não precisar dele, deixe `muse.tratar_duvidas: false`.
-- A chave da API fica na variável `MUSE_API_KEY`, **nunca** dentro do `config.json` commitado.
-- O robô para sozinho por segurança quando: aparece um texto de fim, a resposta não muda, ou atinge `max_iteracoes`.
+| Comando | Para quê |
+|---|---|
+| `--verificar` | Confere se está tudo pronto e diz o que falta |
+| `--testar-vistoria` | Mostra o texto lido do app Vistoria |
+| `--testar-claude` | Testa se o Claude Code responde |
+| `--agora` | Roda o dia inteiro uma vez |
+| `--daemon` | Fica ligado e dispara sozinho às 16:00 |
+
+## Limites honestos
+- Se o Vistoria exporta **PDF**, instale `pypdf`.
+- O robô para sozinho por segurança quando o Claude responde `ACAO: nada` ou ao atingir `max_iteracoes`.
