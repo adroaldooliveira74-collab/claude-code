@@ -113,7 +113,7 @@
       var bar=document.createElement("div");bar.id="vpInfo";
       bar.style.cssText="position:fixed;left:0;right:0;top:0;z-index:2147483500;background:linear-gradient(90deg,#f59c00,#d98100);color:#3a2600;font-family:Segoe UI,Arial,sans-serif;font-size:13.5px;font-weight:700;padding:8px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 10px rgba(0,0,0,.18)";
       bar.innerHTML='<span style="flex:1">'+msg+'</span>';
-      var b=document.createElement("button");b.textContent="Ativar / Renovar";b.className="vp-ok";b.style.cssText="background:#1d2a1a;color:#fff;border:0;border-radius:7px;padding:5px 12px;font-weight:800;cursor:pointer;font-size:12.5px";b.onclick=function(){ativar();};
+      var b=document.createElement("a");b.href="assinar.html";b.textContent="Assinar / Renovar";b.className="vp-ok";b.style.cssText="background:#1d2a1a;color:#fff;border:0;border-radius:7px;padding:6px 12px;font-weight:800;cursor:pointer;font-size:12.5px;text-decoration:none";
       var x=document.createElement("button");x.textContent="✕";x.className="vp-ok";x.title="fechar";x.style.cssText="background:transparent;border:0;color:#3a2600;font-weight:900;cursor:pointer;font-size:15px";x.onclick=function(){bar.remove();document.body.style.paddingTop="";};
       bar.appendChild(b);bar.appendChild(x);
       document.body.insertBefore(bar,document.body.firstChild);
@@ -127,9 +127,9 @@
             : state==="trial_expirado" ? "Teste grátis encerrado — modo consulta (somente leitura). Ative sua licença para editar."
             : "Licença expirada"+(pl&&pl.exp?" em "+pl.exp.split("-").reverse().join("/"):"")+" — modo consulta (somente leitura).";
     bar.innerHTML='<span>🔒 '+msg+'</span>';
-    var b=document.createElement("button");b.textContent="Inserir código de liberação (12 meses)";b.className="vp-ok";
-    b.onclick=function(){ativar();};
-    bar.appendChild(b);
+    var a=document.createElement("a");a.href="assinar.html";a.textContent="🛒 Assinar / Renovar";a.className="vp-ok";a.style.cssText="background:#fff;color:#8a1d17;border-radius:7px;padding:6px 12px;font-weight:800;text-decoration:none;font-size:13px";
+    var b=document.createElement("button");b.textContent="Inserir código";b.className="vp-ok";b.onclick=function(){ativar();};
+    bar.appendChild(a);bar.appendChild(b);
     document.body.insertBefore(bar,document.body.firstChild);
   }
   function ativar(){
@@ -152,7 +152,13 @@
   try{var rs=document.documentElement.style;if(brand.cores.principal){rs.setProperty("--accent",brand.cores.principal);rs.setProperty("--ok",brand.cores.principal);}if(brand.cores.secundaria)rs.setProperty("--laranja",brand.cores.secundaria);}catch(e){}
   var lic=evalLicense();
   var ENFORCE=(window.VP_ENFORCE===true); // só a versão comercial ativa a trava
-  window.VP={brand:brand,license:lic,ativar:ativar,verify:verify,enforce:ENFORCE,applyBrand:function(){var b=loadBrand();window.BRAND.rodape=rodapeLinhas(b);applyBrand(b);}};
+  function deviceId(){var k=lsGet("vp_device");if(!k){k=(Math.random().toString(36).slice(2)+Date.now().toString(36));lsSet("vp_device",k);}return k;}
+  window.VP={brand:brand,license:lic,ativar:ativar,verify:verify,enforce:ENFORCE,device:deviceId(),
+    applyBrand:function(){var b=loadBrand();window.BRAND.rodape=rodapeLinhas(b);applyBrand(b);},
+    // Ativação ONLINE opcional (anti-compartilhamento). Só é usada se window.VP_ONLINE_URL estiver definida.
+    verificarOnline:function(url,token){url=(url||window.VP_ONLINE_URL||"").replace(/\/$/,"");if(!url)return Promise.resolve({ok:true,offline:true});
+      return fetch(url+"/validar",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:token||lsGet(LS_LIC)||"",device:deviceId()})}).then(function(r){return r.json();}).catch(function(){return {ok:true,offline:true};});}
+  };
   window.VP_LOCKED = ENFORCE && !!LOCKED_STATES[lic.state];
   // Parte que mexe no DOM (logos, banner, trava) — espera o corpo existir
   function dom(){

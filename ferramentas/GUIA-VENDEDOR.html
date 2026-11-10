@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guia do Vendedor — Perito · Laudo</title>
+<style>
+:root{--accent:#007a36;--laranja:#f59c00;--ink:#1d2a1a;--muted:#5d6a59;--line:#dbe3d1;--soft:#eef5e6}
+body{margin:0;background:#fff;color:var(--ink);font-family:"Segoe UI",Arial,sans-serif;font-size:15px;line-height:1.6}
+.wrap{max-width:820px;margin:0 auto;padding:30px 24px 70px}
+h1{color:var(--accent);margin:0 0 2px}h2{color:var(--accent);border-bottom:2px solid var(--soft);padding-bottom:6px;margin-top:28px}
+h3{margin:16px 0 4px}code{background:#f3f6ef;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-family:ui-monospace,monospace;font-size:13px}
+.box{background:var(--soft);border:1px solid var(--line);border-left:5px solid var(--accent);border-radius:8px;padding:12px 16px;margin:12px 0}
+.warn{background:#fff6e8;border-left-color:var(--laranja)}
+.danger{background:#fdeeec;border-left-color:#b3261e}
+ol,ul{padding-left:22px}li{margin:5px 0}
+pre{background:#0f1a12;color:#eaf3e2;padding:12px 14px;border-radius:8px;overflow:auto;font-size:13px}
+.tag{display:inline-block;background:var(--accent);color:#fff;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:700}
+</style></head>
+<body><div class="wrap">
+<div class="tag">USO INTERNO — VENDEDOR</div>
+<h1>Guia do Vendedor</h1>
+<p class="lead">Como vender, licenciar e manter o <b>Perito · Laudo</b>. Não distribua este arquivo.</p>
+
+<h2>1. O que você entrega ao cliente</h2>
+<p>Apenas o <code>venda-pericia.zip</code> (EXE + APK + Manual). Ele é montado sozinho pelo GitHub Actions a cada atualização (aba <b>Actions → Pacote de Venda → Artifacts → venda-pericia</b>).</p>
+<div class="danger"><b>Nunca</b> entregue: a chave privada, o <code>Gerador-de-Licencas.html</code>, a pasta <code>ferramentas/</code> ou este guia.</div>
+
+<h2>2. Gerar o código de liberação (12 meses)</h2>
+<ol>
+  <li>Abra o <code>Gerador-de-Licencas.html</code>.</li>
+  <li>Cole a sua <b>chave privada</b> (arquivo <code>MINHA-CHAVE-PRIVADA.txt</code>).</li>
+  <li>Digite o nome do cliente, deixe <b>12</b> meses e clique <b>Gerar</b>.</li>
+  <li>Copie o código e envie ao cliente. Ele ativa em <b>Painel de Controle → Ativar</b> (ou na tela <b>Assinar/Renovar</b>).</li>
+</ol>
+<p><b>Renovação:</b> gere um novo código de 12 meses quando o cliente renovar.</p>
+
+<h2>3. Preço, PIX e WhatsApp (tela de compra)</h2>
+<p>Edite o arquivo <code>venda-config.js</code> com os <b>seus</b> dados antes de publicar o pacote:</p>
+<pre>window.VENDA = {
+  preco:   "R$ 1.200,00 por ano",
+  pix:     "sua-chave-pix",
+  pixTitular: "Seu Nome",
+  whats:   "5544999999999",   // DDI+DDD+numero, só dígitos
+  email:   "seu@email.com"
+};</pre>
+<p>A tela <b>Assinar/Renovar</b> (dentro do programa) mostra o plano, o PIX (com botão copiar) e um botão de <b>WhatsApp</b> já com mensagem pronta. O cliente paga, manda o comprovante e você envia o código.</p>
+
+<h2>4. Teste grátis e modo consulta</h2>
+<ul>
+  <li><b>7 dias grátis</b> na primeira execução (uso completo).</li>
+  <li>Depois, sem licença válida → <b>modo consulta</b> (abre e lê, mas não edita/gera documentos).</li>
+  <li>Ao ativar um código válido → tudo liberado por 12 meses.</li>
+</ul>
+<p>Para mudar a duração do teste, edite <code>TRIAL_DAYS</code> em <code>comercial.js</code>.</p>
+
+<h2>5. (Opcional) Assinar o .exe — tira o aviso do Windows</h2>
+<p>Com um <b>certificado de assinatura de código</b> (pago, ex.: Sectigo/DigiCert), o .exe sai assinado e o Windows para de mostrar “Executar assim mesmo”.</p>
+<ol>
+  <li>Compre o certificado (.pfx) e sua senha.</li>
+  <li>No GitHub: <b>Settings → Secrets and variables → Actions → New secret</b>:
+    <ul><li><code>WINDOWS_CERT_BASE64</code> = conteúdo do .pfx em base64</li>
+    <li><code>WINDOWS_CERT_PASSWORD</code> = a senha do .pfx</li></ul></li>
+  <li>Pronto: o próximo build do pacote já sai <b>assinado</b> (o workflow <code>venda.yml</code> usa esses secrets automaticamente). Sem os secrets, compila normal.</li>
+</ol>
+<div class="box">Para gerar o base64 do .pfx no PowerShell:<br><code>[Convert]::ToBase64String([IO.File]::ReadAllBytes("cert.pfx")) | Set-Clipboard</code></div>
+
+<h2>6. (Opcional) Ativação online — anti-compartilhamento</h2>
+<p>Limita quantos computadores usam o mesmo código e permite <b>revogar</b> à distância. A emissão continua offline (o servidor <b>não</b> guarda a chave privada).</p>
+<ol>
+  <li>Hospede <code>server/licenca-online.js</code> em qualquer serviço Node (VPS, Render, Railway…). Ele sobe com:
+    <pre>ADMIN=suasenha MAX_DEVICES=2 node server/licenca-online.js</pre></li>
+  <li>No pacote, crie um arquivo <code>online-config.js</code> com <code>window.VP_ONLINE_URL="https://seu-servidor";</code> e carregue-o nas páginas (antes de <code>comercial.js</code>).</li>
+  <li>Revogar um código:
+    <pre>POST /revogar  cabeçalho x-admin: suasenha  corpo: {"token":"&lt;codigo&gt;"}</pre>
+    (para reativar, envie <code>{"token":"...","liberar":true}</code>).</li>
+</ol>
+<div class="warn">Sem hospedar o servidor nem definir a URL, o programa funciona 100% offline como hoje — a ativação online é um extra.</div>
+
+<h2>7. Segurança (seja realista com o cliente)</h2>
+<ul>
+  <li>A licença offline já segura o uso casual, mas <b>não é 100% à prova de pirataria</b>. Para blindar, ligue a ativação online (item 6).</li>
+  <li>Guarde a chave privada em local seguro e com backup. Se perder, não consegue gerar novos códigos; se vazar, qualquer um gera.</li>
+</ul>
+</div></body></html>

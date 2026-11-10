@@ -17,9 +17,11 @@ on:
       - "painel.html"
       - "admin.html"
       - "painel-controle.html"
+      - "assinar.html"
       - "campo.html"
       - "comercial.js"
       - "licenca-config.js"
+      - "venda-config.js"
       - "vendor/**"
       - "server/**"
       - "electron/**"
@@ -45,6 +47,11 @@ jobs:
         run: npx electron-builder --win portable --publish never
         env:
           GH_TOKEN: ""
+          # Assinatura de código (opcional): se você adicionar o certificado
+          # nos Secrets do repositório, o .exe sai ASSINADO automaticamente e
+          # some o aviso do Windows. Sem os secrets, compila normal (sem assinar).
+          CSC_LINK: ${{ secrets.WINDOWS_CERT_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
       - name: Renomear EXE
         run: Copy-Item (Get-ChildItem dist/*.exe | Select-Object -First 1).FullName -Destination "Perito-Laudo-PC.exe"
         shell: pwsh
