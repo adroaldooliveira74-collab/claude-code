@@ -4,7 +4,8 @@
 (function(){
   "use strict";
   var PUB = "yOlJKVw9frMqK3BOe2OjXbqsEMfT8CBotAeyUT4jrtg="; // chave pública de verificação
-  var LS_BRAND="vp_brand", LS_LIC="vp_lic", LS_SEEN="vp_seen";
+  var LS_BRAND="vp_brand", LS_LIC="vp_lic", LS_SEEN="vp_seen", LS_TRIAL="vp_trial";
+  var TRIAL_DAYS=7, AVISO_DIAS=15;
 
   // ---------- util ----------
   function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
@@ -55,24 +56,32 @@
       return {ok:true,pl:pl};
     }catch(e){return {ok:false,err:String(e&&e.message||e)};}
   }
+  function addDays(iso,n){var d=new Date(iso+"T00:00:00");d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);}
+  function dDiff(a,b){return Math.round((Date.parse(b+"T00:00:00")-Date.parse(a+"T00:00:00"))/86400000);}
   function evalLicense(){
     var token=lsGet(LS_LIC)||"";
     var seen=lsGet(LS_SEEN)||""; var hoje=today();
-    var res={state:"sem",pl:null,token:token};
+    var rollback = seen && hoje < seen;              // relógio atrasado (fraude)
+    var res={state:"sem",pl:null,token:token,daysLeft:null};
     if(token){
       var v=verify(token);
       if(!v.ok){res.state="invalida";}
       else{
         res.pl=v.pl;
-        var rollback = seen && hoje < seen;              // relógio atrasado (fraude)
-        var expirada = hoje > v.pl.exp;
-        res.state = (rollback||expirada) ? "expirada" : "ativa";
+        if(rollback || hoje>v.pl.exp){res.state="expirada";}
+        else {res.state="ativa"; res.daysLeft=dDiff(hoje,v.pl.exp);}
       }
+    } else {
+      // período de teste (primeira execução)
+      var ini=lsGet(LS_TRIAL); if(!ini){ini=hoje; lsSet(LS_TRIAL,hoje);}
+      var fim=addDays(ini,TRIAL_DAYS);
+      if(!rollback && hoje<=fim){res.state="trial"; res.daysLeft=dDiff(hoje,fim); res.trialEnd=fim;}
+      else {res.state="trial_expirado";}
     }
-    // atualiza "maior data já vista" (anti-rollback) só avança
     if(!seen || hoje>seen) lsSet(LS_SEEN,hoje);
     return res;
   }
+  var LOCKED_STATES={expirada:1,invalida:1,trial_expirado:1};
 
   // ---------- MODO CONSULTA (trava de edição/exportação) ----------
   var BLOCK=/baixar|\bpdf\b|word|gerar|montar|atualizar laudo|analisar|✨|importar|enviar ao servidor|📲|liberar|exportar|copiar texto|salvar|novo|\bapk\b/i;
@@ -99,10 +108,23 @@
   var _t;
   function toast(){try{var d=document.getElementById("vpToast");if(!d){d=document.createElement("div");d.id="vpToast";d.style.cssText="position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1d2a1a;color:#fff;padding:11px 18px;border-radius:10px;font:600 13px Segoe UI,Arial;z-index:2147483600;opacity:0;transition:.2s";document.body.appendChild(d);}d.textContent="🔒 Licença expirada — modo consulta. Renove para editar/gerar documentos.";d.style.opacity=1;clearTimeout(_t);_t=setTimeout(function(){d.style.opacity=0;},2600);}catch(e){}}
 
+  function infoBanner(msg){
+    try{
+      var bar=document.createElement("div");bar.id="vpInfo";
+      bar.style.cssText="position:fixed;left:0;right:0;top:0;z-index:2147483500;background:linear-gradient(90deg,#f59c00,#d98100);color:#3a2600;font-family:Segoe UI,Arial,sans-serif;font-size:13.5px;font-weight:700;padding:8px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 10px rgba(0,0,0,.18)";
+      bar.innerHTML='<span style="flex:1">'+msg+'</span>';
+      var b=document.createElement("button");b.textContent="Ativar / Renovar";b.className="vp-ok";b.style.cssText="background:#1d2a1a;color:#fff;border:0;border-radius:7px;padding:5px 12px;font-weight:800;cursor:pointer;font-size:12.5px";b.onclick=function(){ativar();};
+      var x=document.createElement("button");x.textContent="✕";x.className="vp-ok";x.title="fechar";x.style.cssText="background:transparent;border:0;color:#3a2600;font-weight:900;cursor:pointer;font-size:15px";x.onclick=function(){bar.remove();document.body.style.paddingTop="";};
+      bar.appendChild(b);bar.appendChild(x);
+      document.body.insertBefore(bar,document.body.firstChild);
+      document.body.style.paddingTop="38px";
+    }catch(e){}
+  }
   function banner(state,pl){
     var bar=document.createElement("div");bar.id="vpBar";
     var msg = state==="sem" ? "Produto sem licença — modo consulta (somente leitura)."
             : state==="invalida" ? "Licença inválida — modo consulta (somente leitura)."
+            : state==="trial_expirado" ? "Teste grátis encerrado — modo consulta (somente leitura). Ative sua licença para editar."
             : "Licença expirada"+(pl&&pl.exp?" em "+pl.exp.split("-").reverse().join("/"):"")+" — modo consulta (somente leitura).";
     bar.innerHTML='<span>🔒 '+msg+'</span>';
     var b=document.createElement("button");b.textContent="Inserir código de liberação (12 meses)";b.className="vp-ok";
@@ -131,12 +153,14 @@
   var lic=evalLicense();
   var ENFORCE=(window.VP_ENFORCE===true); // só a versão comercial ativa a trava
   window.VP={brand:brand,license:lic,ativar:ativar,verify:verify,enforce:ENFORCE,applyBrand:function(){var b=loadBrand();window.BRAND.rodape=rodapeLinhas(b);applyBrand(b);}};
-  window.VP_LOCKED = ENFORCE && (lic.state!=="ativa");
+  window.VP_LOCKED = ENFORCE && !!LOCKED_STATES[lic.state];
   // Parte que mexe no DOM (logos, banner, trava) — espera o corpo existir
   function dom(){
     applyBrand(brand);
     if(window.VP_SKIP_LOCK||!ENFORCE)return;
     if(window.VP_LOCKED){banner(lic.state,lic.pl);lockConsulta();}
+    else if(lic.state==="trial"){infoBanner("🎁 Teste grátis — "+(lic.daysLeft<=0?"último dia":"faltam "+lic.daysLeft+" dia(s)")+". Para continuar usando, ative sua licença.");}
+    else if(lic.state==="ativa" && lic.daysLeft!=null && lic.daysLeft<=AVISO_DIAS){infoBanner("⏰ Sua licença vence "+(lic.daysLeft<=0?"hoje":"em "+lic.daysLeft+" dia(s)")+(lic.pl&&lic.pl.exp?" ("+lic.pl.exp.split("-").reverse().join("/")+")":"")+". Renove para não interromper.");}
   }
   if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",dom); else dom();
 })();

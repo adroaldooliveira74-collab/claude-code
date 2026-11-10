@@ -150,7 +150,9 @@ function dataBR(iso){return iso?iso.split("-").reverse().join("/"):"";}
 function refreshLic(){
   const L=(window.VP&&window.VP.license)||{state:"sem"};
   const bd=$("#licBadge"),inf=$("#licInfo");
-  if(L.state==="ativa"){bd.className="badge ok";bd.textContent="Ativa";inf.textContent=(L.pl?("Licenciado para "+(L.pl.n||"—")+" · válida até "+dataBR(L.pl.exp)):"");}
+  if(L.state==="ativa"){bd.className="badge ok";bd.textContent="Ativa";inf.textContent=(L.pl?("Licenciado para "+(L.pl.n||"—")+" · válida até "+dataBR(L.pl.exp)+(L.daysLeft!=null&&L.daysLeft<=15?" · vence em "+L.daysLeft+" dia(s)":"")):"");}
+  else if(L.state==="trial"){bd.className="badge ok";bd.textContent="Teste grátis";inf.textContent="período de avaliação — "+(L.daysLeft<=0?"último dia":"faltam "+L.daysLeft+" dia(s)")+". Ative para continuar.";}
+  else if(L.state==="trial_expirado"){bd.className="badge bad";bd.textContent="Teste encerrado";inf.textContent="modo consulta — ative sua licença para editar";}
   else if(L.state==="expirada"){bd.className="badge bad";bd.textContent="Expirada";inf.textContent=(L.pl?("Venceu em "+dataBR(L.pl.exp)+" — modo consulta"):"modo consulta");}
   else if(L.state==="invalida"){bd.className="badge bad";bd.textContent="Inválida";inf.textContent="código não reconhecido — modo consulta";}
   else{bd.className="badge bad";bd.textContent="Sem licença";inf.textContent="modo consulta (somente leitura)";}
