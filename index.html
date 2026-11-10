@@ -176,6 +176,7 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
 </style>
 </head>
 <body>
+<script>window.__SRVPIN__="%%PIN%%";</script>
 
 
 <div id="home">
@@ -627,6 +628,11 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
       <div class="row-actions"><button class="btn primary" id="bkExport">⬇ Exportar este processo</button><button class="btn" id="bkExportAll">⬇ Exportar TODOS</button><button class="btn" id="bkImport">⬆ Importar backup</button><label class="chk" style="display:flex;gap:6px;align-items:center;font-size:12.5px;font-weight:500"><input type="checkbox" id="bkRead">abrir como leitura</label></div>
       <input type="file" id="bkFile" accept=".json,application/json" hidden>
     </div>
+    <div class="card" id="srvCard" hidden>
+      <h2>🖥️ Servidor (PC) <span class="seal">REDE LOCAL</span></h2>
+      <p class="sub">Aparece só no aplicativo de PC. Envie este processo ao servidor para liberar ao celular, ou abra um processo que voltou do campo (sem precisar de arquivos).</p>
+      <div class="row-actions"><button class="btn primary small" id="srvEnviar">⬆ Enviar este processo ao servidor</button><button class="btn small" id="srvAbrir">⬇ Abrir processo do servidor</button><a class="btn small" href="/admin">🗂️ Abrir Admin</a><span class="hint" id="srvStatus"></span></div>
+    </div>
     <div class="card">
       <h2>📲 Instalar o app</h2>
       <p class="sub">Abra este endereco no navegador e use <b>Instalar app</b> (Chrome/Edge no PC e Android) ou <b>Compartilhar → Adicionar a Tela de Inicio</b> (iPhone). Funciona como app, com camera, GPS e offline.</p>
@@ -1002,6 +1008,16 @@ async function importBackup(file,readonly){let p;try{p=JSON.parse(await file.tex
   if(p.media){for(const id in p.media){const it=p.media[id];try{if(it.t==="text")await idbPut(id,it.d);else await idbPut(id,b64ToBlob(it.d,it.m));}catch(e){}}}
   state=Object.assign(blankState(),p.state);if(!state.painelId)state.painelId=uid();if(readonly&&state.auditoria)state.auditoria.locked=true;try{localStorage.setItem(LS_KEY,JSON.stringify(state));saveRecord();}catch(e){}
   hydrate();renderAll();generateLaudo();flash("Backup importado"+(readonly?" (somente leitura)":"")+".");}
+const SRVPIN=(window.__SRVPIN__&&window.__SRVPIN__.indexOf("%%")!==0)?window.__SRVPIN__:"";
+async function srvApi(path,opts){opts=opts||{};opts.headers=Object.assign({"x-pin":SRVPIN},opts.headers||{});const r=await fetch(path,opts);if(!r.ok){let e="";try{e=(await r.json()).error;}catch(x){}throw new Error(e||("HTTP "+r.status));}return r.json();}
+async function srvDetect(){try{await (await fetch("/api/ping")).json();const c=$("#srvCard");if(c)c.hidden=false;}catch(e){}}
+async function srvEnviar(){const st=$("#srvStatus");try{if(st)st.textContent="enviando…";saveRecord();const media=await collectMedia(state);await srvApi("/api/seed",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({state:state,media:media})});if(st){st.style.color="var(--ok)";st.textContent="Enviado. Abra o Admin para liberar ao celular.";}flash("Processo enviado ao servidor do PC.");}catch(e){if(st){st.style.color="var(--warn)";st.textContent="Erro: "+e.message;}}}
+async function srvAbrir(){try{const d=await srvApi("/api/list");const pc=(d.records||[]).filter(r=>r.location==="pc");if(!pc.length){flash("Nenhum processo disponível no servidor (ou todos em campo).");return;}
+  const lines=pc.map((r,i)=>(i+1)+") "+(r.numero||"(sem número)")+" — "+(r.parte||""));const sel=prompt("Abrir qual processo do servidor?\n"+lines.join("\n")+"\n\nDigite o número:");const i=parseInt(sel,10)-1;if(isNaN(i)||!pc[i])return;
+  const rec=await srvApi("/api/pull?pid="+encodeURIComponent(pc[i].pid));
+  if(rec.media){for(const id in rec.media){const it=rec.media[id];await idbPut(id,it.t==="text"?it.d:b64ToBlob(it.d,it.m));}}
+  state=Object.assign(blankState(),rec.state);if(!state.painelId)state.painelId=uid();try{localStorage.setItem(ACTIVE_KEY,state.painelId);}catch(e){}saveRecord();hydrate();renderAll();generateLaudo();flash("Processo aberto do servidor.");}catch(e){flash("Erro: "+e.message);}}
+{const _be=$("#srvEnviar");if(_be)_be.addEventListener("click",srvEnviar);const _ba=$("#srvAbrir");if(_ba)_ba.addEventListener("click",srvAbrir);srvDetect();}
 async function collectMedia(st){const ids=[];(st.media||[]).forEach(m=>ids.push(m.id));(st.docs||[]).forEach(d=>{if(d.hasText)ids.push("doctext_"+d.id);});(st.aparelhos||[]).forEach(a=>ids.push(a.kind==="pdf"?"apt_"+a.id:a.id));(st.epiDocs||[]).forEach(e=>ids.push(e.kind==="pdf"?"epidoc_"+e.id:e.id));const media={};for(const id of ids){const b=await idbGet(id);if(b==null)continue;if(typeof b==="string")media[id]={t:"text",d:b};else media[id]={t:"blob",m:b.type||"application/octet-stream",d:await blobToB64(b)};}return media;}
 async function exportAll(){try{saveRecord();}catch(e){}const idx=readIdx();const records=[];for(const r of idx){try{const raw=localStorage.getItem(REC(r.pid));if(!raw)continue;const st=JSON.parse(raw);records.push({state:st,media:await collectMedia(st)});}catch(e){}}
   const payload={_app:"perito-laudo",_v:5,_all:true,ts:new Date().toISOString(),records};
