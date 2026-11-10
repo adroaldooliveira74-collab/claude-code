@@ -27,7 +27,29 @@ ACAO: nada
 
 Se um upload falhar, o bot **avisa o Claude com a mensagem de erro** e deixa ele decidir (reenviar corrigido ou parar). Assim, o dia inteiro é conduzido pelo Claude, sem você precisar mexer.
 
-> ⚠️ **Leia isto antes de usar.** O robô controla seu teclado e mouse. Enquanto ele roda, **não mexa no computador** e deixe a janela do muse.ai aberta e visível. Para abortar na hora: jogue o mouse rápido para o **canto superior esquerdo** da tela.
+> ℹ️ Como o envio ao muse.ai é pela **API**, o robô **não precisa** mexer no seu mouse/teclado nem ter o navegador aberto. (O controle de tela só é usado se você desligar a API e escolher o modo navegador.)
+
+---
+
+## ⭐ Jeito mais fácil (clicar nos `.bat`)
+
+Depois de baixar a pasta no seu PC, você pode fazer quase tudo clicando duas vezes:
+
+| Arquivo | O que faz |
+|---|---|
+| `instalar.bat` | Instala as bibliotecas (uma vez só) |
+| `verificar.bat` | **Confere se está tudo pronto** e diz o que falta |
+| `simular.bat` | Roda o dia inteiro **sem enviar ao muse** (teste seguro) |
+| `rodar.bat` | Roda de verdade (é o que o Agendador usa às 16:00) |
+
+**Ordem recomendada:** `instalar.bat` → `verificar.bat` → (resolver o que faltar) → `simular.bat` → `rodar.bat`.
+
+Os mesmos passos pela linha de comando:
+```bash
+python claude_muse_bot.py --verificar
+python claude_muse_bot.py --simular
+python claude_muse_bot.py --agora
+```
 
 ---
 
