@@ -72,11 +72,14 @@ python claude_muse_bot.py --agora
    ```
    (`requests` = API do muse.ai; `pyautogui`/`pyperclip` = só o loop de dúvidas no navegador.)
 
-4. **A chave da API do muse.ai.** Pegue a chave na sua conta do muse.ai e guarde numa variável de ambiente (não no código). No **CMD**:
-   ```bash
-   setx MUSE_API_KEY "sua_chave_aqui"
+4. **A chave da API do muse.ai.** Pegue a chave na sua conta do muse.ai e cole no `config.json`, no campo `muse_api.chave`, entre as aspas:
+   ```json
+   "muse_api": {
+     "chave": "cole_sua_chave_aqui",
+     ...
+   }
    ```
-   Feche e abra um novo terminal depois. Confira com:
+   (Alternativa avançada: deixar `chave` vazio e usar a variável de ambiente `MUSE_API_KEY` via `setx`.) Confira com:
    ```bash
    python claude_muse_bot.py --testar-muse
    ```

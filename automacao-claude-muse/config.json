@@ -21,8 +21,9 @@
   },
 
   "muse_api": {
-    "_comentario": "Parte NOVA e confiavel: sobe o relatorio como arquivo via API. A chave fica na variavel de ambiente, nao aqui.",
+    "_comentario": "JEITO FACIL: cole sua chave do muse.ai no campo 'chave' abaixo, entre as aspas. (Alternativa avancada: deixar 'chave' vazio e usar a variavel de ambiente MUSE_API_KEY.)",
     "ativo": true,
+    "chave": "",
     "url_upload": "https://muse.ai/api/files/upload",
     "variavel_ambiente_chave": "MUSE_API_KEY",
     "collection_id": "",
