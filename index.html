@@ -778,8 +778,12 @@ function parsePeticao(txt){const found=[];const put=(sel,setter,val,label)=>{if(
   const com=txt.match(/Comarca\s+de\s+([A-ZÀ-Úa-zà-ú][^\n.,;\-]{1,34})/i);if(com)put("#p_comarca",(s,v)=>s.processo.comarca=v,titleCase(com[1]),"comarca");
   const val=txt.match(/R\$\s?[\d.]+,\d{2}/);if(val)put("#p_valor",(s,v)=>s.processo.valor=v,val[0],"valor");
   const cnpj=txt.match(/\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/);if(cnpj)put("#e_cnpj",(s,v)=>s.empresa.cnpj=v,cnpj[0],"CNPJ");
-  const a=matchParte(txt,/(?:reclamante|autor(?:a)?|requerente|exequente)s?\s*[:\-–]\s*/i);if(a)put("#pt_autor",(s,v)=>s.partes.autor=v,titleCase(a),"reclamante");
-  const r=matchParte(txt,/(?:reclamad[oa]|r[ée]u|requerid[oa]|executad[oa])s?\s*[:\-–]\s*/i);if(r){put("#pt_reu",(s,v)=>s.partes.reu=v,r,"reclamada");if(!state.empresa.razao){state.empresa.razao=r;$("#e_razao").value=r;}}
+  let a=matchParte(txt,/(?:reclamante|autor(?:a)?|requerente|exequente)s?\s*[:\-–]\s*/i);
+  if(!a){const m=txt.match(/(?:^|\n)\s*([A-ZÀ-Ú][A-ZÀ-Ú'´`.\s]{6,60}?)\s*,?\s*(?:brasileir|portador|inscrit|estrangeir|solteir|casad|divorciad|vi[úu]v)/i);if(m)a=clean(m[1]);}
+  if(a)put("#pt_autor",(s,v)=>s.partes.autor=v,titleCase(a),"reclamante");
+  let r=matchParte(txt,/(?:reclamad[oa]|r[ée]u|requerid[oa]|executad[oa])s?\s*[:\-–]\s*/i);
+  if(!r){const m=txt.match(/em\s+face\s+d[eo]\s+([A-ZÀ-Ú][^\n,.;]{3,70})/i);if(m)r=clean(m[1]);}
+  if(r){put("#pt_reu",(s,v)=>s.partes.reu=v,r,"reclamada");if(!state.empresa.razao){state.empresa.razao=r;const el2=$("#e_razao");if(el2)el2.value=r;}}
   const flat=txt.replace(/\n+/g," ");
   const advs=[...txt.matchAll(/ADVOGAD[OA]\s*[:\-–]\s*([A-ZÀ-Ú][^\n]{3,60})/g)].map(m=>clean(m[1]));
   const oab=txt.match(/OAB\/?\s*([A-Z]{2})\.?\s*[–\-:]*\s*([\d.]{3,9})/i);
@@ -790,7 +794,7 @@ function parsePeticao(txt){const found=[];const put=(sel,setter,val,label)=>{if(
   const adm=dataPT(txt,/admitid[oa][^.]{0,50}?\bem\s+(\d{1,2})\s+de\s+([a-zà-ç]+)\s+de\s+(\d{4})/i);if(adm)put("#vc_admissao",(s,x)=>s.vinculo.admissao=x,adm,"admissão");
   const sai=dataPT(txt,/(\d{1,2})\s+de\s+([a-zà-ç]+)\s+de\s+(\d{4})\s*,?[^.]{0,40}?(?:dispensad|demitid|desligad|rescis)/i)||dataPT(txt,/(?:dispensad[oa]|demitid[oa]|desligad[oa]|rescis\w+)[^.]{0,60}?\bem\s+(\d{1,2})\s+de\s+([a-zà-ç]+)\s+de\s+(\d{4})/i);if(sai)put("#vc_saida",(s,x)=>s.vinculo.saida=x,sai,"saída");
   state.peticao=txt;{const pt=$("#peticao");if(pt)pt.value=txt;}save();if(typeof renderEpiGap==="function")renderEpiGap();const el=$("#petResult");el.style.color=found.length?"var(--ok)":"var(--warn)";
-  el.textContent=found.length?("Extraído: "+found.join(", ")+". Revise."):"Nada reconhecido — preencha manualmente.";flash(found.length?"Cadastro preenchido — revise.":"Nada reconhecido no PDF.");iaObjetoFn(true);}
+  el.textContent=found.length?("Extraído: "+found.join(", ")+". Revise."):("Li o texto ("+txt.length+" caracteres), mas não reconheci os campos automaticamente. Revise/preencha, ou use “Colar texto”.");flash(found.length?"Cadastro preenchido — revise.":"PDF lido, mas sem campos reconhecidos.");iaObjetoFn(true);}
 function matchParte(txt,re){const m=txt.match(re);if(!m)return"";const a=txt.slice(m.index+m[0].length,m.index+m[0].length+90);return clean(a.split(/[,;\n]|\bbrasileir|\binscrit|\bportador|\bCPF|\bCNPJ|\bCTPS/i)[0]).slice(0,70);}
 
 const ORDER=["Juiz","Reclamada","Autora","MP"];
@@ -814,12 +818,17 @@ function wireDrop(dropSel,inputSel,onFile,multi){const d=$(dropSel),inp=$(inputS
   ["dragleave","drop"].forEach(e=>d.addEventListener(e,ev=>{ev.preventDefault();d.classList.remove("over");}));
   d.addEventListener("drop",ev=>{const f=ev.dataTransfer.files;if(!f||!f.length)return;multi?onFile(f):onFile(f[0]);});
   inp.addEventListener("change",()=>{if(inp.files.length)multi?onFile(inp.files):onFile(inp.files[0]);inp.value="";});}
-async function handlePdf(file,kind){const resSel=kind==="pet"?"#petResult":"#qResult";$(resSel).style.color="var(--muted)";$(resSel).innerHTML='<span class="spin"></span> Lendo PDF…';
-  try{const txt=await pdfToText(file);if(!txt.trim())throw 0;kind==="pet"?parsePeticao(txt):importQuesitos(txt);}
-  catch(e){
-    if(getKey()){try{$(resSel).innerHTML='<span class="spin"></span> PDF digitalizado — lendo com IA (OCR)…';const t=await ocrPdf(file);if(t&&t.trim()){kind==="pet"?parsePeticao(t):importQuesitos(t);flash("Lido com IA (OCR) — revise.");return;}}catch(e2){}}
-    $(resSel).style.color="var(--warn)";$(resSel).textContent="Não consegui ler (PDF imagem/digitalizado?). Configure o Gemini para OCR automático, ou use “Colar texto”.";flash("Falha ao ler o PDF.");
-  }}
+async function handlePdf(file,kind){const resSel=kind==="pet"?"#petResult":"#qResult";const st=$(resSel);st.style.color="var(--muted)";st.innerHTML='<span class="spin"></span> Lendo PDF…';
+  let txt="";try{txt=await pdfToText(file);}catch(e){txt="";}
+  const hasText=txt&&txt.replace(/\s/g,"").length>60;
+  if(hasText){kind==="pet"?parsePeticao(txt):importQuesitos(txt);return;}
+  // pouco/nenhum texto selecionável → provavelmente digitalizado (imagem)
+  if(getKey()){
+    try{st.innerHTML='<span class="spin"></span> PDF digitalizado — lendo com IA (OCR)…';const t=await ocrPdf(file);if(t&&t.replace(/\s/g,"").length>40){kind==="pet"?parsePeticao(t):importQuesitos(t);flash("Lido com IA (OCR) — revise.");return;}}catch(e2){}
+    st.style.color="var(--warn)";st.textContent="Não consegui extrair o texto, mesmo com a IA. O PDF pode estar protegido ou corrompido. Use “Colar texto”.";flash("Falha ao ler o PDF.");return;
+  }
+  st.style.color="var(--warn)";st.innerHTML='Este PDF parece <b>digitalizado</b> (imagem), sem texto selecionável. Ative a <b>IA</b> na aba <b>IA/Config</b> para leitura automática (OCR), ou use <b>“Colar texto”</b>.';flash("PDF sem texto — ative a IA ou cole o texto.");
+}
 async function pdfPagesToImages(file,maxPages){const data=new Uint8Array(await file.arrayBuffer());const pdf=await pdfjsLib.getDocument({data}).promise;const out=[];const n=Math.min(pdf.numPages,maxPages||6);for(let i=1;i<=n;i++){const page=await pdf.getPage(i);const vp=page.getViewport({scale:1.6});const cv=document.createElement("canvas");cv.width=vp.width;cv.height=vp.height;const ctx=cv.getContext("2d");await page.render({canvasContext:ctx,viewport:vp}).promise;const blob=await new Promise(r=>cv.toBlob(r,"image/jpeg",0.8));if(blob)out.push(blob);}return out;}
 async function ocrPdf(file){if(!getKey())throw new Error("sem-chave");const imgs=await pdfPagesToImages(file,6);if(!imgs.length)throw new Error("sem-paginas");return (await geminiGenerate("Transcreva fielmente TODO o texto deste documento digitalizado, mantendo a ordem e a estrutura. Responda apenas o texto, sem comentários.",{images:imgs},false)||"").trim();}
 wireDrop("#dropPet","#petInput",f=>handlePdf(f,"pet"));
