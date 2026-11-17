@@ -58,6 +58,7 @@ a{color:var(--accent)}button{font-family:inherit}
 .tab[aria-selected="true"] .n{background:rgba(255,255,255,.22);color:var(--accent-ink)}
 .tab:not([aria-selected="true"]):hover{border-color:var(--accent);color:var(--accent)}
 .tab.done .n{background:var(--ok);color:#fff}
+.tab .tbadge{background:var(--danger);color:#fff;font-size:10.5px;font-weight:800;min-width:16px;height:16px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;line-height:1}
 .procchip{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--accent);background:var(--accent-soft);border:1px solid var(--line);border-radius:999px;padding:3px 10px;max-width:42vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .navprev{display:flex;gap:10px;justify-content:space-between;margin-top:14px}
 .navprev button{flex:1;max-width:48%}
@@ -204,6 +205,7 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
   <button class="icon-btn" id="procBtn">📁 Processos</button>
   <button class="icon-btn" id="homeBtn">🏠 Início</button>
   <a class="icon-btn" href="painel-controle.html" title="Marca, cores e licença" style="text-decoration:none">⚙️ Controle</a>
+  <button class="icon-btn" id="iaChip" data-goia title="A IA (OCR e preenchimento automático) ainda não foi configurada" style="display:none;border-color:var(--laranja);color:var(--warn)">⚡ Configurar IA</button>
   <button class="icon-btn" id="themeBtn">◐ Tema</button><button class="icon-btn" id="resetBtn">↺ Novo</button>
 </div>
 
@@ -487,6 +489,7 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
         <textarea id="qText" rows="6" placeholder="Cole o texto dos quesitos (com os títulos de cada parte, se houver)…"></textarea>
         <button class="btn small" id="parseQText" style="margin-top:8px;align-self:flex-start">⤵ Importar</button></label>
       <div class="note green"><b>Imparcialidade:</b> o laudo esclarece a dúvida do juízo, não cria litígio. Responda de forma técnica, objetiva e fundamentada.</div>
+      <div class="row-actions" id="qIaRow" style="margin:10px 0" hidden><button class="btn ia small" id="qIaBtn" type="button">✨ Responder os quesitos pela IA (rascunho)</button><span class="hint" id="qIaStatus">A IA preenche só as respostas vazias, com base nos dados. Revise sempre.</span></div>
       <div id="quesitosList"></div>
       <div class="empty-state" id="quesEmpty">Nenhum quesito cadastrado.</div>
       <div class="add-bar">
@@ -828,7 +831,7 @@ async function handlePdf(file,kind){const resSel=kind==="pet"?"#petResult":"#qRe
     try{st.innerHTML='<span class="spin"></span> PDF digitalizado — lendo com IA (OCR)…';const t=await ocrPdf(file);if(t&&t.replace(/\s/g,"").length>40){kind==="pet"?parsePeticao(t):importQuesitos(t);flash("Lido com IA (OCR) — revise.");return;}}catch(e2){}
     st.style.color="var(--warn)";st.textContent="Não consegui extrair o texto, mesmo com a IA. O PDF pode estar protegido ou corrompido. Use “Colar texto”.";flash("Falha ao ler o PDF.");return;
   }
-  st.style.color="var(--warn)";st.innerHTML='Este PDF parece <b>digitalizado</b> (imagem), sem texto selecionável. Ative a <b>IA</b> na aba <b>IA/Config</b> para leitura automática (OCR), ou use <b>“Colar texto”</b>.';flash("PDF sem texto — ative a IA ou cole o texto.");
+  st.style.color="var(--warn)";st.innerHTML='Este PDF parece <b>digitalizado</b> (imagem), sem texto selecionável. <u data-goia style="cursor:pointer;color:var(--accent)">Configure a IA (OCR) →</u> ou use <b>“Colar texto”</b>.';flash("PDF sem texto — ative a IA ou cole o texto.");
 }
 async function pdfPagesToImages(file,maxPages){const data=new Uint8Array(await file.arrayBuffer());const pdf=await pdfjsLib.getDocument({data}).promise;const out=[];const n=Math.min(pdf.numPages,maxPages||6);for(let i=1;i<=n;i++){const page=await pdf.getPage(i);const vp=page.getViewport({scale:1.6});const cv=document.createElement("canvas");cv.width=vp.width;cv.height=vp.height;const ctx=cv.getContext("2d");await page.render({canvasContext:ctx,viewport:vp}).promise;const blob=await new Promise(r=>cv.toBlob(r,"image/jpeg",0.8));if(blob)out.push(blob);}return out;}
 async function ocrPdf(file){if(!getKey())throw new Error("sem-chave");const imgs=await pdfPagesToImages(file,6);if(!imgs.length)throw new Error("sem-paginas");return (await geminiGenerate("Transcreva fielmente TODO o texto deste documento digitalizado, mantendo a ordem e a estrutura. Responda apenas o texto, sem comentários.",{images:imgs},false)||"").trim();}
@@ -979,7 +982,7 @@ $$("[data-addq]").forEach(b=>b.addEventListener("click",()=>addQuesito(b.dataset
 function renderQuesitos(){const wrap=$("#quesitosList");wrap.innerHTML="";$("#quesEmpty").hidden=state.quesitos.length>0;
   const ordered=[...state.quesitos].sort((a,b)=>ORDER.indexOf(a.origem)-ORDER.indexOf(b.origem));const cnt={};
   ordered.forEach(q=>{cnt[q.origem]=(cnt[q.origem]||0)+1;const n=cnt[q.origem];const cls=q.origem==="Juiz"?"juiz":q.origem==="Reclamada"?"reclamada":q.origem==="Autora"?"autora":"mp";
-    const el=document.createElement("div");el.className="ques";el.innerHTML=`<div class="head"><span class="pill ${cls}">${esc(q.origem)}</span><span class="qnum">Quesito ${String(n).padStart(2,"0")}</span><span class="spacer"></span><select class="orig" data-orig="${q.id}">${ORDER.map(o=>`<option ${o===q.origem?"selected":""}>${o}</option>`).join("")}</select><button class="btn danger small" data-delq="${q.id}">Remover</button></div><div class="inner"><div class="qlabel">Pergunta</div><textarea class="pergunta" data-qp="${q.id}" placeholder="Transcreva o quesito…">${esc(q.pergunta)}</textarea><div class="qlabel">Resposta do perito</div><textarea class="resposta" data-qa="${q.id}" placeholder="Resposta técnica, objetiva e fundamentada…">${esc(q.resposta)}</textarea><div class="row-actions" style="margin-top:6px"><button class="btn small" data-qpre="${q.id}" type="button">Prejudicado</button><button class="btn small" data-qna="${q.id}" type="button">Não se aplica</button><button class="btn small" data-qrem="${q.id}" type="button">+ Remissão</button></div></div>`;wrap.appendChild(el);});
+    const el=document.createElement("div");el.className="ques";el.innerHTML=`<div class="head"><span class="pill ${cls}">${esc(q.origem)}</span><span class="qnum">Quesito ${String(n).padStart(2,"0")}</span><span class="spacer"></span><button class="btn small" data-qup="${q.id}" title="Subir" type="button">↑</button><button class="btn small" data-qdown="${q.id}" title="Descer" type="button">↓</button><select class="orig" data-orig="${q.id}">${ORDER.map(o=>`<option ${o===q.origem?"selected":""}>${o}</option>`).join("")}</select><button class="btn danger small" data-delq="${q.id}">Remover</button></div><div class="inner"><div class="qlabel">Pergunta</div><textarea class="pergunta" data-qp="${q.id}" placeholder="Transcreva o quesito…">${esc(q.pergunta)}</textarea><div class="qlabel">Resposta do perito</div><textarea class="resposta" data-qa="${q.id}" placeholder="Resposta técnica, objetiva e fundamentada…">${esc(q.resposta)}</textarea><div class="row-actions" style="margin-top:6px"><button class="btn small" data-qpre="${q.id}" type="button">Prejudicado</button><button class="btn small" data-qna="${q.id}" type="button">Não se aplica</button><button class="btn small" data-qrem="${q.id}" type="button">+ Remissão</button></div></div>`;wrap.appendChild(el);});
   wrap.querySelectorAll("[data-qp]").forEach(t=>t.addEventListener("input",()=>{const q=state.quesitos.find(x=>x.id===t.dataset.qp);if(q){q.pergunta=t.value;save();}}));
   wrap.querySelectorAll("[data-qa]").forEach(t=>t.addEventListener("input",()=>{const q=state.quesitos.find(x=>x.id===t.dataset.qa);if(q){q.resposta=t.value;save();}}));
   wrap.querySelectorAll("[data-orig]").forEach(s=>s.addEventListener("change",()=>{const q=state.quesitos.find(x=>x.id===s.dataset.orig);if(q){q.origem=s.value;save();renderQuesitos();}}));
@@ -987,7 +990,11 @@ function renderQuesitos(){const wrap=$("#quesitosList");wrap.innerHTML="";$("#qu
   const setResp=(id,val,append)=>{const q=state.quesitos.find(x=>x.id===id);if(!q)return;q.resposta=append?((q.resposta?q.resposta.trim()+" ":"")+val):val;save();renderQuesitos();};
   wrap.querySelectorAll("[data-qpre]").forEach(b=>b.addEventListener("click",()=>setResp(b.dataset.qpre,"Prejudicado.",false)));
   wrap.querySelectorAll("[data-qna]").forEach(b=>b.addEventListener("click",()=>setResp(b.dataset.qna,"Não se aplica ao objeto desta perícia.",false)));
-  wrap.querySelectorAll("[data-qrem]").forEach(b=>b.addEventListener("click",()=>setResp(b.dataset.qrem,"Vide item ___ / Foto nº ___ deste laudo.",true)));}
+  wrap.querySelectorAll("[data-qrem]").forEach(b=>b.addEventListener("click",()=>setResp(b.dataset.qrem,"Vide item ___ / Foto nº ___ deste laudo.",true)));
+  const moveQ=(id,dir)=>{const arr=state.quesitos;const i=arr.findIndex(x=>x.id===id);if(i<0)return;let j=i+dir;while(j>=0&&j<arr.length&&arr[j].origem!==arr[i].origem)j+=dir;if(j<0||j>=arr.length)return;const t=arr[i];arr[i]=arr[j];arr[j]=t;save();renderQuesitos();};
+  wrap.querySelectorAll("[data-qup]").forEach(b=>b.addEventListener("click",()=>moveQ(b.dataset.qup,-1)));
+  wrap.querySelectorAll("[data-qdown]").forEach(b=>b.addEventListener("click",()=>moveQ(b.dataset.qdown,1)));
+  const row=$("#qIaRow");if(row)row.hidden=state.quesitos.length===0;}
 
 /* normas */
 function renderNormas(){const wrap=$("#normasList");wrap.innerHTML="";state.normas.forEach(n=>{const el=document.createElement("div");el.className="norma-item";el.innerHTML=`<label class="chk"><input type="checkbox" data-non="${esc(n.code)}" ${n.on?"checked":""}></label><span class="code">${esc(n.code)}</span><span class="desc">${esc(n.desc)}</span><button class="btn danger small" data-deln="${esc(n.code)}">×</button>`;wrap.appendChild(el);});
@@ -1008,6 +1015,8 @@ $("#addNc").addEventListener("click",()=>{state.ncs.push({id:uid(),desc:"",grau:
 /* ===== IA ===== */
 let sampleCap=null,sampleTried=false,sampleLimits=null;
 function getKey(){try{return localStorage.getItem("gemini_key")||"";}catch(e){return"";}}
+function updateIaChip(){try{const c=$("#iaChip");if(c)c.style.display=getKey()?"none":"";}catch(e){}}
+document.addEventListener("click",function(e){const t=e.target.closest&&e.target.closest("[data-goia]");if(t){e.preventDefault();if(typeof goTab==="function")goTab("config");}});
 function getModel(){try{return localStorage.getItem("gemini_model")||"gemini-flash-latest";}catch(e){return"gemini-flash-latest";}}
 function blobToB64(b){return new Promise(res=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(",")[1]||"");r.onerror=()=>res("");r.readAsDataURL(b);});}
 function b64ToBlob(b64,mime){try{const bin=atob(b64);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new Blob([u],{type:mime||"application/octet-stream"});}catch(e){return new Blob([]);}}
@@ -1023,8 +1032,8 @@ async function geminiGenerate(input,opts,wantJson){const key=getKey();if(!key){c
   if(!txt){const er=new Error("vazio");er.code="empty_completion";throw er;}return txt;}
 async function getSample(){if(!getKey())return null;if(!sampleCap){const fn=async(input,opts)=>({text:await geminiGenerate(input,opts,false),truncated:false});fn.json=(input,opts)=>geminiGenerate(input,opts,true);fn.limits=async()=>({maxPromptBytes:1000000,images:{maxCount:12,maxInputBytes:20000000,mediaTypes:["image/jpeg","image/png","image/webp"]}});sampleCap=fn;try{sampleLimits=await fn.limits();}catch(e){}}return sampleCap;}
 function registerSW(){if("serviceWorker"in navigator){try{navigator.serviceWorker.register("sw.js").catch(()=>{});}catch(e){}}}
-function initConfig(){const k=$("#cfg_key"),m=$("#cfg_model");if(k)k.value=getKey();if(m)m.value=getModel();
-  const sv=$("#cfg_save");if(sv)sv.addEventListener("click",()=>{try{localStorage.setItem("gemini_key",$("#cfg_key").value.trim());localStorage.setItem("gemini_model",($("#cfg_model").value.trim()||"gemini-flash-latest"));}catch(e){}sampleCap=null;const st=$("#cfg_status");st.style.color="var(--ok)";st.textContent="Salvo neste aparelho.";flash("Configuracao salva.");});
+function initConfig(){const k=$("#cfg_key"),m=$("#cfg_model");if(k)k.value=getKey();if(m)m.value=getModel();updateIaChip();
+  const sv=$("#cfg_save");if(sv)sv.addEventListener("click",()=>{try{localStorage.setItem("gemini_key",$("#cfg_key").value.trim());localStorage.setItem("gemini_model",($("#cfg_model").value.trim()||"gemini-flash-latest"));}catch(e){}sampleCap=null;updateIaChip();const st=$("#cfg_status");st.style.color="var(--ok)";st.textContent="Salvo neste aparelho.";flash("Configuração salva.");});
   const ts=$("#cfg_test");if(ts)ts.addEventListener("click",async()=>{const st=$("#cfg_status");try{localStorage.setItem("gemini_key",$("#cfg_key").value.trim());localStorage.setItem("gemini_model",($("#cfg_model").value.trim()||"gemini-flash-latest"));}catch(e){}sampleCap=null;st.style.color="var(--muted)";st.innerHTML='<span class="spin"></span> Testando...';try{const s=await getSample();if(!s){st.style.color="var(--warn)";st.textContent="Informe a chave.";return;}await s("Responda apenas: OK");st.style.color="var(--ok)";st.textContent="Conexao OK.";flash("Gemini conectado.");}catch(e){st.style.color="var(--warn)";st.textContent="Falha: "+(e.message||e.code||"erro");}});}
 async function exportBackup(){const ids=[];state.media.forEach(m=>ids.push(m.id));state.docs.forEach(d=>{if(d.hasText)ids.push("doctext_"+d.id);});state.aparelhos.forEach(a=>ids.push(a.kind==="pdf"?"apt_"+a.id:a.id));state.epiDocs.forEach(e=>ids.push(e.kind==="pdf"?"epidoc_"+e.id:e.id));
   const payload={_app:"perito-laudo",_v:5,ts:new Date().toISOString(),state:state,media:{}};
@@ -1130,6 +1139,7 @@ Responda SOMENTE com JSON:
   }catch(e){const msg=iaErr(e);st.style.color="var(--warn)";st.textContent=msg;flash(msg);}finally{btn.disabled=false;}}
 function iaErr(e){return e&&e.code==="not_granted"?"Configure a chave do Gemini (aba IA/Config).":e&&e.code==="invalid_json"?"Formato inesperado — tente de novo.":e&&e.code==="rate_limited"?"Muitas chamadas — aguarde.":"Falha na IA — tente novamente.";}
 $("#iaBtn").addEventListener("click",iaDraft);
+{const qb=$("#qIaBtn");if(qb)qb.addEventListener("click",()=>{if(!getKey()){flash("Configure a IA primeiro.");goTab("config");return;}const s=$("#qIaStatus");if(s){s.style.color="var(--muted)";s.innerHTML='<span class="spin"></span> IA redigindo as respostas…';}Promise.resolve(iaDraft()).then(()=>{renderQuesitos();const s2=$("#qIaStatus");if(s2){s2.style.color="var(--ok)";s2.textContent="Rascunho gerado — revise cada resposta.";}}).catch(()=>{});});}
 
 async function iaNormasFn(){const st=$("#iaNormasStatus");const s=await getSample();if(!s){st.style.color="var(--warn)";st.textContent="IA indisponível aqui.";return;}
   if(!state.peticao&&!state.objeto){st.style.color="var(--warn)";st.textContent="Importe a petição ou preencha o objeto primeiro.";return;}
@@ -1391,7 +1401,7 @@ function renderProcList(){const w=$("#procList");if(!w)return;const idx=readIdx(
 function openProc(){try{saveRecord();}catch(e){}renderProcList();const m=$("#procModal");if(m)m.hidden=false;}
 function closeProc(){const m=$("#procModal");if(m)m.hidden=true;}
 {const pb=$("#procBtn");if(pb)pb.addEventListener("click",openProc);const pc=$("#procClose");if(pc)pc.addEventListener("click",closeProc);const pn=$("#procNew");if(pn)pn.addEventListener("click",()=>{newRecord();renderProcList();});const pm=$("#procModal");if(pm)pm.addEventListener("click",e=>{if(e.target===pm)closeProc();});}
-$("#resetBtn").addEventListener("click",()=>newRecord());
+$("#resetBtn").addEventListener("click",()=>{const S=state;const tem=(S.processo&&S.processo.numero)||(S.partes&&S.partes.autor)||(S.quesitos&&S.quesitos.length)||(S.media&&S.media.length)||(S.medicoes&&S.medicoes.length)||(S.conclusao&&S.conclusao.trim());if(tem&&!confirm("Iniciar uma NOVA perícia?\n\nO processo atual fica salvo na lista (botão Processos) — nada é perdido. Deseja continuar?"))return;newRecord();});
 
 /* ===== auditoria: abertura/encerramento + GPS + bloqueio ===== */
 function nowISO(){return new Date().toISOString();}
@@ -1450,7 +1460,9 @@ function checkLaudo(){const S=state;const items=[];const add=(ok,label,tab)=>ite
   add(!S.agentes.some(a=>a.situacao==="Exposição caracterizada"&&(!a.grau||a.grau==="Não caracterizado")),"Grau definido para todo agente caracterizado (NR-15)","normas");
   add(!S.medicoes.length||S.medicoes.every(m=>m.certNum&&m.certNum.trim()),"Instrumentos com certificado de calibração informado","medicoes");
   add(!S.medicoes.some(m=>m.certVal&&S.vistoria.data&&m.certVal<S.vistoria.data),"Certificados de calibração vigentes na data da vistoria","medicoes");
-  const wrap=$("#cplList");if(wrap){wrap.innerHTML=items.map(i=>`<div ${i.tab?`data-gotab="${i.tab}"`:""} style="display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px;${!i.ok&&i.tab?"cursor:pointer":""}"><span style="color:${i.ok?'var(--ok)':'var(--danger)'};font-weight:800;flex:none">${i.ok?'✓':'✗'}</span><span>${esc(i.label)}${!i.ok&&i.tab?' <span style="color:var(--accent);text-decoration:underline">corrigir →</span>':""}</span></div>`).join("")+(items.some(i=>!i.ok)?`<p class="hint" style="margin-top:8px;color:var(--danger)">⚠ Há pendências — toque numa pendência para ir ao campo.</p>`:`<p class="hint" style="margin-top:8px;color:var(--ok)">✓ Estrutura completa conforme o CPC.</p>`);wrap.querySelectorAll("[data-gotab]").forEach(el=>el.addEventListener("click",()=>{if(typeof goTab==="function")goTab(el.dataset.gotab);}));}}
+  const wrap=$("#cplList");if(wrap){wrap.innerHTML=items.map(i=>`<div ${i.tab?`data-gotab="${i.tab}"`:""} style="display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px;${!i.ok&&i.tab?"cursor:pointer":""}"><span style="color:${i.ok?'var(--ok)':'var(--danger)'};font-weight:800;flex:none">${i.ok?'✓':'✗'}</span><span>${esc(i.label)}${!i.ok&&i.tab?' <span style="color:var(--accent);text-decoration:underline">corrigir →</span>':""}</span></div>`).join("")+(items.some(i=>!i.ok)?`<p class="hint" style="margin-top:8px;color:var(--danger)">⚠ Há pendências — toque numa pendência para ir ao campo.</p>`:`<p class="hint" style="margin-top:8px;color:var(--ok)">✓ Estrutura completa conforme o CPC.</p>`);wrap.querySelectorAll("[data-gotab]").forEach(el=>el.addEventListener("click",()=>{if(typeof goTab==="function")goTab(el.dataset.gotab);}));}
+  try{const pend=items.filter(i=>!i.ok).length;const tb=document.querySelector('.tab[data-tab="laudo"]');if(tb){let bd=tb.querySelector('.tbadge');if(pend>0){if(!bd){bd=document.createElement('span');bd.className='tbadge';tb.appendChild(bd);}bd.textContent=pend;bd.title=pend+' pendência(s) de conformidade antes de assinar';}else if(bd){bd.remove();}}}catch(e){}
+}
 
 /* ===== aceite / escusa ===== */
 function hojeExt(){return new Date().toLocaleDateString("pt-BR",{day:"2-digit",month:"long",year:"numeric"});}
