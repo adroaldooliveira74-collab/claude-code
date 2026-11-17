@@ -77,6 +77,7 @@ main{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px
 @media(max-width:620px){.g2,.g3{grid-template-columns:1fr}}
 label.field{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted);font-weight:600;min-width:0}
 input,textarea,select{font-family:var(--body);font-size:14px;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:10px 11px;width:100%;min-height:44px}
+input[type=checkbox],input[type=radio]{width:18px;height:18px;min-height:0;padding:0;border-radius:4px;flex-shrink:0;accent-color:var(--accent);vertical-align:middle}
 textarea{min-height:84px;resize:vertical;line-height:1.5}
 input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 input.mono,.mono input{font-family:var(--mono)}.hint{font-size:11.5px;color:var(--muted);font-weight:400}
@@ -182,6 +183,7 @@ table.data .del{color:var(--danger);border:1px solid var(--line);background:var(
   <button class="icon-btn" id="procBtn">📁 Processos</button>
   <button class="icon-btn" id="homeBtn">🏠 Início</button>
   <a class="icon-btn" href="painel-controle.html" title="Marca, cores e licença" style="text-decoration:none">⚙️ Controle</a>
+  <button class="icon-btn" id="iaChip" data-goia title="A IA (OCR e preenchimento automático) ainda não foi configurada" style="display:none;border-color:var(--laranja);color:var(--warn)">⚡ Configurar IA</button>
   <button class="icon-btn" id="themeBtn">◐ Tema</button><button class="icon-btn" id="resetBtn">↺ Novo</button>
 </div>
 
@@ -517,13 +519,13 @@ table.data .del{color:var(--danger);border:1px solid var(--line);background:var(
       <p class="sub">A IA deste app usa o <b>Google Gemini</b>. Informe sua chave; ela fica salva <b>apenas neste aparelho</b> e so e enviada ao proprio Gemini.</p>
       <label class="field">Chave da API Gemini<input id="cfg_key" type="password" placeholder="AIza..."></label>
       <label class="field" style="margin-top:10px">Modelo<input id="cfg_model" class="mono" placeholder="gemini-flash-latest"></label>
-      <div class="row-actions" style="margin-top:12px"><button class="btn primary" id="cfg_save">Salvar</button><button class="btn" id="cfg_test">Testar conexao</button><span class="hint" id="cfg_status"></span></div>
+      <div class="row-actions" style="margin-top:12px"><button class="btn primary" id="cfg_save">Salvar</button><button class="btn" id="cfg_test">Testar conexão</button><span class="hint" id="cfg_status"></span></div>
       <p class="hint" style="margin-top:10px">Chave gratuita em <b>aistudio.google.com/app/apikey</b>. Modelos sugeridos: <span class="mono">gemini-flash-latest</span> (padrão), <span class="mono">gemini-pro-latest</span> (mais capaz) e <span class="mono">gemini-flash-lite-latest</span> (mais rápido/econômico). Use sempre as versões <span class="mono">-latest</span>, que não ficam obsoletas.</p>
     </div>
     <div class="card">
-      <h2>💾 Backup / transferencia</h2>
+      <h2>💾 Backup / transferência</h2>
       <p class="sub">Exporte TUDO (dados + fotos + documentos) para um arquivo. No PC, importe esse arquivo para liberar espaco no celular sem perder nada.</p>
-      <div class="row-actions"><button class="btn primary" id="bkExport">⬇ Exportar tudo (backup)</button><button class="btn" id="bkImport">⬆ Importar backup</button><label class="chk" style="display:flex;gap:6px;align-items:center;font-size:12.5px;font-weight:500"><input type="checkbox" id="bkRead">abrir como leitura</label></div>
+      <div class="row-actions"><button class="btn primary" id="bkExport">⬇ Exportar tudo (backup)</button><button class="btn" id="bkImport">⬆ Importar backup</button><label class="chk" style="display:inline-flex;gap:6px;align-items:center;font-size:12.5px;font-weight:500;white-space:nowrap;flex-shrink:0"><input type="checkbox" id="bkRead" style="width:17px;height:17px;min-height:0;padding:0;flex-shrink:0;accent-color:var(--accent)">abrir como leitura</label></div>
       <input type="file" id="bkFile" accept=".json,application/json" hidden>
     </div>
     <div class="card">
@@ -726,7 +728,7 @@ async function handlePdf(file,kind){const resSel=kind==="pet"?"#petResult":"#qRe
     try{st.innerHTML='<span class="spin"></span> PDF digitalizado — lendo com IA (OCR)…';const t=await ocrPdf(file);if(t&&t.replace(/\s/g,"").length>40){kind==="pet"?parsePeticao(t):importQuesitos(t);flash("Lido com IA (OCR) — revise.");return;}}catch(e2){}
     st.style.color="var(--warn)";st.textContent="Não consegui extrair o texto, mesmo com a IA. O PDF pode estar protegido ou corrompido. Use “Colar texto”.";flash("Falha ao ler o PDF.");return;
   }
-  st.style.color="var(--warn)";st.innerHTML='Este PDF parece <b>digitalizado</b> (imagem), sem texto selecionável. Ative a <b>IA</b> na aba <b>IA/Config</b> para leitura automática (OCR), ou use <b>“Colar texto”</b>.';flash("PDF sem texto — ative a IA ou cole o texto.");
+  st.style.color="var(--warn)";st.innerHTML='Este PDF parece <b>digitalizado</b> (imagem), sem texto selecionável. <u data-goia style="cursor:pointer;color:var(--accent)">Configure a IA (OCR) &rarr;</u> ou use <b>“Colar texto”</b>.';flash("PDF sem texto — ative a IA ou cole o texto.");
 }
 wireDrop("#dropPet","#petInput",f=>handlePdf(f,"pet"));
 $("#togglePet").addEventListener("click",()=>{const w=$("#petTextWrap");w.hidden=!w.hidden;});
@@ -860,11 +862,14 @@ $$("[data-addq]").forEach(b=>b.addEventListener("click",()=>addQuesito(b.dataset
 function renderQuesitos(){const wrap=$("#quesitosList");wrap.innerHTML="";$("#quesEmpty").hidden=state.quesitos.length>0;
   const ordered=[...state.quesitos].sort((a,b)=>ORDER.indexOf(a.origem)-ORDER.indexOf(b.origem));const cnt={};
   ordered.forEach(q=>{cnt[q.origem]=(cnt[q.origem]||0)+1;const n=cnt[q.origem];const cls=q.origem==="Juiz"?"juiz":q.origem==="Reclamada"?"reclamada":q.origem==="Autora"?"autora":q.origem==="MP"?"mp":"laudo";
-    const el=document.createElement("div");el.className="ques";el.innerHTML=`<div class="head"><span class="pill ${cls}">${esc(q.origem)}</span><span class="qnum">Quesito ${String(n).padStart(2,"0")}</span><span class="spacer"></span><select class="orig" data-orig="${q.id}">${ORDER.map(o=>`<option ${o===q.origem?"selected":""}>${o}</option>`).join("")}</select><button class="btn danger small" data-delq="${q.id}">Remover</button></div><div class="inner"><div class="qlabel">Ponto do laudo</div><textarea class="pergunta" data-qp="${q.id}" placeholder="Transcreva o quesito…">${esc(q.pergunta)}</textarea><div class="qlabel">Crítica técnica</div><textarea class="resposta" data-qa="${q.id}" placeholder="Resposta técnica, objetiva e fundamentada…">${esc(q.resposta)}</textarea></div>`;wrap.appendChild(el);});
+    const el=document.createElement("div");el.className="ques";el.innerHTML=`<div class="head"><span class="pill ${cls}">${esc(q.origem)}</span><span class="qnum">Quesito ${String(n).padStart(2,"0")}</span><span class="spacer"></span><button class="btn small" data-qup="${q.id}" title="Subir" type="button">↑</button><button class="btn small" data-qdown="${q.id}" title="Descer" type="button">↓</button><select class="orig" data-orig="${q.id}">${ORDER.map(o=>`<option ${o===q.origem?"selected":""}>${o}</option>`).join("")}</select><button class="btn danger small" data-delq="${q.id}">Remover</button></div><div class="inner"><div class="qlabel">Ponto do laudo</div><textarea class="pergunta" data-qp="${q.id}" placeholder="Transcreva o quesito…">${esc(q.pergunta)}</textarea><div class="qlabel">Crítica técnica</div><textarea class="resposta" data-qa="${q.id}" placeholder="Resposta técnica, objetiva e fundamentada…">${esc(q.resposta)}</textarea></div>`;wrap.appendChild(el);});
   wrap.querySelectorAll("[data-qp]").forEach(t=>t.addEventListener("input",()=>{const q=state.quesitos.find(x=>x.id===t.dataset.qp);if(q){q.pergunta=t.value;save();}}));
   wrap.querySelectorAll("[data-qa]").forEach(t=>t.addEventListener("input",()=>{const q=state.quesitos.find(x=>x.id===t.dataset.qa);if(q){q.resposta=t.value;save();}}));
   wrap.querySelectorAll("[data-orig]").forEach(s=>s.addEventListener("change",()=>{const q=state.quesitos.find(x=>x.id===s.dataset.orig);if(q){q.origem=s.value;save();renderQuesitos();}}));
-  wrap.querySelectorAll("[data-delq]").forEach(b=>b.addEventListener("click",()=>{state.quesitos=state.quesitos.filter(x=>x.id!==b.dataset.delq);save();renderQuesitos();}));}
+  wrap.querySelectorAll("[data-delq]").forEach(b=>b.addEventListener("click",()=>{state.quesitos=state.quesitos.filter(x=>x.id!==b.dataset.delq);save();renderQuesitos();}));
+  const moveQ=(id,dir)=>{const arr=state.quesitos;const i=arr.findIndex(x=>x.id===id);if(i<0)return;let j=i+dir;while(j>=0&&j<arr.length&&arr[j].origem!==arr[i].origem)j+=dir;if(j<0||j>=arr.length)return;const t=arr[i];arr[i]=arr[j];arr[j]=t;save();renderQuesitos();};
+  wrap.querySelectorAll("[data-qup]").forEach(b=>b.addEventListener("click",()=>moveQ(b.dataset.qup,-1)));
+  wrap.querySelectorAll("[data-qdown]").forEach(b=>b.addEventListener("click",()=>moveQ(b.dataset.qdown,1)));}
 
 /* normas */
 function renderNormas(){const wrap=$("#normasList");wrap.innerHTML="";state.normas.forEach(n=>{const el=document.createElement("div");el.className="norma-item";el.innerHTML=`<label class="chk"><input type="checkbox" data-non="${esc(n.code)}" ${n.on?"checked":""}></label><span class="code">${esc(n.code)}</span><span class="desc">${esc(n.desc)}</span><button class="btn danger small" data-deln="${esc(n.code)}">×</button>`;wrap.appendChild(el);});
@@ -885,6 +890,8 @@ $("#addNc").addEventListener("click",()=>{state.ncs.push({id:uid(),desc:"",grau:
 /* ===== IA ===== */
 let sampleCap=null,sampleTried=false,sampleLimits=null;
 function getKey(){try{return localStorage.getItem("gemini_key")||"";}catch(e){return"";}}
+function updateIaChip(){try{const c=$("#iaChip");if(c)c.style.display=getKey()?"none":"";}catch(e){}}
+document.addEventListener("click",function(e){const t=e.target.closest&&e.target.closest("[data-goia]");if(t){e.preventDefault();if(typeof goTab==="function")goTab("config");}});
 function getModel(){try{return localStorage.getItem("gemini_model")||"gemini-flash-latest";}catch(e){return"gemini-flash-latest";}}
 function blobToB64(b){return new Promise(res=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(",")[1]||"");r.onerror=()=>res("");r.readAsDataURL(b);});}
 function b64ToBlob(b64,mime){try{const bin=atob(b64);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new Blob([u],{type:mime||"application/octet-stream"});}catch(e){return new Blob([]);}}
@@ -900,8 +907,8 @@ async function geminiGenerate(input,opts,wantJson){const key=getKey();if(!key){c
   if(!txt){const er=new Error("vazio");er.code="empty_completion";throw er;}return txt;}
 async function getSample(){if(!getKey())return null;if(!sampleCap){const fn=async(input,opts)=>({text:await geminiGenerate(input,opts,false),truncated:false});fn.json=(input,opts)=>geminiGenerate(input,opts,true);fn.limits=async()=>({maxPromptBytes:1000000,images:{maxCount:12,maxInputBytes:20000000,mediaTypes:["image/jpeg","image/png","image/webp"]}});sampleCap=fn;try{sampleLimits=await fn.limits();}catch(e){}}return sampleCap;}
 function registerSW(){if("serviceWorker"in navigator){try{navigator.serviceWorker.register("sw.js").catch(()=>{});}catch(e){}}}
-function initConfig(){const k=$("#cfg_key"),m=$("#cfg_model");if(k)k.value=getKey();if(m)m.value=getModel();
-  const sv=$("#cfg_save");if(sv)sv.addEventListener("click",()=>{try{localStorage.setItem("gemini_key",$("#cfg_key").value.trim());localStorage.setItem("gemini_model",($("#cfg_model").value.trim()||"gemini-flash-latest"));}catch(e){}sampleCap=null;const st=$("#cfg_status");st.style.color="var(--ok)";st.textContent="Salvo neste aparelho.";flash("Configuracao salva.");});
+function initConfig(){const k=$("#cfg_key"),m=$("#cfg_model");if(k)k.value=getKey();if(m)m.value=getModel();updateIaChip();
+  const sv=$("#cfg_save");if(sv)sv.addEventListener("click",()=>{try{localStorage.setItem("gemini_key",$("#cfg_key").value.trim());localStorage.setItem("gemini_model",($("#cfg_model").value.trim()||"gemini-flash-latest"));}catch(e){}sampleCap=null;updateIaChip();const st=$("#cfg_status");st.style.color="var(--ok)";st.textContent="Salvo neste aparelho.";flash("Configuração salva.");});
   const ts=$("#cfg_test");if(ts)ts.addEventListener("click",async()=>{const st=$("#cfg_status");try{localStorage.setItem("gemini_key",$("#cfg_key").value.trim());localStorage.setItem("gemini_model",($("#cfg_model").value.trim()||"gemini-flash-latest"));}catch(e){}sampleCap=null;st.style.color="var(--muted)";st.innerHTML='<span class="spin"></span> Testando...';try{const s=await getSample();if(!s){st.style.color="var(--warn)";st.textContent="Informe a chave.";return;}await s("Responda apenas: OK");st.style.color="var(--ok)";st.textContent="Conexao OK.";flash("Gemini conectado.");}catch(e){st.style.color="var(--warn)";st.textContent="Falha: "+(e.message||e.code||"erro");}});}
 async function exportBackup(){const ids=[];state.media.forEach(m=>ids.push(m.id));state.docs.forEach(d=>{if(d.hasText)ids.push("doctext_"+d.id);});state.aparelhos.forEach(a=>ids.push(a.kind==="pdf"?"apt_"+a.id:a.id));state.epiDocs.forEach(e=>ids.push(e.kind==="pdf"?"epidoc_"+e.id:e.id));
   const payload={_app:"perito-laudo",_v:5,ts:new Date().toISOString(),state:state,media:{}};
@@ -1031,7 +1038,7 @@ async function pdfPagesToImages(file,maxPages){const data=new Uint8Array(await f
 async function ocrPdf(file){if(!getKey())throw new Error("sem-chave");const imgs=await pdfPagesToImages(file,8);if(!imgs.length)throw new Error("sem-paginas");return (await geminiGenerate("Transcreva fielmente TODO o texto deste documento digitalizado, mantendo a ordem e a estrutura. Responda apenas o texto, sem comentários.",{images:imgs},false)||"").trim();}
 async function handleLaudoPdf(file){const r=$("#laudoResult");if(r){r.style.color="var(--muted)";r.innerHTML='<span class="spin"></span> Lendo laudo…';}try{const t=await pdfToText(file);if(!t.trim())throw 0;await idbPut("laudotext_"+state.painelId,t);state.laudoHas=true;fillPeritoFromLaudo(t);save();if(r){r.style.color="var(--ok)";r.textContent="Laudo lido ("+t.length+" caracteres). Agora clique em Analisar.";}flash("Laudo do perito carregado.");}catch(e){
   if(getKey()){try{if(r){r.style.color="var(--muted)";r.innerHTML='<span class="spin"></span> PDF digitalizado — lendo com IA (OCR)…';}const t2=await ocrPdf(file);if(t2&&t2.trim()){await idbPut("laudotext_"+state.painelId,t2);state.laudoHas=true;fillPeritoFromLaudo(t2);save();if(r){r.style.color="var(--ok)";r.textContent="Laudo lido com IA/OCR ("+t2.length+" caracteres). Agora clique em Analisar.";}flash("Laudo lido com IA (OCR).");return;}}catch(e2){}}
-  if(r){r.style.color="var(--warn)";r.innerHTML=getKey()?"Não consegui extrair o texto, mesmo com a IA. O PDF pode estar protegido/corrompido.":'Laudo parece <b>digitalizado</b> (imagem). Ative a <b>IA</b> na aba <b>IA/Config</b> para leitura automática (OCR).';}}}
+  if(r){r.style.color="var(--warn)";r.innerHTML=getKey()?"Não consegui extrair o texto, mesmo com a IA. O PDF pode estar protegido/corrompido.":'Laudo parece <b>digitalizado</b> (imagem). <u data-goia style="cursor:pointer;color:var(--accent)">Configure a IA (OCR) &rarr;</u>';}}}
 async function iaFuros(){const st=$("#furosStatus");const s=await getSample();if(!s){st.style.color="var(--warn)";st.textContent="Configure o Gemini (aba IA/Config).";return;}
   const laudo=await idbGet("laudotext_"+state.painelId);if(!laudo){st.style.color="var(--warn)";st.textContent="Importe o PDF do laudo primeiro.";return;}
   const b=$("#iaFuros");if(b)b.disabled=true;st.style.color="var(--muted)";st.innerHTML='<span class="spin"></span> Analisando o laudo…';
@@ -1192,7 +1199,7 @@ function renderProcList(){const w=$("#procList");if(!w)return;const idx=readIdx(
 function openProc(){try{saveRecord();}catch(e){}renderProcList();const m=$("#procModal");if(m)m.hidden=false;}
 function closeProc(){const m=$("#procModal");if(m)m.hidden=true;}
 {const pb=$("#procBtn");if(pb)pb.addEventListener("click",openProc);const pc=$("#procClose");if(pc)pc.addEventListener("click",closeProc);const pn=$("#procNew");if(pn)pn.addEventListener("click",()=>{newRecord();renderProcList();});const pm=$("#procModal");if(pm)pm.addEventListener("click",e=>{if(e.target===pm)closeProc();});}
-$("#resetBtn").addEventListener("click",()=>newRecord());
+$("#resetBtn").addEventListener("click",()=>{const S=state;const tem=(S.processo&&S.processo.numero)||(S.partes&&S.partes.autor)||(S.quesitos&&S.quesitos.length)||(S.media&&S.media.length)||(S.conclusao&&S.conclusao.trim());if(tem&&!confirm("Iniciar um NOVO trabalho?\n\nO atual fica salvo na lista (botão Processos) — nada é perdido. Deseja continuar?"))return;newRecord();});
 
 /* ===== auditoria: abertura/encerramento + GPS + bloqueio ===== */
 function nowISO(){return new Date().toISOString();}
