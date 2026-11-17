@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gerador de Licenças — USO INTERNO (vendedor)</title>
+<script src="../vendor/tweetnacl.min.js"></script>
+<style>
+:root{--accent:#007a36;--danger:#b3261e}
+*{box-sizing:border-box}body{margin:0;background:#0f1a12;color:#eaf3e2;font-family:"Segoe UI",Arial,sans-serif;font-size:15px;line-height:1.55}
+main{max-width:760px;margin:0 auto;padding:24px 16px 60px}
+h1{font-size:22px;margin:0 0 4px}.sub{color:#9fd37e;font-size:13px;margin-bottom:18px}
+.card{background:#16261a;border:1px solid #2a4030;border-radius:12px;padding:18px;margin-bottom:16px}
+.warn{background:#3a1512;border-color:#6b241d;color:#ffd9d4}
+label{display:block;font-size:13px;color:#bcd9ad;font-weight:600;margin:10px 0 4px}
+input,textarea{width:100%;padding:10px 12px;border:1px solid #37503f;border-radius:9px;background:#0f1a12;color:#eaf3e2;font-size:14px;font-family:ui-monospace,monospace}
+.row{display:flex;gap:12px;flex-wrap:wrap}.row>div{flex:1;min-width:160px}
+button{margin-top:14px;background:var(--accent);color:#fff;border:0;border-radius:9px;padding:11px 18px;font-weight:800;font-size:15px;cursor:pointer}
+button.sec{background:#2a4030}
+.out{margin-top:12px;background:#0b140e;border:1px dashed #37503f;border-radius:9px;padding:12px;word-break:break-all;font-family:ui-monospace,monospace;font-size:13px;min-height:40px}
+.ok{color:#7fe3a0}.bad{color:#ff9a90}.note{font-size:12.5px;color:#9fb79a}
+</style>
+</head>
+<body>
+<main>
+  <h1>🔐 Gerador de Licenças</h1>
+  <div class="sub">USO INTERNO DO VENDEDOR — não distribua este arquivo nem a chave privada.</div>
+
+  <div class="card warn">
+    <b>⚠️ Chave privada = seu cofre.</b> Quem tiver ela gera licenças grátis. Guarde só com você; nunca coloque no pacote de venda nem mande para clientes.
+  </div>
+
+  <div class="card">
+    <label>Chave privada (base64) — cole a sua</label>
+    <textarea id="sec" rows="2" placeholder="cole aqui a chave privada (SEC=...)"></textarea>
+    <label style="margin-top:8px"><input type="checkbox" id="remember" style="width:auto"> Lembrar neste navegador (só use no seu PC)</label>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div><label>Nome do cliente (aparece na licença)</label><input id="nome" placeholder="Ex.: Dr. João Silva — Perito"></div>
+      <div><label>Meses de validade</label><input id="meses" value="12" inputmode="numeric"></div>
+    </div>
+    <button id="gerar">Gerar código de liberação</button>
+    <div class="note" id="exp"></div>
+    <div class="out" id="out">—</div>
+    <button class="sec" id="copiar">Copiar código</button>
+  </div>
+
+  <div class="card">
+    <label>Conferir um código (opcional)</label>
+    <textarea id="chk" rows="2" placeholder="cole um código para validar"></textarea>
+    <button class="sec" id="verificar">Verificar</button>
+    <div class="out" id="chkout">—</div>
+  </div>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+const enc=new TextEncoder(),dec=new TextDecoder();
+const b64=u=>btoa(String.fromCharCode.apply(null,u));
+const deb64=b=>{const s=atob(b);const u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u;};
+const u2u=u=>b64(u).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+const url2=s=>{s=s.replace(/-/g,"+").replace(/_/g,"/");while(s.length%4)s+="=";return deb64(s);};
+try{const sv=localStorage.getItem("gen_sec");if(sv){$("#sec").value=sv;$("#remember").checked=true;}}catch(e){}
+function gerar(){
+  const sec=$("#sec").value.trim();const nome=$("#nome").value.trim();const meses=parseInt($("#meses").value,10)||12;
+  if(!sec){$("#out").innerHTML='<span class="bad">Cole a chave privada.</span>';return;}
+  if(!nome){$("#out").innerHTML='<span class="bad">Informe o nome do cliente.</span>';return;}
+  let secU;try{secU=deb64(sec);}catch(e){$("#out").innerHTML='<span class="bad">Chave privada inválida.</span>';return;}
+  const hoje=new Date();const exp=new Date(hoje);exp.setMonth(exp.getMonth()+meses);
+  const iso=d=>d.toISOString().slice(0,10);
+  const pl={n:nome,p:"pericia",iss:iso(hoje),exp:iso(exp)};
+  const plStr=u2u(enc.encode(JSON.stringify(pl)));
+  let sig;try{sig=nacl.sign.detached(enc.encode(plStr),secU);}catch(e){$("#out").innerHTML='<span class="bad">Erro ao assinar: chave privada incorreta.</span>';return;}
+  const token=plStr+"."+u2u(sig);
+  $("#exp").textContent="Validade: "+iso(hoje).split("-").reverse().join("/")+" → "+iso(exp).split("-").reverse().join("/")+" ("+meses+" meses)";
+  $("#out").innerHTML='<span class="ok">'+token+'</span>';
+  if($("#remember").checked){try{localStorage.setItem("gen_sec",sec);}catch(e){}}else{try{localStorage.removeItem("gen_sec");}catch(e){}}
+}
+function verificar(){
+  const t=$("#chk").value.trim();if(!t){$("#chkout").textContent="—";return;}
+  try{const [p,s]=t.split(".");const ok=nacl.sign.detached.verify(enc.encode(p),url2(s),url2PubFromSec());
+    const pl=JSON.parse(dec.decode(url2(p)));const hoje=new Date().toISOString().slice(0,10);
+    $("#chkout").innerHTML=ok?('<span class="ok">OK — '+pl.n+' · validade '+pl.exp.split("-").reverse().join("/")+(hoje>pl.exp?' (VENCIDA)':'')+'</span>'):'<span class="bad">Assinatura inválida (chave privada não confere).</span>';
+  }catch(e){$("#chkout").innerHTML='<span class="bad">Código ilegível.</span>';}
+}
+function url2PubFromSec(){const sec=deb64($("#sec").value.trim());return sec.slice(32);} // chave pública = últimos 32 bytes da privada (Ed25519)
+$("#gerar").addEventListener("click",gerar);
+$("#copiar").addEventListener("click",()=>{const t=$("#out").textContent;if(t&&t!=="—"){navigator.clipboard&&navigator.clipboard.writeText(t);$("#copiar").textContent="Copiado!";setTimeout(()=>$("#copiar").textContent="Copiar código",1200);}});
+$("#verificar").addEventListener("click",verificar);
+</script>
+</body>
+</html>
