@@ -214,6 +214,7 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
     <div style="display:flex;align-items:center;gap:10px"><h2 style="flex:1">📁 Meus processos (perícias)</h2><button class="icon-btn" id="procClose">✕</button></div>
     <p class="sub">Cada perícia fica salva neste aparelho. Abra outra, crie uma nova ou exclua. A perícia aberta é salva automaticamente.</p>
     <div class="row-actions" style="margin:10px 0"><button class="btn primary small" id="procNew">+ Nova perícia</button></div>
+    <input id="procSearch" placeholder="🔎 Buscar por número ou parte…" style="margin-bottom:10px">
     <div id="procList"></div>
   </div>
 </div>
@@ -540,6 +541,7 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
       <div class="row-actions"><button class="btn ia" id="iaBtn">✨ Gerar rascunho (fotos + dados)</button><span class="hint" id="iaStatus"></span></div>
     </div>
     <div class="card"><h2>✍️ Conclusão</h2>
+      <div class="row-actions" style="margin-bottom:8px;flex-wrap:wrap"><button class="btn small" id="cncSugerir" type="button" title="Monta a conclusão a partir dos agentes caracterizados e do grau">🤖 Sugerir enquadramento</button><button class="btn small" data-cnc="insal" type="button">✓ Insalubre</button><button class="btn small" data-cnc="naoinsal" type="button">✗ Não insalubre</button><button class="btn small" data-cnc="peric" type="button">⚡ Periculosidade</button><button class="btn small" data-cnc="naoperic" type="button">✗ Não perigosa</button></div>
       <label class="field">Conclusão do perito
         <textarea id="concl" rows="5" placeholder="Diante do exposto e das constatações técnicas, conclui o perito que as atividades do reclamante [são / não são] insalubres/perigosas, nos termos da NR-15/NR-16…"></textarea></label></div>
     <div class="card"><h2>✅ Conformidade do laudo <span class="seal">CPC art. 473</span></h2>
@@ -646,6 +648,11 @@ body:not([data-view="app"]) .topbar,body:not([data-view="app"]) .tabs,body:not([
       <h2>📲 Instalar o app</h2>
       <p class="sub">Abra este endereco no navegador e use <b>Instalar app</b> (Chrome/Edge no PC e Android) ou <b>Compartilhar → Adicionar a Tela de Inicio</b> (iPhone). Funciona como app, com camera, GPS e offline.</p>
     </div>
+    <div class="card">
+      <h2>🔎 Acessibilidade</h2>
+      <p class="sub">Ajuste o tamanho da tela (fonte e botões maiores).</p>
+      <div class="row-actions"><button class="btn" id="fontMinus" type="button">A−</button><span class="hint" id="fontPct" style="min-width:48px;text-align:center">100%</span><button class="btn" id="fontPlus" type="button">A+</button><button class="btn small" id="fontReset" type="button">Padrão</button></div>
+    </div>
   </section>
   <div class="navprev" id="navPrev"><button class="btn" id="navPrevBtn">← Anterior</button><button class="btn primary" id="navNextBtn">Próximo →</button></div>
 </main>
@@ -724,6 +731,14 @@ function $(s){return document.querySelector(s);}function $$(s){return[...documen
 function flash(m){const f=$("#flash");f.innerHTML=m;f.classList.add("show");clearTimeout(f._t);f._t=setTimeout(()=>f.classList.remove("show"),2300);}
 const esc=s=>(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const clean=s=>s.replace(/\s+/g," ").trim().replace(/[.,;]$/,"");
+const soDig=s=>(s||"").replace(/\D/g,"");
+function validaCNJ(s){const d=soDig(s);return d.length===20;}
+function validaCNPJ(s){const c=soDig(s);if(c.length!==14||/^(\d)\1{13}$/.test(c))return false;const calc=b=>{let f=b.length-7,soma=0;for(let i=0;i<b.length;i++){soma+=(+b[i])*f--;if(f<2)f=9;}const r=soma%11;return r<2?0:11-r;};const d1=calc(c.slice(0,12)),d2=calc(c.slice(0,12)+d1);return c.slice(12)===""+d1+d2;}
+function validaCPF(s){const c=soDig(s);if(c.length!==11||/^(\d)\1{10}$/.test(c))return false;const calc=q=>{let soma=0;for(let i=0;i<q;i++)soma+=(+c[i])*(q+1-i);const r=(soma*10)%11;return r===10?0:r;};return calc(9)===+c[9]&&calc(10)===+c[10];}
+function wireValidacoes(){const set=(el,ok,msg)=>{if(!el)return;const bad=el.value.trim()&&!ok;el.style.borderColor=bad?"var(--danger)":"";el.title=bad?msg:"";};
+  const bind=(sel,fn,msg)=>{const el=$(sel);if(!el)return;const run=()=>set(el,fn(el.value),msg);el.addEventListener("input",run);el.addEventListener("blur",run);run();};
+  bind("#p_numero",validaCNJ,"Número CNJ incompleto — deve ter 20 dígitos (NNNNNNN-DD.AAAA.J.TR.OOOO).");
+  bind("#e_cnpj",validaCNPJ,"CNPJ inválido (dígito verificador não confere).");}
 const titleCase=s=>clean(s||"").toLowerCase().replace(/\b([a-zà-ú])([a-zà-ú'’]*)/g,(m,a,b)=>a.toUpperCase()+b).replace(/\b(Da|De|Do|Das|Dos|E)\b/g,m=>m.toLowerCase());
 const MESES_PT={janeiro:1,fevereiro:2,"março":3,marco:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12};
 function dataPT(t,re){const m=t.match(re);if(!m)return"";const d=+m[1],mo=MESES_PT[(m[2]||"").toLowerCase()],y=+m[3];if(!mo||!y||!d)return"";return y+"-"+String(mo).padStart(2,"0")+"-"+String(d).padStart(2,"0");}
@@ -952,14 +967,16 @@ async function handleFiles(files){if(isLocked()){flash("Perícia encerrada — s
   for(const f of files){const isImg=f.type.startsWith("image/"),isVid=f.type.startsWith("video/");if(!isImg&&!isVid)continue;
     if(isImg){if(nFotos>=MAX_FOTOS){rejFoto++;continue;}}
     else{if(nVids>=MAX_VIDEOS){rejVid++;continue;}const dur=await videoDuracao(f);if(dur>MAX_VID_SEG+0.5){rejDur++;continue;}}
-    const id=uid();try{const b=isImg?await downscale(f):f;await idbPut(id,b);}catch(e){await idbPut(id,f);}
+    const id=uid();let stamp="";if(isImg&&state.carimboFoto!==false){const ab=(state.auditoria&&state.auditoria.abertura)||null;const g=(ab&&ab.lat!=null)?(" · "+ab.lat.toFixed(5)+", "+ab.lon.toFixed(5)):"";stamp=new Date().toLocaleString("pt-BR")+g;}try{const b=isImg?await downscale(f,stamp):f;await idbPut(id,b);}catch(e){await idbPut(id,f);}
     state.media.push({id,kind:isImg?"img":"vid",legenda:"",norma:"",ts:Date.now()});if(isImg)nFotos++;else nVids++;add++;}
   save();renderMedia();
   const avisos=[];if(rejFoto)avisos.push(rejFoto+" foto(s) acima do limite de "+MAX_FOTOS);if(rejVid)avisos.push(rejVid+" vídeo(s) acima do limite de "+MAX_VIDEOS);if(rejDur)avisos.push(rejDur+" vídeo(s) com mais de 1 min");
   if(add&&avisos.length)flash(add+" adicionada(s). Ignorado(s): "+avisos.join("; ")+".");
   else if(avisos.length)flash("Nada adicionado — "+avisos.join("; ")+".");
   else flash(add+" mídia(s) adicionada(s). ("+nFotos+"/"+MAX_FOTOS+" fotos, "+nVids+"/"+MAX_VIDEOS+" vídeos)");}
-function downscale(file){return new Promise((res,rej)=>{const img=new Image(),u=URL.createObjectURL(file);img.onload=()=>{const max=1600;let w=img.width,h=img.height;if(w>max||h>max){const r=Math.min(max/w,max/h);w=Math.round(w*r);h=Math.round(h*r);}const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);URL.revokeObjectURL(u);c.toBlob(b=>b?res(b):rej(0),"image/jpeg",.82);};img.onerror=()=>{URL.revokeObjectURL(u);rej(0);};img.src=u;});}
+function downscale(file,stamp){return new Promise((res,rej)=>{const img=new Image(),u=URL.createObjectURL(file);img.onload=()=>{const max=1600;let w=img.width,h=img.height;if(w>max||h>max){const r=Math.min(max/w,max/h);w=Math.round(w*r);h=Math.round(h*r);}const c=document.createElement("canvas");c.width=w;c.height=h;const ctx=c.getContext("2d");ctx.drawImage(img,0,0,w,h);
+  if(stamp){const fs=Math.max(13,Math.round(w/52));ctx.font="600 "+fs+"px Arial";const pad=Math.round(fs*0.45);const tw=Math.min(w,ctx.measureText(stamp).width+pad*2);const bh=fs+pad*2;ctx.fillStyle="rgba(0,0,0,.55)";ctx.fillRect(0,h-bh,tw,bh);ctx.fillStyle="#fff";ctx.textBaseline="middle";ctx.fillText(stamp,pad,h-bh/2+1);}
+  URL.revokeObjectURL(u);c.toBlob(b=>b?res(b):rej(0),"image/jpeg",.82);};img.onerror=()=>{URL.revokeObjectURL(u);rej(0);};img.src=u;});}
 const objUrls=[];
 async function renderMedia(){objUrls.forEach(u=>URL.revokeObjectURL(u));objUrls.length=0;const grid=$("#mediaGrid");grid.innerHTML="";$("#mediaEmpty").hidden=state.media.length>0;$("#mediaCount").textContent=state.media.length+(state.media.length===1?" mídia":" mídias");
   const opts=`<option value="">— norma —</option>`+state.normas.map(n=>`<option value="${esc(n.code)}">${esc(n.code)}</option>`).join("");let pn=0;
@@ -1381,6 +1398,19 @@ async function exportPdf(){const{photos}=await generateLaudo();const J=window.js
   await saveFile(doc.output("blob"),fname("pdf"));}
 
 $("#genBtn").addEventListener("click",()=>{generateLaudo();flash("Laudo atualizado.");});{const _lr=$("#lerBtn");if(_lr)_lr.addEventListener("click",()=>{const d=$("#laudoDoc");if(d){d.classList.toggle("reading");_lr.classList.toggle("primary");}});}
+function setConcl(txt){const t=$("#concl");if(t){t.value=txt;state.conclusao=txt;save();generateLaudo();flash("Conclusão inserida — revise antes de assinar.");}}
+function cncModelos(){const P=state.partes.autor||"o(a) reclamante";return{
+  insal:`Diante do exposto e das constatações técnicas, CONCLUI o perito que as atividades desenvolvidas por ${P} SÃO INSALUBRES, nos termos da NR-15 (Portaria MTE nº 3.214/78 e Anexos), fazendo jus ao adicional de insalubridade no grau indicado.`,
+  naoinsal:`Diante do exposto e das constatações técnicas, CONCLUI o perito que as atividades desenvolvidas por ${P} NÃO SÃO INSALUBRES, por não haver exposição a agentes nocivos em intensidade/concentração acima dos limites de tolerância da NR-15, não fazendo jus ao adicional de insalubridade.`,
+  peric:`Diante do exposto e das constatações técnicas, CONCLUI o perito que as atividades desenvolvidas por ${P} SÃO PERIGOSAS, nos termos da NR-16 (Portaria MTE nº 3.214/78), fazendo jus ao adicional de periculosidade de 30%.`,
+  naoperic:`Diante do exposto e das constatações técnicas, CONCLUI o perito que as atividades desenvolvidas por ${P} NÃO SÃO PERIGOSAS, por não se enquadrarem nas hipóteses da NR-16, não fazendo jus ao adicional de periculosidade.`};}
+function grauNum(g){const m=/(\d+)\s*%/.exec(g||"");return m?+m[1]:0;}
+function sugerirEnquadramento(){const car=(state.agentes||[]).filter(a=>a.situacao==="Exposição caracterizada"||(a.grau&&a.grau!=="Não caracterizado"));const peric=state.periculosidade&&/sim/i.test(state.periculosidade.caracterizada||"");const P=state.partes.autor||"o(a) reclamante";const partes=[];
+  if(car.length){const maxG=car.reduce((m,a)=>Math.max(m,grauNum(a.grau)),0);const gTxt=maxG>=40?"grau máximo (40%)":maxG>=20?"grau médio (20%)":maxG>=10?"grau mínimo (10%)":"grau a definir";const ags=car.map(a=>a.nome+(a.anexo?" ("+a.anexo+")":"")).join("; ");partes.push(`CONCLUI o perito que as atividades desenvolvidas por ${P} SÃO INSALUBRES, em ${gTxt}, por exposição a: ${ags}, nos termos da NR-15 (Portaria MTE nº 3.214/78).`);}
+  else partes.push(`CONCLUI o perito que as atividades desenvolvidas por ${P} NÃO SÃO INSALUBRES, nos termos da NR-15, por ausência de exposição acima dos limites de tolerância.`);
+  if(peric)partes.push(`Quanto à periculosidade, as atividades SÃO PERIGOSAS, nos termos da NR-16${state.periculosidade.base?" ("+state.periculosidade.base+")":""}.`);
+  setConcl("Diante do exposto e das constatações técnicas, "+partes.join(" "));}
+{const sg=$("#cncSugerir");if(sg)sg.addEventListener("click",sugerirEnquadramento);document.querySelectorAll("[data-cnc]").forEach(b=>b.addEventListener("click",()=>{const m=cncModelos();setConcl(m[b.dataset.cnc]||"");}));}
 $("#pdfBtn").addEventListener("click",exportPdf);{const _w=$("#wordBtn");if(_w)_w.addEventListener("click",exportWord);}$("#ncWord").addEventListener("click",exportNcPdf);
 $("#copyBtn").addEventListener("click",async()=>{await generateLaudo();const txt=$("#laudoDoc").innerText.replace(/\n{3,}/g,"\n\n").trim();try{await navigator.clipboard.writeText(txt);flash("Laudo copiado — cole no Word.");}catch(e){const r=document.createRange();r.selectNodeContents($("#laudoDoc"));const s=getSelection();s.removeAllRanges();s.addRange(r);flash("Selecionado — Ctrl/Cmd+C.");}});
 
@@ -1394,9 +1424,23 @@ async function deleteRecord(pid){const rec=localStorage.getItem(REC(pid));if(rec
   if(state.painelId===pid){const idx=readIdx();if(idx.length){await openRecord(idx[0].pid);}else{newRecord();}}
   renderProcList();flash("Processo excluído.");}
 function procWhen(ts){try{return new Date(ts).toLocaleString("pt-BR");}catch(e){return"";}}
-function renderProcList(){const w=$("#procList");if(!w)return;const idx=readIdx().slice().sort((a,b)=>(b.updated||0)-(a.updated||0));if(!idx.length){w.innerHTML='<p class="empty">Nenhuma perícia salva ainda.</p>';return;}
-  w.innerHTML=idx.map(r=>`<div class="doc-row" style="${r.pid===state.painelId?'border-color:var(--accent);':''}margin-bottom:8px"><div class="top"><span class="tname">${esc(r.numero)||"(sem número)"}${r.pid===state.painelId?' <span class="seal">ATUAL</span>':''}</span></div><div style="color:var(--muted);font-size:13px;margin:4px 0">${esc(r.parte)||"—"} · ${esc(r.tipo)||"—"} · ${procWhen(r.updated)}</div><div class="row-actions"><button class="btn small" data-popen="${r.pid}">Abrir</button><button class="btn danger small" data-pdel="${r.pid}">Excluir</button></div></div>`).join("");
+function duplicateRecord(pid){try{const r=localStorage.getItem(REC(pid));if(!r)return;const st=Object.assign(blankState(),JSON.parse(r));const bs=blankState();
+  st.painelId=uid();
+  st.media=[];st.docs=[];st.aparelhos=[];st.epiDocs=[];st.atividades=[];st.medicoes=[];st.ncs=[];
+  st.vistoria=bs.vistoria;st.conclusao="";st.analise="";
+  if(st.processo)st.processo.numero=(st.processo.numero?st.processo.numero+" (cópia)":"");
+  if(Array.isArray(st.quesitos))st.quesitos.forEach(q=>q.resposta="");
+  localStorage.setItem(REC(st.painelId),JSON.stringify(st));const idx=readIdx().filter(x=>x.pid!==st.painelId);idx.unshift(idxEntry(st));writeIdx(idx);
+  renderProcList();flash("Duplicado: cadastro, partes, quesitos e normas copiados (sem fotos/medições). Abra para editar.");
+}catch(e){flash("Falha ao duplicar.");}}
+function renderProcList(){const w=$("#procList");if(!w)return;let idx=readIdx().slice().sort((a,b)=>(b.updated||0)-(a.updated||0));
+  const si=$("#procSearch");const q=(si&&si.value||"").trim().toLowerCase();
+  if(si&&!si._wired){si._wired=true;si.addEventListener("input",()=>renderProcList());}
+  if(q)idx=idx.filter(r=>((r.numero||"")+" "+(r.parte||"")+" "+(r.tipo||"")).toLowerCase().indexOf(q)>=0);
+  if(!idx.length){w.innerHTML='<p class="empty">'+(q?"Nenhum processo encontrado.":"Nenhuma perícia salva ainda.")+'</p>';return;}
+  w.innerHTML=idx.map(r=>`<div class="doc-row" style="${r.pid===state.painelId?'border-color:var(--accent);':''}margin-bottom:8px"><div class="top"><span class="tname">${esc(r.numero)||"(sem número)"}${r.pid===state.painelId?' <span class="seal">ATUAL</span>':''}</span></div><div style="color:var(--muted);font-size:13px;margin:4px 0">${esc(r.parte)||"—"} · ${esc(r.tipo)||"—"} · ${procWhen(r.updated)}</div><div class="row-actions"><button class="btn small" data-popen="${r.pid}">Abrir</button><button class="btn small" data-pdup="${r.pid}">⧉ Duplicar</button><button class="btn danger small" data-pdel="${r.pid}">Excluir</button></div></div>`).join("");
   w.querySelectorAll("[data-popen]").forEach(b=>b.addEventListener("click",()=>openRecord(b.dataset.popen)));
+  w.querySelectorAll("[data-pdup]").forEach(b=>b.addEventListener("click",()=>duplicateRecord(b.dataset.pdup)));
   w.querySelectorAll("[data-pdel]").forEach(b=>b.addEventListener("click",()=>{if(window.__pd!==b.dataset.pdel){window.__pd=b.dataset.pdel;flash("Toque de novo em Excluir para confirmar.");setTimeout(()=>window.__pd=null,3000);return;}window.__pd=null;deleteRecord(b.dataset.pdel);}));}
 function openProc(){try{saveRecord();}catch(e){}renderProcList();const m=$("#procModal");if(m)m.hidden=false;}
 function closeProc(){const m=$("#procModal");if(m)m.hidden=true;}
@@ -1504,7 +1548,11 @@ function renderVistMed(){const w=$("#vistMedResumo");if(!w)return;let h="";
   if(!h)h=`<div class="hint">Nenhum relatório/medição ainda. Anexe e analise na aba Medições.</div>`;
   w.innerHTML=h;}
 function renderAll(){renderProf();renderEquipe();renderDocs();renderEpi();renderEpiDocs();renderMed();renderApt();renderQuesitos();renderNormas();renderAtividades();renderAgentes();renderPeriodos();renderRoteiro();renderMedia();renderNc();renderAudit();renderDesempenho();renderEstatisticas();applyLock();checkLaudo();updateTabDots();updateProcChip();}
-hydrate();bindInputs();renderAll();
+hydrate();bindInputs();wireValidacoes();renderAll();
+(function(){const LSZ="vp_fontscale";function apply(z){try{document.documentElement.style.zoom=z;}catch(e){}const p=$("#fontPct");if(p)p.textContent=Math.round(z*100)+"%";}
+  let z=parseFloat(localStorage.getItem(LSZ)||"1")||1;apply(z);
+  const setZ=nz=>{z=Math.min(1.6,Math.max(0.8,Math.round(nz*20)/20));try{localStorage.setItem(LSZ,z);}catch(e){}apply(z);};
+  const mi=$("#fontMinus"),pl=$("#fontPlus"),rs=$("#fontReset");if(mi)mi.addEventListener("click",()=>setZ(z-0.1));if(pl)pl.addEventListener("click",()=>setZ(z+0.1));if(rs)rs.addEventListener("click",()=>setZ(1));})();
 (function(){try{const idx=readIdx();const last=idx.slice().sort((a,b)=>(b.updated||0)-(a.updated||0))[0];const hl=$("#homeLast");if(hl&&last){hl.innerHTML=`Continuar: <b>${esc(last.numero||"processo sem número")}</b> · <span style="color:var(--accent);text-decoration:underline;cursor:pointer" id="homeCont">abrir ↗</span>`;const hc=$("#homeCont");if(hc)hc.addEventListener("click",()=>{const gp=$("#goPericia");if(gp)gp.click();});}
   const lb=parseInt(localStorage.getItem("last_backup_ts")||"0",10);if(idx.length&&(!lb||Date.now()-lb>7*864e5)){setTimeout(()=>flash("Lembrete: faça um backup dos processos (aba IA/Config → Exportar)."),1800);}}catch(e){}})();
 if(!$("#v_metodo").value)$("#v_metodo").value=state.vistoria.metodo;
